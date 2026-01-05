@@ -620,4 +620,20 @@ TEMPLATE_TEST_CASE( "gynx::valid", "[algorithm][valid]", std::vector<char>)
         CHECK(gynx::valid_nucleotide(s2));
         CHECK(gynx::valid_peptide(s2)); // A, C, G, T are also amino acids
     }
+
+// -- range compatibility tests ------------------------------------------------
+
+    SECTION( "view ranges compatibility" )
+    {   gynx::sq_gen<T> s{"ACGTACGTKQ"};
+        CHECK(gynx::valid_nucleotide(s | std::views::take(8)));
+        gynx::sq_view_gen<T> v{s};
+        v.remove_suffix(2); // drop 'KQ'
+        CHECK(gynx::valid_nucleotide(v));
+        CHECK(gynx::valid_nucleotide(v.begin(), v.end()));
+        auto result = s
+        |   std::views::take(8)
+        |   std::views::transform([](auto c) { return std::tolower(c); })
+        |   std::views::reverse;
+        CHECK(gynx::valid_nucleotide(result));
+    }
 }
