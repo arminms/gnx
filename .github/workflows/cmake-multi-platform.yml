@@ -41,9 +41,8 @@ jobs:
 
     - name: Configure with CMake (macOS)
       run: |
-        brew install llvm libomp
-        CXX=$(brew --prefix llvm)/bin/clang++ cmake -S ${{github.workspace}} -B build \
-          -DCMAKE_TOOLCHAIN_FILE=$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake
+        brew install llvm libomp zlib catch2
+        CXX=$(brew --prefix llvm)/bin/clang++ cmake -S ${{github.workspace}} -B build
       if: matrix.os == 'macos-latest'
 
     - name: Build
