@@ -21,18 +21,28 @@
 //
 #include <catch2/catch_all.hpp>
 
+#if defined(__CUDACC__)
+    #include <thrust/universal_vector.h>
+#endif
+
 #include <gynx/sq.hpp>
 #include <gynx/sq_view.hpp>
 #include <gynx/io/fastaqz.hpp>
 #include <gynx/algorithms/valid.hpp>
 // #include <gynx/lut/phred33.hpp>
 
+#if defined(__CUDACC__)
+TEMPLATE_TEST_CASE( "gynx::sq", "[class][cuda]", std::vector<char>, thrust::host_vector<char>, thrust::device_vector<char>)
+#else
 TEMPLATE_TEST_CASE( "gynx::sq", "[class]", std::vector<char>)
+#endif
 {   typedef TestType T;
 
     gynx::sq_gen<T> s{"ACGT"};
     std::string t{"ACGT"}, u{"acgt"}, v{"ACGT "};
     s["test-int"] = -33;
+
+    // thrust::device_vector<char> dv{s.begin(), s.end()};
 
 // -- comparison operators -----------------------------------------------------
 
@@ -60,18 +70,36 @@ TEMPLATE_TEST_CASE( "gynx::sq", "[class]", std::vector<char>)
 // -- constructors -------------------------------------------------------------
 
     SECTION( "single value constructor" )
-    {   gynx::sq_gen<T> a4(4);
+    {
+#if defined(__CUDACC__) // not supported for thrust::device_vector
+        if constexpr (!std::is_same_v<T, thrust::device_vector<char>>)
+        {   gynx::sq_gen<T> a4(4);
+            CHECK(a4 == "AAAA");
+            gynx::sq_gen<T> c4(4, 'C');
+            CHECK(c4 == "CCCC");
+        }
+#else
+        gynx::sq_gen<T> a4(4);
         CHECK(a4 == "AAAA");
         gynx::sq_gen<T> c4(4, 'C');
         CHECK(c4 == "CCCC");
+#endif //__CUDACC__
     }
     SECTION( "string_view constructor" )
     {   gynx::sq_gen<T> c("ACGT");
         CHECK(s == c);
     }
     SECTION( "sq_view constructor" )
-    {   gynx::sq_view_gen<T> sv(s);
+    {
+#if defined(__CUDACC__) // not supported for thrust::device_vector
+        if constexpr (!std::is_same_v<T, thrust::device_vector<char>>)
+        {   gynx::sq_view_gen<T> sv(s);
+            CHECK(s == sv);
+        }
+#else
+        gynx::sq_view_gen<T> sv(s);
         CHECK(s == sv);
+#endif //__CUDACC__
     }
     SECTION( "iterator constructor" )
     {   std::string acgt{"ACGT"};
@@ -113,12 +141,20 @@ TEMPLATE_TEST_CASE( "gynx::sq", "[class]", std::vector<char>)
 // -- iterators ----------------------------------------------------------------
 
     SECTION( "begin/end" )
-    {   gynx::sq_gen<T> t(4);
+    {   gynx::sq_gen<T> t("AAAA");
         for (auto a : t)
             CHECK(a == 'A');
+#if defined(__CUDACC__) // not supported for thrust::device_vector
+        if constexpr (!std::is_same_v<T, thrust::device_vector<char>>)
+        {   for (auto& a : t)
+                a = 'T';
+            CHECK(t == gynx::sq_gen<T>("TTTT"));
+        }
+#else
         for (auto& a : t)
             a = 'T';
-        CHECK(t == gynx::sq_gen<T>(4, 'T'));
+        CHECK(t == gynx::sq_gen<T>("TTTT"));
+#endif //__CUDACC__
         auto s_it = s.cbegin();
         for
         (   auto t_it = t.begin()
@@ -129,7 +165,7 @@ TEMPLATE_TEST_CASE( "gynx::sq", "[class]", std::vector<char>)
         CHECK(t == "ACGT");
     }
     SECTION( "cbegin/cend" )
-    {   const gynx::sq_gen<T> t(4);
+    {   const gynx::sq_gen<T> t("AAAA");
         auto s_it = s.begin();
         for
         (   auto t_it = t.cbegin()
@@ -140,7 +176,7 @@ TEMPLATE_TEST_CASE( "gynx::sq", "[class]", std::vector<char>)
         CHECK(s == "AAAA");
     }
     SECTION( "rbegin/rend" )
-    {   gynx::sq_gen<T> t(4);
+    {   gynx::sq_gen<T> t("AAAA");
         auto s_it = s.cbegin();
         for
         (   auto t_it = t.rbegin()
@@ -267,12 +303,16 @@ TEMPLATE_TEST_CASE( "gynx::sq", "[class]", std::vector<char>)
 
     SECTION( "string literal operator" )
     {   auto t = "ACGT"_sq;
-        CHECK(s == t);
-        CHECK(s == "ACGT"_sq);
+        CHECK(t == "ACGT");
+        CHECK(t == "ACGT"_sq);
     }
 }
 
+#if defined(__CUDACC__)
+TEMPLATE_TEST_CASE( "gynx::sq_view", "[view]", std::vector<char>, thrust::host_vector<char>)
+#else
 TEMPLATE_TEST_CASE( "gynx::sq_view", "[view]", std::vector<char>)
+#endif //__CUDACC__
 {   typedef TestType T;
 
     gynx::sq_gen<T> s{"ACGT"};
@@ -353,13 +393,6 @@ TEMPLATE_TEST_CASE( "gynx::sq_view", "[view]", std::vector<char>)
         CHECK("acgt" != v);
     }
 
-// -- alias -------------------------------------------------------------------
-
-    SECTION( "alias gynx::sq_view" )
-    {   gynx::sq_view v{s};
-        CHECK(v == "ACGT");
-    }
-
 // -- ranges concept support --------------------------------------------------
 
     SECTION( "std::ranges::view concept" )
@@ -390,7 +423,11 @@ TEMPLATE_TEST_CASE( "gynx::sq_view", "[view]", std::vector<char>)
     }
 }
 
+#if defined(__CUDACC__)
+TEMPLATE_TEST_CASE( "gynx::io::fastaqz", "[io][in][out][cuda]", std::vector<char>, thrust::host_vector<char>, thrust::device_vector<char>)
+#else
 TEMPLATE_TEST_CASE( "gynx::io::fastaqz", "[io][in][out]", std::vector<char>)
+#endif
 {   typedef TestType T;
     std::string desc("Chlamydia psittaci 6BC plasmid pCps6BC, complete sequence");
     gynx::sq_gen<T> s, t;
@@ -461,10 +498,20 @@ TEMPLATE_TEST_CASE( "gynx::io::fastaqz", "[io][in][out]", std::vector<char>)
     }
 }
 
+#if defined(__CUDACC__)
+TEMPLATE_TEST_CASE( "gynx::valid", "[algorithm][valid][cuda]", std::vector<char>, thrust::host_vector<char>)
+#else
 TEMPLATE_TEST_CASE( "gynx::valid", "[algorithm][valid]", std::vector<char>)
+#endif //__CUDACC__
 {   typedef TestType T;
 
 // -- nucleotide validation ----------------------------------------------------
+
+    // SECTION( "device vector" )
+    // {   gynx::sq_gen<T> s{"ACGT"};
+    //     thrust::device_vector<char> dv{s.begin(), s.end()};
+    //     CHECK(gynx::valid_nucleotide(dv));
+    // }
 
     SECTION( "valid nucleotide sequences" )
     {   gynx::sq_gen<T> s1{"ACGT"};

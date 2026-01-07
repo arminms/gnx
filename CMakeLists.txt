@@ -19,7 +19,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-cmake_minimum_required(VERSION 3.18...3.26)
+cmake_minimum_required(VERSION 3.25.2...3.31)
 
 ## detect if gynx is being bundled, disable unit tests in that case
 #
@@ -52,10 +52,19 @@ endif()
 #
 include(GNUInstallDirs)
 include(FetchContent)
+include(CheckLanguage)
 
 ## check for compiler support for OpenMP
 #
 find_package(OpenMP REQUIRED)
+
+## check for CUDA support
+#
+check_language(CUDA 12)
+if(CMAKE_CUDA_COMPILER)
+  enable_language(CUDA)
+  find_package(CUDAToolkit)
+endif()
 
 ## check for zlib
 #

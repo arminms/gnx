@@ -36,11 +36,19 @@
 #include <typeindex>
 #include <cstdint>
 
+#if defined(__CUDACC__)
+    #include <thrust/host_vector.h>
+    #include <thrust/device_vector.h>
+    #include <thrust/memory.h>
+#endif // __CUDACC__
+
 #include <gynx/sq_view.hpp>
 #include <gynx/visitor.hpp>
 #include <gynx/io/fastaqz.hpp>
 
 namespace gynx {
+
+//
 
 /// @brief A generic sequence class template with tagged data support.
 /// @tparam Container The underlying container type to hold the sequence.
@@ -63,6 +71,8 @@ public:
     using const_iterator = typename Container::const_iterator;
     using reverse_iterator = typename Container::reverse_iterator;
     using const_reverse_iterator = typename Container::const_reverse_iterator;
+    using container_type = Container;
+    using map_type = Map;
 
     static constexpr size_type npos = static_cast<size_type>(-1);
 
@@ -85,17 +95,33 @@ public:
     /// @a value (default is 'A' (ASCII 65)).
     /// @param count The number of residues in the sequence.
     /// @param value The residue value to initialize each position with.
+#if defined(__CUDACC__)
+    sq_gen(size_type count, const_reference value = value_type(65))
+    requires (!std::is_same_v<Container, thrust::device_vector<value_type>>)
+    :   _sq(count, value)
+    ,   _ptr_td()
+    {}
+#else
     sq_gen(size_type count, const_reference value = value_type(65))
     :   _sq(count, value)
     ,   _ptr_td()
     {}
+#endif //__CUDACC__
     ///
     /// @brief Constructs a sequence from a sequence view.
     /// @param sv The sequence view to construct the sequence from.
+#if defined(__CUDACC__)
+    explicit sq_gen(sq_view_gen<Container> sv)
+    requires (!std::is_same_v<Container, thrust::device_vector<value_type>>)
+    :   _sq(std::begin(sv), std::end(sv))
+    ,   _ptr_td()
+    {}
+#else
     explicit sq_gen(sq_view_gen<Container> sv)
     :   _sq(std::begin(sv), std::end(sv))
     ,   _ptr_td()
     {}
+#endif //__CUDACC__
     ///
     template<typename InputIt>
     requires std::input_iterator<InputIt> &&
@@ -253,6 +279,20 @@ public:
     /// Returns a subsequence starting at position @a pos with length @a count.
     /// If @a count is gynx::sq::npos or exceeds the sequence length from
     /// @a pos, the subsequence extends to the end of the sequence.
+#if defined(__CUDACC__)
+    sq_gen<Container> operator()
+    (   size_type pos
+    ,   size_type count = npos
+    )   const
+    requires (std::is_same_v<Container, thrust::device_vector<value_type>>)
+    {   if (pos > _sq.size())
+            throw std::out_of_range("gynx::sq: pos > this->size()");
+        return sq_gen
+        (   _sq.begin() + pos
+        ,   (count > _sq.size() - pos) ? _sq.end() : _sq.begin() + pos + count
+        );
+    }
+#endif
     sq_view_gen<Container> operator()
     (   size_type pos
     ,   size_type count = npos
@@ -302,17 +342,23 @@ public:
     }
     ///
     /// Returns a const reference to the underlying container's data.
+#if defined(__CUDACC__)
+    const value_type* data() const noexcept
+    requires (!std::is_same_v<Container, thrust::device_vector<value_type>>)
+    {   return _sq.data();
+    }
+#else
     const value_type* data() const noexcept
     {   return _sq.data();
     }
+#endif
 
-// -- comparison operators -----------------------------------------------------
+    // -- comparison operators -----------------------------------------------------
     ///
-    /// Equality operator.
-    template<typename Container1, typename Container2>
-    friend
-    bool operator== (const sq_gen<Container1>& lhs, const sq_gen<Container2>& rhs)
-    {   return lhs._sq == rhs._sq;
+    /// Equality operator with another sq_gen of possibly different Container/Map.
+    template<typename Container2, typename Map2>
+    bool operator==(const sq_gen<Container2, Map2>& rhs) const
+    {   return _sq == rhs._sq;
     }
     ///
     /// Equality operator with std::string_view.
@@ -322,11 +368,10 @@ public:
         return std::equal(_sq.begin(), _sq.end(), sv.begin());
     }
     ///
-    /// Inequality operator.
-    template<typename Container1, typename Container2>
-    friend
-    bool operator!= (const sq_gen<Container1>& lhs, const sq_gen<Container2>& rhs)
-    {   return lhs._sq != rhs._sq;
+    /// Inequality operator with another sq_gen of possibly different Container/Map.
+    template<typename Container2, typename Map2>
+    bool operator!=(const sq_gen<Container2, Map2>& rhs) const
+    {   return _sq != rhs._sq;
     }
 
 // -- file i/o -----------------------------------------------------------------
@@ -363,8 +408,14 @@ public:
     /// Prints the sequence and its tagged data to the output stream @a os.
     void print(std::ostream& os) const
     {   os << std::boolalpha << _sq.size();
-        os.write(_sq.data(), _sq.size());
-        if (! _ptr_td) return;
+#if defined(__CUDACC__)
+        if constexpr (std::is_same_v<Container, thrust::device_vector<value_type>>)
+        {   thrust::host_vector<value_type> hv(_sq);
+            os.write(hv.data(), hv.size());
+        }
+        else
+#endif  //__CUDACC__
+            os.write(_sq.data(), _sq.size());
         for (const auto& [tag, data] : *_ptr_td)
         {   os << std::quoted(tag, '#');
             if
@@ -384,7 +435,15 @@ public:
     {   size_type n;
         is >> std::boolalpha >> n;
         _sq.resize(n);
-        is.read(_sq.data(), n);
+#if defined(__CUDACC__)
+        if constexpr (std::is_same_v<Container, thrust::device_vector<value_type>>)
+        {   thrust::host_vector<value_type> hv(n);
+            is.read(hv.data(), n);
+            thrust::copy(hv.begin(), hv.end(), _sq.begin());
+        }
+        else
+#endif  //__CUDACC__
+            is.read(_sq.data(), n);
         if (is.peek() == '#' && !_ptr_td)
             _ptr_td = std::make_unique<Map>();
         while (is.peek() == '#')
@@ -407,42 +466,34 @@ public:
     }
 };
 
-// -- comparison operators -----------------------------------------------------
-    ///
-    /// Helper to check if a type has .size()
-    template <typename T, typename = void>
-    struct has_size
-    :   std::false_type
-    {};
-    template <typename T>
-    struct has_size<T, std::void_t<decltype(std::declval<T>().size())>>
-    :   std::true_type
-    {};
-    ///
-    /// Equality operators
-    template<typename Container1, typename Container2>
-    bool operator== (const sq_gen<Container1>& lhs, const Container2& rhs)
-    {   if constexpr (has_size<Container2>::value)
-        {   if (lhs.size() != rhs.size())
-                return false;
-        }
-        return std::equal(lhs.begin(), lhs.end(), std::begin(rhs));
-    }
-    template<typename Container1, typename Container2>
-    bool operator== (const Container1& lhs, const sq_gen<Container2>& rhs)
-    {   if constexpr (has_size<Container1>::value)
-        {   if (lhs.size() != rhs.size())
-                return false;
-        }
-        return std::equal(std::begin(lhs), std::end(lhs), rhs.begin());
-    }
+// -- comparison operators (external) -----------------------------------------
     ///
     /// Symmetric operator for "literal" == sq_gen
     template<typename Container>
     bool operator==(std::string_view lhs, const sq_gen<Container>& rhs)
     {   return rhs == lhs; 
     }
-    ///    /// Specialization for C-string literal comparisons (const char*)
+    ///
+    /// Compare sq_gen with sq_view_gen
+    template<typename Container1, typename Map1, typename Container2>
+    bool operator==(const sq_gen<Container1, Map1>& lhs, const sq_view_gen<Container2>& rhs)
+    {   if (lhs.size() != rhs.size()) return false;
+        return std::equal(lhs.begin(), lhs.end(), rhs.begin());
+    }
+    template<typename Container1, typename Map1, typename Container2>
+    bool operator==(const sq_view_gen<Container2>& lhs, const sq_gen<Container1, Map1>& rhs)
+    {   return rhs == lhs;
+    }
+    template<typename Container1, typename Map1, typename Container2>
+    bool operator!=(const sq_gen<Container1, Map1>& lhs, const sq_view_gen<Container2>& rhs)
+    {   return ! (lhs == rhs);
+    }
+    template<typename Container1, typename Map1, typename Container2>
+    bool operator!=(const sq_view_gen<Container2>& lhs, const sq_gen<Container1, Map1>& rhs)
+    {   return ! (lhs == rhs);
+    }
+    ///
+    /// Specialization for C-string literal comparisons (const char*)
     template<typename Container>
     bool operator==(const char* lhs, const sq_gen<Container>& rhs)
     {   return std::string_view(lhs) == rhs;
@@ -451,13 +502,6 @@ public:
     bool operator==(const sq_gen<Container>& lhs, const char* rhs)
     {   return lhs == std::string_view(rhs);
     }
-    ///    /// Inequality operator.
-    template<typename Container1, typename Container2>
-    bool operator!= (const sq_gen<Container1>& lhs, const Container2& rhs)
-    {   return ! (lhs == rhs);   }
-    template<typename Container1, typename Container2>
-    bool operator!= (const Container1& lhs, const sq_gen<Container2>& rhs)
-    {   return ! (lhs == rhs);   }
 
 // -- i/o stream operators -----------------------------------------------------
     ///

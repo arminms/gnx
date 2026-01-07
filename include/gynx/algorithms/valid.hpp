@@ -86,6 +86,7 @@ inline bool valid
     auto n = last - first;
     std::size_t sum = 0;
 
+    // compile-time dispatch based on execution policy
     if constexpr (std::is_same_v<std::decay_t<ExecPolicy>, gynx::execution::unsequenced_policy>)
     {
         #pragma omp simd reduction(+:sum)

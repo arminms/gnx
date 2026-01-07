@@ -27,6 +27,14 @@ add_definitions(-DSAMPLE_READS="${sample_reads_SOURCE_DIR}/SRR10190173_1.fastq.g
 #
 add_executable(unit_tests unit_tests.cpp)
 
+if(CUDAToolkit_FOUND)
+  set_source_files_properties(unit_tests.cpp PROPERTIES LANGUAGE CUDA)
+  target_compile_options(unit_tests INTERFACE
+    $<$<COMPILE_LANGUAGE:CUDA>:--extended-lambda>
+    $<$<AND:$<CONFIG:Debug>,$<COMPILE_LANGUAGE:CUDA>>:-G;-src-in-ptx>
+  )
+endif()
+
 ## defining link libraries for unit tests
 #
 target_link_libraries(unit_tests PRIVATE
