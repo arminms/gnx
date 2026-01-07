@@ -41,8 +41,10 @@ jobs:
 
     - name: Configure with CMake (macOS)
       run: |
-        brew install llvm libomp zlib catch2
-        CXX=$(brew --prefix llvm)/bin/clang++ cmake -S ${{github.workspace}} -B build
+        export OpenMP_ROOT=$(brew --prefix)/opt/libomp
+        run: |
+          cmake -S ${{github.workspace}} -B build \
+          -DCMAKE_TOOLCHAIN_FILE=$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake
       if: matrix.os == 'macos-latest'
 
     - name: Build
@@ -50,4 +52,4 @@ jobs:
 
     - name: Test
       working-directory: ${{github.workspace}}/build
-      run: ctest
+      run: ctest --output-on-failure
