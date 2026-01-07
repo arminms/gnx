@@ -28,6 +28,10 @@ jobs:
     - name: Install dependencies via vcpkg
       run: vcpkg install catch2 zlib --binarysource="clear;x-gha,readwrite"
 
+    - name: Install libomp on macOS
+      run: brew install libomp
+      if: matrix.os == 'macos-latest'
+
     - name: Configure with CMake (Linux)
       run: |
         cmake -S ${{github.workspace}} -B build \
@@ -41,10 +45,13 @@ jobs:
 
     - name: Configure with CMake (macOS)
       run: |
-        export OpenMP_ROOT=$(brew --prefix)/opt/libomp
-        run: |
-          cmake -S ${{github.workspace}} -B build \
-          -DCMAKE_TOOLCHAIN_FILE=$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake
+        export OpenMP_ROOT=$(brew --prefix libomp)
+        cmake -S ${{github.workspace}} -B build \
+        -DCMAKE_TOOLCHAIN_FILE=$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake \
+        -DOpenMP_ROOT=$OpenMP_ROOT \
+        -DOpenMP_CXX_FLAGS="-Xpreprocessor -fopenmp -I$OpenMP_ROOT/include" \
+        -DOpenMP_CXX_LIB_NAMES="omp" \
+        -DOpenMP_omp_LIBRARY=$OpenMP_ROOT/lib/libomp.dylib
       if: matrix.os == 'macos-latest'
 
     - name: Build
