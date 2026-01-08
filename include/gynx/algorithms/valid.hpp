@@ -100,8 +100,9 @@ inline bool valid
             sum += table[static_cast<uint8_t>(first[i])];
     }
     else if constexpr (std::is_same_v<std::decay_t<ExecPolicy>, gynx::execution::parallel_unsequenced_policy>)
-    {
-        #pragma omp parallel for simd default(none) reduction(+:sum) shared(first,table,n)
+    {   // commented out line below must be used once MSVC supports it
+        // #pragma omp parallel for simd default(none) reduction(+:sum) shared(first,table,n)
+        #pragma omp parallel for default(none) reduction(+:sum) shared(first,table,n)
         for (int i = 0; i < n; ++i)
             sum += table[static_cast<uint8_t>(first[i])];
     }

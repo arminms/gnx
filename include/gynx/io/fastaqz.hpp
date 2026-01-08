@@ -155,7 +155,9 @@ struct fasta
         const typename Sequence::value_type* data = nullptr;
 #if defined(__CUDACC__) // handle device_vector
         thrust::host_vector<typename Sequence::value_type> h_seq;
-        if constexpr (std::is_same_v<typename Sequence::container_type, thrust::device_vector<typename Sequence::value_type>>)
+        if constexpr
+        (   std::is_same_v<typename Sequence::container_type, thrust::device_vector<typename Sequence::value_type>>
+        )
         {   h_seq.resize(std::size(seq));
             thrust::copy(seq.begin(), seq.end(), h_seq.begin());
             data = h_seq.data();
@@ -233,7 +235,9 @@ struct fasta_gz
         const typename Sequence::value_type* data = nullptr;
 #if defined(__CUDACC__) // handle device_vector
         thrust::host_vector<typename Sequence::value_type> h_seq;
-        if constexpr (std::is_same_v<typename Sequence::container_type, thrust::device_vector<typename Sequence::value_type>>)
+        if constexpr
+        (   std::is_same_v<typename Sequence::container_type, thrust::device_vector<typename Sequence::value_type>>
+        )
         {   h_seq.resize(std::size(seq));
             thrust::copy(seq.begin(), seq.end(), h_seq.begin());
             data = h_seq.data();
@@ -304,7 +308,9 @@ struct fastq
         const typename Sequence::value_type* data = nullptr;
 #if defined(__CUDACC__) // handle device_vector
         thrust::host_vector<typename Sequence::value_type> h_seq;
-        if constexpr (std::is_same_v<typename Sequence::container_type, thrust::device_vector<typename Sequence::value_type>>)
+        if constexpr
+        (   std::is_same_v<typename Sequence::container_type, thrust::device_vector<typename Sequence::value_type>>
+        )
         {   h_seq.resize(std::size(seq));
             thrust::copy(seq.begin(), seq.end(), h_seq.begin());
             data = h_seq.data();
@@ -414,7 +420,9 @@ struct fastq_gz
         const typename Sequence::value_type* data = nullptr;
 #if defined(__CUDACC__) // handle device_vector
         thrust::host_vector<typename Sequence::value_type> h_seq;
-        if constexpr (std::is_same_v<typename Sequence::container_type, thrust::device_vector<typename Sequence::value_type>>)
+        if constexpr
+        (   std::is_same_v<typename Sequence::container_type, thrust::device_vector<typename Sequence::value_type>>
+        )
         {   h_seq.resize(std::size(seq));
             thrust::copy(seq.begin(), seq.end(), h_seq.begin());
             data = h_seq.data();

@@ -39,6 +39,7 @@
 #if defined(__CUDACC__)
     #include <thrust/host_vector.h>
     #include <thrust/device_vector.h>
+    #include <thrust/universal_vector.h>
     #include <thrust/memory.h>
 #endif // __CUDACC__
 
@@ -47,9 +48,7 @@
 #include <gynx/io/fastaqz.hpp>
 
 namespace gynx {
-
 //
-
 /// @brief A generic sequence class template with tagged data support.
 /// @tparam Container The underlying container type to hold the sequence.
 /// @tparam Map The type of the map used for tagged data storage.
@@ -284,7 +283,10 @@ public:
     (   size_type pos
     ,   size_type count = npos
     )   const
-    requires (std::is_same_v<Container, thrust::device_vector<value_type>>)
+    requires
+    (   std::is_same_v<Container, thrust::device_vector<value_type>>
+    ||  std::is_same_v<Container, thrust::universal_vector<value_type>>
+    )
     {   if (pos > _sq.size())
             throw std::out_of_range("gynx::sq: pos > this->size()");
         return sq_gen
@@ -335,6 +337,14 @@ public:
             throw std::out_of_range("gynx::sq: tag not found -> " + tag);
         return _ptr_td->at(tag);
     }
+#if defined(__CUDACC__)
+    value_type* data()
+    {   return thrust::raw_pointer_cast(_sq.data());
+    }
+    const value_type* data() const
+    {   return thrust::raw_pointer_cast(_sq.data());
+    }
+#else
     ///
     /// Returns a reference to the underlying container's data.
     value_type* data() noexcept
@@ -342,12 +352,6 @@ public:
     }
     ///
     /// Returns a const reference to the underlying container's data.
-#if defined(__CUDACC__)
-    const value_type* data() const noexcept
-    requires (!std::is_same_v<Container, thrust::device_vector<value_type>>)
-    {   return _sq.data();
-    }
-#else
     const value_type* data() const noexcept
     {   return _sq.data();
     }
@@ -409,7 +413,10 @@ public:
     void print(std::ostream& os) const
     {   os << std::boolalpha << _sq.size();
 #if defined(__CUDACC__)
-        if constexpr (std::is_same_v<Container, thrust::device_vector<value_type>>)
+        if constexpr
+        (   std::is_same_v<Container, thrust::device_vector<value_type>>
+        ||  std::is_same_v<Container, thrust::universal_vector<value_type>>
+        )
         {   thrust::host_vector<value_type> hv(_sq);
             os.write(hv.data(), hv.size());
         }
@@ -436,7 +443,10 @@ public:
         is >> std::boolalpha >> n;
         _sq.resize(n);
 #if defined(__CUDACC__)
-        if constexpr (std::is_same_v<Container, thrust::device_vector<value_type>>)
+        if constexpr
+        (   std::is_same_v<Container, thrust::device_vector<value_type>>
+        ||  std::is_same_v<Container, thrust::universal_vector<value_type>>
+        )
         {   thrust::host_vector<value_type> hv(n);
             is.read(hv.data(), n);
             thrust::copy(hv.begin(), hv.end(), _sq.begin());

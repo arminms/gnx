@@ -21,18 +21,13 @@
 //
 #include <catch2/catch_all.hpp>
 
-#if defined(__CUDACC__)
-    #include <thrust/universal_vector.h>
-#endif
-
 #include <gynx/sq.hpp>
 #include <gynx/sq_view.hpp>
 #include <gynx/io/fastaqz.hpp>
 #include <gynx/algorithms/valid.hpp>
-// #include <gynx/lut/phred33.hpp>
 
 #if defined(__CUDACC__)
-TEMPLATE_TEST_CASE( "gynx::sq", "[class][cuda]", std::vector<char>, thrust::host_vector<char>, thrust::device_vector<char>)
+TEMPLATE_TEST_CASE( "gynx::sq", "[class][cuda]", std::vector<char>, thrust::host_vector<char>, thrust::device_vector<char>, thrust::universal_vector<char>)
 #else
 TEMPLATE_TEST_CASE( "gynx::sq", "[class]", std::vector<char>)
 #endif
@@ -72,7 +67,10 @@ TEMPLATE_TEST_CASE( "gynx::sq", "[class]", std::vector<char>)
     SECTION( "single value constructor" )
     {
 #if defined(__CUDACC__) // not supported for thrust::device_vector
-        if constexpr (!std::is_same_v<T, thrust::device_vector<char>>)
+        if constexpr
+        (   !std::is_same_v<T, thrust::device_vector<char>>
+        &&  !std::is_same_v<T, thrust::universal_vector<char>>
+        )
         {   gynx::sq_gen<T> a4(4);
             CHECK(a4 == "AAAA");
             gynx::sq_gen<T> c4(4, 'C');
@@ -92,7 +90,9 @@ TEMPLATE_TEST_CASE( "gynx::sq", "[class]", std::vector<char>)
     SECTION( "sq_view constructor" )
     {
 #if defined(__CUDACC__) // not supported for thrust::device_vector
-        if constexpr (!std::is_same_v<T, thrust::device_vector<char>>)
+        if constexpr
+        (   !std::is_same_v<T, thrust::device_vector<char>>
+        )
         {   gynx::sq_view_gen<T> sv(s);
             CHECK(s == sv);
         }
@@ -145,7 +145,10 @@ TEMPLATE_TEST_CASE( "gynx::sq", "[class]", std::vector<char>)
         for (auto a : t)
             CHECK(a == 'A');
 #if defined(__CUDACC__) // not supported for thrust::device_vector
-        if constexpr (!std::is_same_v<T, thrust::device_vector<char>>)
+        if constexpr
+        (   !std::is_same_v<T, thrust::device_vector<char>>
+        // &&  !std::is_same_v<T, thrust::universal_vector<char>>
+        )
         {   for (auto& a : t)
                 a = 'T';
             CHECK(t == gynx::sq_gen<T>("TTTT"));
@@ -309,7 +312,7 @@ TEMPLATE_TEST_CASE( "gynx::sq", "[class]", std::vector<char>)
 }
 
 #if defined(__CUDACC__)
-TEMPLATE_TEST_CASE( "gynx::sq_view", "[view]", std::vector<char>, thrust::host_vector<char>)
+TEMPLATE_TEST_CASE( "gynx::sq_view", "[view]", std::vector<char>, thrust::host_vector<char>, thrust::universal_vector<char>)
 #else
 TEMPLATE_TEST_CASE( "gynx::sq_view", "[view]", std::vector<char>)
 #endif //__CUDACC__
@@ -424,7 +427,7 @@ TEMPLATE_TEST_CASE( "gynx::sq_view", "[view]", std::vector<char>)
 }
 
 #if defined(__CUDACC__)
-TEMPLATE_TEST_CASE( "gynx::io::fastaqz", "[io][in][out][cuda]", std::vector<char>, thrust::host_vector<char>, thrust::device_vector<char>)
+TEMPLATE_TEST_CASE( "gynx::io::fastaqz", "[io][in][out][cuda]", std::vector<char>, thrust::host_vector<char>, thrust::device_vector<char>, thrust::universal_vector<char>)
 #else
 TEMPLATE_TEST_CASE( "gynx::io::fastaqz", "[io][in][out]", std::vector<char>)
 #endif
