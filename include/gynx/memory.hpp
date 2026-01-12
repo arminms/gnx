@@ -22,6 +22,7 @@
 #ifndef _GYNX_MEMORY_HPP_
 #define _GYNX_MEMORY_HPP_
 
+#include <cstdlib>
 #include <memory>
 #include <type_traits>
 
@@ -291,7 +292,11 @@ namespace gynx
         // assert(nail::is_power_of_two(align));
         if (0 == size)
             return nullptr;
+#if defined(_WIN32)
+        void* ptr = _aligned_malloc(size, align);
+#else
         void* ptr = std::aligned_alloc(align, size);
+#endif // _WIN32
         return ptr;
     }
 
@@ -301,7 +306,11 @@ namespace gynx
     // detail::allocate_aligned_memory
     void
     detail::deallocate_aligned_memory(void *ptr) noexcept
+#if defined(_WIN32)
+    {   return _aligned_free(ptr);   }
+#else
     {   return free(ptr);   }
+#endif // _WIN32
 
 }  // namespace gynx
 
