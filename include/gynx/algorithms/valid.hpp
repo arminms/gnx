@@ -27,6 +27,11 @@
 #include <iterator>
 #include <ranges>
 #include <utility>
+#include <cstddef>
+
+#if defined(__CUDACC__)
+#include <cub/cub.cuh>
+#endif // __CUDACC__
 
 #include <gynx/execution.hpp>
 #include <gynx/lut/valid.hpp>
@@ -38,6 +43,55 @@ enum class sequence_type
 {   nucleotide   ///< DNA/RNA sequence
 ,   peptide      ///< Protein/amino acid sequence
 };
+
+#if defined(__CUDACC__)
+namespace kernel {
+
+#define BLOCK_THREADS 256
+#define ITEMS_PER_THREAD 4
+
+template<typename T, typename SumT, typename SizeT, typename TableT>
+__global__ void valid_kernel
+(   T* d_in
+,   SumT* d_out
+,   SizeT n
+,   TableT* lut
+)
+{   // allocate shared memory for the lookup table
+    __shared__ TableT shared_lut[256];
+    int tid = threadIdx.x;
+    shared_lut[tid] = lut[tid];
+    __syncthreads();
+
+    typedef cub::BlockReduce<SumT, BLOCK_THREADS> BlockReduceT;
+    // allocate shared memory for CUB
+    __shared__ typename BlockReduceT::TempStorage temp_storage;
+
+    SumT local_sum = 0;
+
+    for (SizeT i = 0; i < ITEMS_PER_THREAD; ++i)
+    {   // thread Coarsening loop
+        SizeT idx
+        =   static_cast<SizeT>(blockIdx.x)
+        *   (BLOCK_THREADS * ITEMS_PER_THREAD)
+        +   tid
+        *   ITEMS_PER_THREAD
+        +   i
+        ;
+        if (idx < n)
+            local_sum += shared_lut[static_cast<TableT>(d_in[idx])];
+    }
+
+    // block reduction (only thread 0 returns the valid aggregate)
+    T block_sum = BlockReduceT(temp_storage).Sum(local_sum);
+
+    if (tid == 0)
+        d_out[blockIdx.x] = block_sum;
+}
+
+} // end kernel namespace
+
+#endif // __CUDACC__
 
 /// @brief Check if all characters in a sequence are valid.
 /// @tparam Iterator Forward iterator type
@@ -79,12 +133,15 @@ inline bool valid
 //  std::span<const uint8_t> lutv = std::span<const uint8_t>{lut::valid_nucleotide}
 ,   sequence_type type = sequence_type::nucleotide
 )
-{   const auto& table = (type == sequence_type::nucleotide) 
+{   typedef typename std::iterator_traits<Iterator>::value_type value_type;
+    typedef typename std::iterator_traits<Iterator>::difference_type difference_type;
+
+    const auto& table = (type == sequence_type::nucleotide) 
     ?   lut::valid_nucleotide 
     :   lut::valid_peptide;
 
-    auto n = last - first;
-    std::size_t sum = 0;
+    difference_type n = last - first;
+    difference_type sum = 0;
 
     // compile-time dispatch based on execution policy
     if constexpr (std::is_same_v<std::decay_t<ExecPolicy>, gynx::execution::unsequenced_policy>)
@@ -100,42 +157,73 @@ inline bool valid
             sum += table[static_cast<uint8_t>(first[i])];
     }
     else if constexpr (std::is_same_v<std::decay_t<ExecPolicy>, gynx::execution::parallel_unsequenced_policy>)
-    {   // commented out line below must be used once MSVC supports it
-        // #pragma omp parallel for simd default(none) reduction(+:sum) shared(first,table,n)
+    {
+#if defined(_WIN32)
         #pragma omp parallel for default(none) reduction(+:sum) shared(first,table,n)
+#else
+        #pragma omp parallel for simd default(none) reduction(+:sum) shared(first,table,n)
+#endif // _WIN32
         for (int i = 0; i < n; ++i)
             sum += table[static_cast<uint8_t>(first[i])];
     }
+#if defined(__CUDACC__)
+    else if constexpr (std::is_same_v<std::decay_t<ExecPolicy>, gynx::execution::data_parallel_cuda_policy>)
+    {   // each thread handles 'ITEMS_PER_THREAD' elements.
+        // each block handles 'BLOCK_THREADS * ITEMS_PER_THREAD' elements.
+        difference_type elements_per_block = BLOCK_THREADS * ITEMS_PER_THREAD;
+
+        // calculate number of blocks needed (ceiling division)
+        unsigned int grid_size = (n + elements_per_block - 1) / elements_per_block;
+
+        thrust::device_vector<difference_type> d_partial_sums(grid_size);
+        thrust::device_vector<uint8_t> d_lut(table.begin(), table.end());
+
+        kernel::valid_kernel<<<grid_size, BLOCK_THREADS>>>
+        (   thrust::raw_pointer_cast(&first[0])
+        ,   thrust::raw_pointer_cast(d_partial_sums.data())
+        ,   n
+        ,   thrust::raw_pointer_cast(d_lut.data())
+        );
+
+        sum = thrust::reduce
+        (   d_partial_sums.begin()
+        ,   d_partial_sums.end()
+        ,   0
+        ,   thrust::plus<difference_type>()
+        );
+    }
+#endif // __CUDACC__
     else
         return valid(first, last, type);
 
     return sum == 0;
 }
 
-/// @brief Check if all characters in a sequence container are valid.
-/// @tparam Container Container type with begin() and end() methods
-/// @param seq The sequence container to validate
+/// @brief Check if all characters in a sequence range are valid.
+/// @tparam Range Range type with begin() and end() methods
+/// @param seq The sequence range to validate
 /// @param type Type of sequence to validate (nucleotide or peptide)
 /// @return true if all characters are valid, false otherwise
-template<std::ranges::input_range Container>
+template<std::ranges::input_range Range>
 constexpr bool valid
-(   const Container& seq
+(   const Range& seq
 ,   sequence_type type = sequence_type::nucleotide
 )
-{   return valid(std::begin(seq), std::end(seq), type);
+{
+    return valid(std::begin(seq), std::end(seq), type);
 }
 
 /// @brief Check if all characters in a sequence container are valid using an execution policy.
 /// @tparam ExecPolicy Execution policy type (e.g., std::execution::seq)
-/// @tparam Container Container type with begin() and end() methods
+/// @tparam Range Range type with begin() and end() methods
 /// @param policy Execution policy controlling algorithm execution
-/// @param seq The sequence container to validate
+/// @param seq The sequence range to validate
 /// @param type Type of sequence to validate (nucleotide or peptide)
 /// @return true if all characters are valid, false otherwise
-template<typename ExecPolicy, std::ranges::input_range Container>
+template<typename ExecPolicy, std::ranges::input_range Range>
 inline bool valid
 (   ExecPolicy&& policy
-,   const Container& seq
+,   const Range& seq
 ,   sequence_type type = sequence_type::nucleotide
 )
 {   return valid

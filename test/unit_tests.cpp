@@ -642,7 +642,6 @@ TEMPLATE_TEST_CASE( "gynx::valid", "[algorithm][valid]", std::vector<char>)
     SECTION( "validation with sq_view" )
     {   gynx::sq_gen<T> s{"ACGTACGT"};
         gynx::sq_view_gen<T> view{s};
-        
         CHECK(gynx::valid_nucleotide(view));
         CHECK(gynx::valid_nucleotide(view.begin(), view.end()));
     }
@@ -686,3 +685,20 @@ TEMPLATE_TEST_CASE( "gynx::valid", "[algorithm][valid]", std::vector<char>)
         CHECK(gynx::valid_nucleotide(result));
     }
 }
+
+#if defined(__CUDACC__)
+TEMPLATE_TEST_CASE( "gynx::valid::device", "[algorithm][valid][cuda]", thrust::device_vector<char>, thrust::universal_vector<char>)
+{   typedef TestType T;
+
+//-- nucleotide validation -----------------------------------------------------
+
+    SECTION( "device vector" )
+    {   gynx::sq_gen<T> s;
+        s.load(SAMPLE_GENOME, 0);
+        CHECK(s.size() > 0);
+        CHECK(gynx::valid_nucleotide(gynx::execution::cuda, s));
+        s[2] = 'Z';
+        CHECK_FALSE(gynx::valid_nucleotide(gynx::execution::cuda, s));
+    }
+}
+#endif //__CUDACC__

@@ -50,6 +50,7 @@ public:
     using const_reference = const value_type&;
     using const_iterator = const_pointer;
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+    using container_type = Container;
 
     static constexpr size_type npos = static_cast<size_type>(-1);
 
