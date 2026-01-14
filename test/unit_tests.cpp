@@ -555,10 +555,10 @@ TEMPLATE_TEST_CASE( "gynx::valid", "[algorithm][valid]", std::vector<char>)
         CHECK_FALSE(gynx::valid_nucleotide(s5));
     }
 
-    // SECTION( "empty nucleotide sequence" )
-    // {   gynx::sq_gen<T> s{""};
-    //     CHECK(gynx::valid_nucleotide(s));
-    // }
+    SECTION( "empty nucleotide sequence" )
+    {   gynx::sq_gen<T> s{""};
+        CHECK(gynx::valid_nucleotide(s));
+    }
 
 // -- peptide validation -------------------------------------------------------
 
@@ -600,10 +600,10 @@ TEMPLATE_TEST_CASE( "gynx::valid", "[algorithm][valid]", std::vector<char>)
         CHECK_FALSE(gynx::valid_peptide(s4));
     }
 
-    // SECTION( "empty peptide sequence" )
-    // {   gynx::sq_gen<T> s{""};
-    //     CHECK(gynx::valid_peptide(s));
-    // }
+    SECTION( "empty sequence" )
+    {   gynx::sq_gen<T> s{""};
+        CHECK(gynx::valid(s));
+    }
 
 // -- iterator-based validation ------------------------------------------------
 

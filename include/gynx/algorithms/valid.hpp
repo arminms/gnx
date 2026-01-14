@@ -98,17 +98,18 @@ bool valid_device
 {   typedef typename std::iterator_traits<Iterator>::value_type value_type;
     typedef typename std::iterator_traits<Iterator>::difference_type difference_type;
 
+    difference_type n = last - first;
+    if (n <= 0)
+        return true;
+
     const auto& table = nucleotide ? lut::valid_nucleotide : lut::valid_peptide;
+    difference_type sum = 0;
+    difference_type elements_per_block = BLOCK_THREADS * ITEMS_PER_THREAD;
+    unsigned int grid_size = (n + elements_per_block - 1) / elements_per_block;
 
     cudaStream_t stream = 0;
     if constexpr (has_stream_member<ExecPolicy>)
        stream = policy.stream();
-
-    difference_type n = last - first;
-    difference_type sum = 0;
-    difference_type elements_per_block = BLOCK_THREADS * ITEMS_PER_THREAD;
-
-    unsigned int grid_size = (n + elements_per_block - 1) / elements_per_block;
 
     thrust::device_vector<difference_type> d_partial_sums(grid_size);
     thrust::device_vector<uint8_t> d_lut(table.begin(), table.end());
