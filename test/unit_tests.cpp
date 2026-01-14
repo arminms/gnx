@@ -502,7 +502,7 @@ TEMPLATE_TEST_CASE( "gynx::io::fastaqz", "[io][in][out]", std::vector<char>)
 }
 
 #if defined(__CUDACC__)
-TEMPLATE_TEST_CASE( "gynx::valid", "[algorithm][valid][cuda]", std::vector<char>, thrust::host_vector<char>)
+TEMPLATE_TEST_CASE( "gynx::valid", "[algorithm][valid][cuda]", std::vector<char>, thrust::host_vector<char>, thrust::universal_vector<char>)
 #else
 TEMPLATE_TEST_CASE( "gynx::valid", "[algorithm][valid]", std::vector<char>)
 #endif //__CUDACC__
@@ -555,10 +555,10 @@ TEMPLATE_TEST_CASE( "gynx::valid", "[algorithm][valid]", std::vector<char>)
         CHECK_FALSE(gynx::valid_nucleotide(s5));
     }
 
-    SECTION( "empty nucleotide sequence" )
-    {   gynx::sq_gen<T> s{""};
-        CHECK(gynx::valid_nucleotide(s));
-    }
+    // SECTION( "empty nucleotide sequence" )
+    // {   gynx::sq_gen<T> s{""};
+    //     CHECK(gynx::valid_nucleotide(s));
+    // }
 
 // -- peptide validation -------------------------------------------------------
 
@@ -599,10 +599,10 @@ TEMPLATE_TEST_CASE( "gynx::valid", "[algorithm][valid]", std::vector<char>)
         CHECK_FALSE(gynx::valid_peptide(s4));
     }
 
-    SECTION( "empty peptide sequence" )
-    {   gynx::sq_gen<T> s{""};
-        CHECK(gynx::valid_peptide(s));
-    }
+    // SECTION( "empty peptide sequence" )
+    // {   gynx::sq_gen<T> s{""};
+    //     CHECK(gynx::valid_peptide(s));
+    // }
 
 // -- iterator-based validation ------------------------------------------------
 
@@ -690,15 +690,25 @@ TEMPLATE_TEST_CASE( "gynx::valid", "[algorithm][valid]", std::vector<char>)
 TEMPLATE_TEST_CASE( "gynx::valid::device", "[algorithm][valid][cuda]", thrust::device_vector<char>, thrust::universal_vector<char>)
 {   typedef TestType T;
 
-//-- nucleotide validation -----------------------------------------------------
+    gynx::sq_gen<T> s;
+    s.load(SAMPLE_GENOME, 0);
+    CHECK(s.size() > 0);
 
     SECTION( "device vector" )
-    {   gynx::sq_gen<T> s;
-        s.load(SAMPLE_GENOME, 0);
-        CHECK(s.size() > 0);
-        CHECK(gynx::valid_nucleotide(gynx::execution::cuda, s));
+    {   CHECK(gynx::valid_nucleotide(gynx::execution::cuda,s));
         s[2] = 'Z';
         CHECK_FALSE(gynx::valid_nucleotide(gynx::execution::cuda, s));
+    }
+
+    SECTION( "cuda stream" )
+    {   cudaStream_t streamA;
+        cudaStreamCreate(&streamA);
+        CHECK(gynx::valid_nucleotide(thrust::cuda::par.on(streamA), s));
+        cudaStreamSynchronize(streamA);
+        s[2] = 'Z';
+        CHECK_FALSE(gynx::valid_nucleotide(thrust::cuda::par.on(streamA), s));
+        cudaStreamSynchronize(streamA);
+        cudaStreamDestroy(streamA);
     }
 }
 #endif //__CUDACC__

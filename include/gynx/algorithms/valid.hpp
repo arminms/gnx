@@ -33,6 +33,7 @@
 #include <cub/cub.cuh>
 #endif // __CUDACC__
 
+#include <gynx/concepts.hpp>
 #include <gynx/execution.hpp>
 #include <gynx/lut/valid.hpp>
 
@@ -43,6 +44,8 @@ enum class sequence_type
 {   nucleotide   ///< DNA/RNA sequence
 ,   peptide      ///< Protein/amino acid sequence
 };
+
+namespace detail {
 
 #if defined(__CUDACC__)
 namespace kernel {
@@ -91,7 +94,52 @@ __global__ void valid_kernel
 
 } // end kernel namespace
 
+template<typename ExecPolicy, device_resident_iterator Iterator>
+bool valid_device
+(   const ExecPolicy& policy
+,   Iterator first
+,   Iterator last
+,   sequence_type type = sequence_type::nucleotide
+)
+{   typedef typename std::iterator_traits<Iterator>::value_type value_type;
+    typedef typename std::iterator_traits<Iterator>::difference_type difference_type;
+
+    const auto& table = (type == sequence_type::nucleotide) 
+    ?   lut::valid_nucleotide 
+    :   lut::valid_peptide;
+
+    cudaStream_t stream = 0;
+    if constexpr (has_stream_member<ExecPolicy>)
+       stream = policy.stream();
+
+    difference_type n = last - first;
+    difference_type sum = 0;
+    difference_type elements_per_block = BLOCK_THREADS * ITEMS_PER_THREAD;
+
+    unsigned int grid_size = (n + elements_per_block - 1) / elements_per_block;
+
+    thrust::device_vector<difference_type> d_partial_sums(grid_size);
+    thrust::device_vector<uint8_t> d_lut(table.begin(), table.end());
+
+    kernel::valid_kernel<<<grid_size, BLOCK_THREADS, 0, stream>>>
+    (   thrust::raw_pointer_cast(&first[0])
+    ,   thrust::raw_pointer_cast(d_partial_sums.data())
+    ,   n
+    ,   thrust::raw_pointer_cast(d_lut.data())
+    );
+
+    sum = thrust::reduce
+    (   d_partial_sums.begin()
+    ,   d_partial_sums.end()
+    ,   0
+    ,   thrust::plus<difference_type>()
+    );
+
+    return sum == 0;
+}
 #endif // __CUDACC__
+
+} // end detail namespace
 
 /// @brief Check if all characters in a sequence are valid.
 /// @tparam Iterator Forward iterator type
@@ -99,7 +147,19 @@ __global__ void valid_kernel
 /// @param last Iterator to the end of the sequence
 /// @param type Type of sequence to validate (nucleotide or peptide)
 /// @return true if all characters are valid, false otherwise
+#if defined(__CUDACC__)
+template<device_resident_iterator Iterator>
+constexpr bool valid
+(   Iterator first
+,   Iterator last
+,   sequence_type type = sequence_type::nucleotide
+)
+{   return detail::valid_device(thrust::cuda::par, first, last, type);
+}
+template<host_resident_iterator Iterator>
+#else
 template<typename Iterator>
+#endif
 constexpr bool valid
 (   Iterator first
 ,   Iterator last
@@ -123,7 +183,25 @@ constexpr bool valid
 /// @param last Iterator to the end of the sequence
 /// @param type Type of sequence to validate (nucleotide or peptide)
 /// @return true if all characters are valid, false otherwise
+#if defined(__CUDACC__)
+template<typename ExecPolicy, device_resident_iterator Iterator>
+inline bool valid
+(   ExecPolicy&& policy
+,   Iterator first
+,   Iterator last
+,   sequence_type type = sequence_type::nucleotide
+)
+{   return detail::valid_device
+    (   std::forward<ExecPolicy>(policy)
+    ,   first
+    ,   last
+    ,   type
+    );
+}
+template<typename ExecPolicy, host_resident_iterator Iterator>
+#else
 template<typename ExecPolicy, std::random_access_iterator Iterator>
+#endif
 requires gynx::is_execution_policy_v<std::decay_t<ExecPolicy>>
 inline bool valid
 (   ExecPolicy&& policy
@@ -166,33 +244,6 @@ inline bool valid
         for (int i = 0; i < n; ++i)
             sum += table[static_cast<uint8_t>(first[i])];
     }
-#if defined(__CUDACC__)
-    else if constexpr (std::is_same_v<std::decay_t<ExecPolicy>, gynx::execution::data_parallel_cuda_policy>)
-    {   // each thread handles 'ITEMS_PER_THREAD' elements.
-        // each block handles 'BLOCK_THREADS * ITEMS_PER_THREAD' elements.
-        difference_type elements_per_block = BLOCK_THREADS * ITEMS_PER_THREAD;
-
-        // calculate number of blocks needed (ceiling division)
-        unsigned int grid_size = (n + elements_per_block - 1) / elements_per_block;
-
-        thrust::device_vector<difference_type> d_partial_sums(grid_size);
-        thrust::device_vector<uint8_t> d_lut(table.begin(), table.end());
-
-        kernel::valid_kernel<<<grid_size, BLOCK_THREADS>>>
-        (   thrust::raw_pointer_cast(&first[0])
-        ,   thrust::raw_pointer_cast(d_partial_sums.data())
-        ,   n
-        ,   thrust::raw_pointer_cast(d_lut.data())
-        );
-
-        sum = thrust::reduce
-        (   d_partial_sums.begin()
-        ,   d_partial_sums.end()
-        ,   0
-        ,   thrust::plus<difference_type>()
-        );
-    }
-#endif // __CUDACC__
     else
         return valid(first, last, type);
 
@@ -209,8 +260,7 @@ constexpr bool valid
 (   const Range& seq
 ,   sequence_type type = sequence_type::nucleotide
 )
-{
-    return valid(std::begin(seq), std::end(seq), type);
+{   return valid(std::begin(seq), std::end(seq), type);
 }
 
 /// @brief Check if all characters in a sequence container are valid using an execution policy.
