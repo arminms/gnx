@@ -66,17 +66,12 @@ if(CMAKE_CUDA_COMPILER)
   find_package(CUDAToolkit)
 endif()
 
-## check for HIP support
+## check for ROCm support
 #
-if(CMAKE_HIP_COMPILER)
+check_language(HIP 6)
+if (CMAKE_HIP_COMPILER)
   enable_language(HIP)
-else()
-  list(APPEND CMAKE_PREFIX_PATH /opt/rocm/hip /opt/rocm)
-endif()
-find_package(hip)
-if(hip_FOUND)
-  enable_language(HIP)
-  find_package(rocthrust REQUIRED)
+  find_package(hip HINTS $ENV{HIP_PATH} /opt/rocm/hip /opt/rocm)
 endif()
 
 ## check for zlib
