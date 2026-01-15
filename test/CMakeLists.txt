@@ -35,6 +35,15 @@ if(CUDAToolkit_FOUND)
   )
 endif()
 
+if(rocthrust_FOUND)
+  set_source_files_properties(unit_tests.cpp PROPERTIES LANGUAGE HIP)
+  target_compile_options(unit_tests PRIVATE
+    -Wno-unused-result
+    $<$<COMPILE_LANGUAGE:HIP>:--offload-arch=gfx942>
+  )
+  target_link_libraries(unit_tests INTERFACE roc::rocthrust)
+endif()
+
 ## defining link libraries for unit tests
 #
 target_link_libraries(unit_tests PRIVATE

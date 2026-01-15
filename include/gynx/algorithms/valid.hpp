@@ -31,6 +31,8 @@
 
 #if defined(__CUDACC__)
 #include <cub/cub.cuh>
+#elif defined(__HIPCC__)
+#include <hipcub/hipcub.hpp>
 #endif // __CUDACC__
 
 #include <gynx/concepts.hpp>
@@ -41,7 +43,7 @@ namespace gynx {
 
 namespace detail {
 
-#if defined(__CUDACC__)
+#if defined(__CUDACC__) || defined(__HIPCC__)
 namespace kernel {
 
 #define BLOCK_THREADS 256
@@ -60,7 +62,11 @@ __global__ void valid_kernel
     shared_lut[tid] = lut[tid];
     __syncthreads();
 
+#if defined(__HIPCC__)
+    typedef hipcub::BlockReduce<SumT, BLOCK_THREADS> BlockReduceT;
+#else
     typedef cub::BlockReduce<SumT, BLOCK_THREADS> BlockReduceT;
+#endif
     // allocate shared memory for CUB
     __shared__ typename BlockReduceT::TempStorage temp_storage;
 
@@ -107,7 +113,11 @@ bool valid_device
     difference_type elements_per_block = BLOCK_THREADS * ITEMS_PER_THREAD;
     unsigned int grid_size = (n + elements_per_block - 1) / elements_per_block;
 
+#if defined(__HIPCC__)
+    hipStream_t stream = 0;
+#else
     cudaStream_t stream = 0;
+#endif
     if constexpr (has_stream_member<ExecPolicy>)
        stream = policy.stream();
 
@@ -151,6 +161,16 @@ constexpr bool valid
 {   return detail::valid_device(thrust::cuda::par, first, last, nucleotide);
 }
 template<host_resident_iterator Iterator>
+#elif defined(__HIPCC__)
+template<device_resident_iterator Iterator>
+constexpr bool valid
+(   Iterator first
+,   Iterator last
+,   bool nucleotide = false
+)
+{   return detail::valid_device(thrust::hip_rocprim::par, first, last, nucleotide);
+}
+template<host_resident_iterator Iterator>
 #else
 template<typename Iterator>
 #endif
@@ -175,7 +195,7 @@ constexpr bool valid
 /// @param nucleotide Type of sequence to validate (true for nucleotide,
 /// false for peptide/nucleotide)
 /// @return true if all characters are valid, false otherwise
-#if defined(__CUDACC__)
+#if defined(__CUDACC__) || defined(__HIPCC__)
 template<typename ExecPolicy, device_resident_iterator Iterator>
 inline bool valid
 (   ExecPolicy&& policy

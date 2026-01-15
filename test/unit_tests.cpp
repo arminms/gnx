@@ -26,7 +26,7 @@
 #include <gynx/io/fastaqz.hpp>
 #include <gynx/algorithms/valid.hpp>
 
-#if defined(__CUDACC__)
+#if defined(__CUDACC__) || defined(__HIPCC__)
 TEMPLATE_TEST_CASE( "gynx::sq", "[class][cuda]", std::vector<char>, thrust::host_vector<char>, thrust::device_vector<char>, thrust::universal_vector<char>)
 #else
 TEMPLATE_TEST_CASE( "gynx::sq", "[class]", std::vector<char>)
@@ -66,7 +66,7 @@ TEMPLATE_TEST_CASE( "gynx::sq", "[class]", std::vector<char>)
 
     SECTION( "single value constructor" )
     {
-#if defined(__CUDACC__) // not supported for thrust::device_vector
+#if defined(__CUDACC__) || defined(__HIPCC__) // not supported for thrust::device_vector
         if constexpr
         (   !std::is_same_v<T, thrust::device_vector<char>>
         &&  !std::is_same_v<T, thrust::universal_vector<char>>
@@ -89,7 +89,7 @@ TEMPLATE_TEST_CASE( "gynx::sq", "[class]", std::vector<char>)
     }
     SECTION( "sq_view constructor" )
     {
-#if defined(__CUDACC__) // not supported for thrust::device_vector
+#if defined(__CUDACC__) || defined(__HIPCC__) // not supported for thrust::device_vector
         if constexpr
         (   !std::is_same_v<T, thrust::device_vector<char>>
         )
@@ -144,7 +144,7 @@ TEMPLATE_TEST_CASE( "gynx::sq", "[class]", std::vector<char>)
     {   gynx::sq_gen<T> t("AAAA");
         for (auto a : t)
             CHECK(a == 'A');
-#if defined(__CUDACC__) // not supported for thrust::device_vector
+#if defined(__CUDACC__) || defined(__HIPCC__) // not supported for thrust::device_vector
         if constexpr
         (   !std::is_same_v<T, thrust::device_vector<char>>
         // &&  !std::is_same_v<T, thrust::universal_vector<char>>
@@ -311,7 +311,7 @@ TEMPLATE_TEST_CASE( "gynx::sq", "[class]", std::vector<char>)
     }
 }
 
-#if defined(__CUDACC__)
+#if defined(__CUDACC__) || defined(__HIPCC__)
 TEMPLATE_TEST_CASE( "gynx::sq_view", "[view]", std::vector<char>, thrust::host_vector<char>, thrust::universal_vector<char>)
 #else
 TEMPLATE_TEST_CASE( "gynx::sq_view", "[view]", std::vector<char>)
@@ -426,7 +426,7 @@ TEMPLATE_TEST_CASE( "gynx::sq_view", "[view]", std::vector<char>)
     }
 }
 
-#if defined(__CUDACC__)
+#if defined(__CUDACC__) || defined(__HIPCC__)
 TEMPLATE_TEST_CASE( "gynx::io::fastaqz", "[io][in][out][cuda]", std::vector<char>, thrust::host_vector<char>, thrust::device_vector<char>, thrust::universal_vector<char>)
 #else
 TEMPLATE_TEST_CASE( "gynx::io::fastaqz", "[io][in][out]", std::vector<char>)
@@ -501,7 +501,7 @@ TEMPLATE_TEST_CASE( "gynx::io::fastaqz", "[io][in][out]", std::vector<char>)
     }
 }
 
-#if defined(__CUDACC__)
+#if defined(__CUDACC__) || defined(__HIPCC__)
 TEMPLATE_TEST_CASE( "gynx::valid", "[algorithm][valid][cuda]", std::vector<char>, thrust::host_vector<char>, thrust::universal_vector<char>)
 #else
 TEMPLATE_TEST_CASE( "gynx::valid", "[algorithm][valid]", std::vector<char>)
@@ -696,9 +696,9 @@ TEMPLATE_TEST_CASE( "gynx::valid::device", "[algorithm][valid][cuda]", thrust::d
     CHECK(s.size() > 0);
 
     SECTION( "device vector" )
-    {   CHECK(gynx::valid_nucleotide(gynx::execution::cuda,s));
+    {   CHECK(gynx::valid_nucleotide(thrust::device,s));
         s[2] = 'Z';
-        CHECK_FALSE(gynx::valid_nucleotide(gynx::execution::cuda, s));
+        CHECK_FALSE(gynx::valid_nucleotide(thrust::device, s));
     }
 
     SECTION( "cuda stream" )
@@ -713,3 +713,30 @@ TEMPLATE_TEST_CASE( "gynx::valid::device", "[algorithm][valid][cuda]", thrust::d
     }
 }
 #endif //__CUDACC__
+
+#if defined(__HIPCC__)
+TEMPLATE_TEST_CASE( "gynx::valid::device", "[algorithm][valid][rocm]", thrust::device_vector<char>, thrust::universal_vector<char>)
+{   typedef TestType T;
+
+    gynx::sq_gen<T> s;
+    s.load(SAMPLE_GENOME, 0);
+    CHECK(s.size() > 0);
+
+    SECTION( "device vector" )
+    {   CHECK(gynx::valid_nucleotide(thrust::hip_rocprim::par, s));
+        s[2] = 'Z';
+        CHECK_FALSE(gynx::valid_nucleotide(thrust::hip_rocprim::par, s));
+    }
+
+    SECTION( "cuda stream" )
+    {   hipStream_t streamA;
+        hipStreamCreate(&streamA);
+        CHECK(gynx::valid_nucleotide(thrust::hip::par.on(streamA), s));
+        hipStreamSynchronize(streamA);
+        s[2] = 'Z';
+        CHECK_FALSE(gynx::valid_nucleotide(thrust::hip::par.on(streamA), s));
+        hipStreamSynchronize(streamA);
+        hipStreamDestroy(streamA);
+    }
+}
+#endif //__HIPCC__

@@ -154,7 +154,7 @@ struct fasta
         ,   fp
         );
         const typename Sequence::value_type* data = nullptr;
-#if defined(__CUDACC__) // handle device_vector
+#if defined(__CUDACC__) || defined(__HIPCC__) // handle device_vector
         universal_host_pinned_vector<typename Sequence::value_type> h_seq;
         if constexpr
         (   std::is_same_v<typename Sequence::container_type, thrust::device_vector<typename Sequence::value_type>>
@@ -234,7 +234,7 @@ struct fasta_gz
         std::string header = ">" + id + desc + "\n";
         gzwrite(fp, header.c_str(), header.size());
         const typename Sequence::value_type* data = nullptr;
-#if defined(__CUDACC__) // handle device_vector
+#if defined(__CUDACC__) || defined(__HIPCC__) // handle device_vector
         universal_host_pinned_vector<typename Sequence::value_type> h_seq;
         if constexpr
         (   std::is_same_v<typename Sequence::container_type, thrust::device_vector<typename Sequence::value_type>>
@@ -307,7 +307,7 @@ struct fastq
         ,   fp
         );
         const typename Sequence::value_type* data = nullptr;
-#if defined(__CUDACC__) // handle device_vector
+#if defined(__CUDACC__) || defined(__HIPCC__) // handle device_vector
         universal_host_pinned_vector<typename Sequence::value_type> h_seq;
         if constexpr
         (   std::is_same_v<typename Sequence::container_type, thrust::device_vector<typename Sequence::value_type>>
@@ -419,7 +419,7 @@ struct fastq_gz
         std::string header = "@" + id + desc + "\n";
         gzwrite(fp, header.c_str(), header.size());
         const typename Sequence::value_type* data = nullptr;
-#if defined(__CUDACC__) // handle device_vector
+#if defined(__CUDACC__) || defined(__HIPCC__) // handle device_vector
         universal_host_pinned_vector<typename Sequence::value_type> h_seq;
         if constexpr
         (   std::is_same_v<typename Sequence::container_type, thrust::device_vector<typename Sequence::value_type>>

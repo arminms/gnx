@@ -27,7 +27,7 @@
 #include <vector>
 #include <iterator>
 
-#if defined(__CUDACC__)
+#if defined(__CUDACC__) || defined(__HIPCC__)
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
 #include <thrust/iterator/iterator_traits.h>
@@ -55,7 +55,7 @@ concept has_map_type = requires
 {   typename T::map_type;
 };
 
-#if defined(__CUDACC__)
+#if defined(__CUDACC__) || defined(__HIPCC__)
 // helper alias to get the system tag of a container
 template <typename Container>
 using system_tag_t = typename thrust::iterator_system<typename Container::const_iterator>::type;
@@ -84,7 +84,11 @@ concept host_resident_iterator = std::convertible_to<iterator_system_t<Iter>, th
 // helper to extract CUDA stream from execution policies
 template <typename T>
 concept has_stream_member = requires(T a)
+#if defined(__HIPCC__)
+{   { a.stream() } -> std::same_as<hipStream_t>;
+#else
 {   { a.stream() } -> std::same_as<cudaStream_t>;
+#endif // __HIPCC__
 };
 #endif // __CUDACC__
 

@@ -36,7 +36,7 @@
 #include <typeindex>
 #include <cstdint>
 
-#if defined(__CUDACC__)
+#if defined(__CUDACC__) || defined(__HIPCC__)
     #include <thrust/host_vector.h>
     #include <thrust/device_vector.h>
     #include <thrust/universal_vector.h>
@@ -95,7 +95,7 @@ public:
     /// @a value (default is 'A' (ASCII 65)).
     /// @param count The number of residues in the sequence.
     /// @param value The residue value to initialize each position with.
-#if defined(__CUDACC__)
+#if defined(__CUDACC__) || defined(__HIPCC__)
     sq_gen(size_type count, const_reference value = value_type(65))
     requires (!std::is_same_v<Container, thrust::device_vector<value_type>>)
     :   _sq(count, value)
@@ -110,7 +110,7 @@ public:
     ///
     /// @brief Constructs a sequence from a sequence view.
     /// @param sv The sequence view to construct the sequence from.
-#if defined(__CUDACC__)
+#if defined(__CUDACC__) || defined(__HIPCC__)
     explicit sq_gen(sq_view_gen<Container> sv)
     requires (!std::is_same_v<Container, thrust::device_vector<value_type>>)
     :   _sq(std::begin(sv), std::end(sv))
@@ -279,7 +279,7 @@ public:
     /// Returns a subsequence starting at position @a pos with length @a count.
     /// If @a count is gynx::sq::npos or exceeds the sequence length from
     /// @a pos, the subsequence extends to the end of the sequence.
-#if defined(__CUDACC__)
+#if defined(__CUDACC__) || defined(__HIPCC__)
     sq_gen<Container> operator()
     (   size_type pos
     ,   size_type count = npos
@@ -338,7 +338,7 @@ public:
             throw std::out_of_range("gynx::sq: tag not found -> " + tag);
         return _ptr_td->at(tag);
     }
-#if defined(__CUDACC__)
+#if defined(__CUDACC__) || defined(__HIPCC__)
     value_type* data()
     {   return thrust::raw_pointer_cast(_sq.data());
     }
@@ -413,7 +413,7 @@ public:
     /// Prints the sequence and its tagged data to the output stream @a os.
     void print(std::ostream& os) const
     {   os << std::boolalpha << _sq.size();
-#if defined(__CUDACC__)
+#if defined(__CUDACC__) || defined(__HIPCC__)
         if constexpr
         (   std::is_same_v<Container, thrust::device_vector<value_type>>
         )
@@ -447,7 +447,7 @@ public:
     {   size_type n;
         is >> std::boolalpha >> n;
         _sq.resize(n);
-#if defined(__CUDACC__)
+#if defined(__CUDACC__) || defined(__HIPCC__)
         if constexpr
         (   std::is_same_v<Container, thrust::device_vector<value_type>>
         )

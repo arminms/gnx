@@ -29,8 +29,11 @@
 #if defined(__CUDACC__)
     #include <thrust/universal_vector.h>
     #include <thrust/system/cuda/memory_resource.h>
+    #include <thrust/device_allocator.h>
     #include <thrust/mr/allocator.h>
     #include <thrust/system/cpp/memory.h>
+#elif defined(__HIPCC__)
+    #include <thrust/universal_vector.h>
 #endif
 
 namespace gynx
@@ -45,6 +48,9 @@ namespace gynx
 
     template <typename T>
     using universal_host_pinned_vector = thrust::universal_vector<T, pinned_host_allocator<T>>;
+#elif defined(__HIPCC__)
+    template <typename T>
+    using universal_host_pinned_vector = thrust::universal_vector<T>;
 #endif // __CUDACC__
 
 
