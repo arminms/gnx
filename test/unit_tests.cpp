@@ -707,7 +707,7 @@ TEMPLATE_TEST_CASE( "gynx::valid::device", "[algorithm][valid][cuda]", thrust::d
         CHECK(gynx::valid_nucleotide(thrust::cuda::par.on(streamA), s));
         cudaStreamSynchronize(streamA);
         s[2] = 'Z';
-        CHECK_FALSE(gynx::valid_nucleotide(thrust::cuda::par.on(streamA), s));
+        CHECK_FALSE(gynx::valid_nucleotide(thrust::cuda::par_nosync.on(streamA), s));
         cudaStreamSynchronize(streamA);
         cudaStreamDestroy(streamA);
     }
@@ -734,7 +734,7 @@ TEMPLATE_TEST_CASE( "gynx::valid::device", "[algorithm][valid][rocm]", thrust::d
         CHECK(gynx::valid_nucleotide(thrust::hip::par.on(streamA), s));
         hipStreamSynchronize(streamA);
         s[2] = 'Z';
-        CHECK_FALSE(gynx::valid_nucleotide(thrust::hip::par.on(streamA), s));
+        CHECK_FALSE(gynx::valid_nucleotide(thrust::hip::par_nosync.on(streamA), s));
         hipStreamSynchronize(streamA);
         hipStreamDestroy(streamA);
     }
