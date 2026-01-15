@@ -26,8 +26,10 @@
 #include <gynx/io/fastaqz.hpp>
 #include <gynx/algorithms/valid.hpp>
 
-#if defined(__CUDACC__) || defined(__HIPCC__)
+#if defined(__CUDACC__)
 TEMPLATE_TEST_CASE( "gynx::sq", "[class][cuda]", std::vector<char>, thrust::host_vector<char>, thrust::device_vector<char>, thrust::universal_vector<char>)
+#elif defined(__HIPCC__)
+TEMPLATE_TEST_CASE( "gynx::sq", "[class][rocm]", std::vector<char>, thrust::host_vector<char>, thrust::device_vector<char>, thrust::universal_vector<char>)
 #else
 TEMPLATE_TEST_CASE( "gynx::sq", "[class]", std::vector<char>)
 #endif
@@ -426,8 +428,10 @@ TEMPLATE_TEST_CASE( "gynx::sq_view", "[view]", std::vector<char>)
     }
 }
 
-#if defined(__CUDACC__) || defined(__HIPCC__)
+#if defined(__CUDACC__)
 TEMPLATE_TEST_CASE( "gynx::io::fastaqz", "[io][in][out][cuda]", std::vector<char>, thrust::host_vector<char>, thrust::device_vector<char>, thrust::universal_vector<char>)
+#elif defined(__HIPCC__)
+TEMPLATE_TEST_CASE( "gynx::io::fastaqz", "[io][in][out][rocm]", std::vector<char>, thrust::host_vector<char>, thrust::device_vector<char>, thrust::universal_vector<char>)
 #else
 TEMPLATE_TEST_CASE( "gynx::io::fastaqz", "[io][in][out]", std::vector<char>)
 #endif
@@ -501,20 +505,16 @@ TEMPLATE_TEST_CASE( "gynx::io::fastaqz", "[io][in][out]", std::vector<char>)
     }
 }
 
-#if defined(__CUDACC__) || defined(__HIPCC__)
+#if defined(__CUDACC__)
 TEMPLATE_TEST_CASE( "gynx::valid", "[algorithm][valid][cuda]", std::vector<char>, thrust::host_vector<char>, thrust::universal_vector<char>)
+#elif defined(__HIPCC__)
+TEMPLATE_TEST_CASE( "gynx::valid", "[algorithm][valid][rocm]", std::vector<char>, thrust::host_vector<char>, thrust::universal_vector<char>)
 #else
 TEMPLATE_TEST_CASE( "gynx::valid", "[algorithm][valid]", std::vector<char>)
 #endif //__CUDACC__
 {   typedef TestType T;
 
 // -- nucleotide validation ----------------------------------------------------
-
-    // SECTION( "device vector" )
-    // {   gynx::sq_gen<T> s{"ACGT"};
-    //     thrust::device_vector<char> dv{s.begin(), s.end()};
-    //     CHECK(gynx::valid_nucleotide(dv));
-    // }
 
     SECTION( "valid nucleotide sequences" )
     {   gynx::sq_gen<T> s1{"ACGT"};
@@ -696,9 +696,9 @@ TEMPLATE_TEST_CASE( "gynx::valid::device", "[algorithm][valid][cuda]", thrust::d
     CHECK(s.size() > 0);
 
     SECTION( "device vector" )
-    {   CHECK(gynx::valid_nucleotide(thrust::device,s));
+    {   CHECK(gynx::valid_nucleotide(thrust::cuda::par, s));
         s[2] = 'Z';
-        CHECK_FALSE(gynx::valid_nucleotide(thrust::device, s));
+        CHECK_FALSE(gynx::valid_nucleotide(thrust::cuda::par, s));
     }
 
     SECTION( "cuda stream" )
