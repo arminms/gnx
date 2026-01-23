@@ -168,7 +168,7 @@ constexpr bool valid
 ,   Iterator last
 ,   bool nucleotide = false
 )
-{   return detail::valid_device(thrust::hip_rocprim::par, first, last, nucleotide);
+{   return detail::valid_device(thrust::hip::par, first, last, nucleotide);
 }
 template<host_resident_iterator Iterator>
 #else

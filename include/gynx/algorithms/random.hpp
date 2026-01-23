@@ -118,8 +118,13 @@ inline void rand_device
     // );
 
     int device;
+#if defined(__HIPCC__)
+    hipGetDevice(&device);
+    hipDeviceGetAttribute(&sm_count, hipDeviceAttributeMultiprocessorCount, device);
+#else
     cudaGetDevice(&device);
     cudaDeviceGetAttribute(&sm_count, cudaDevAttrMultiProcessorCount, device);
+#endif
 
     // launch leapfrogging kernel
     kernel::leapfrogging<<<sm_count, block_size, alphabet.size() * sizeof(value_type), stream>>>
@@ -160,7 +165,7 @@ constexpr void rand
 ,   std::string_view alphabet
 ,   std::uint64_t seed = 0
 )
-{   detail::rand_device(thrust::hip_rocprim::par, out, n, alphabet, seed);
+{   detail::rand_device(thrust::hip::par, out, n, alphabet, seed);
 }
 template
 <   host_resident_iterator OutputIterator

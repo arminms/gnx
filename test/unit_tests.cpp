@@ -731,9 +731,9 @@ TEMPLATE_TEST_CASE( "gynx::valid::device", "[algorithm][valid][rocm]", thrust::d
     CHECK(s.size() > 0);
 
     SECTION( "device vector" )
-    {   CHECK(gynx::valid_nucleotide(thrust::hip_rocprim::par, s));
+    {   CHECK(gynx::valid_nucleotide(thrust::hip::par, s));
         s[2] = 'Z';
-        CHECK_FALSE(gynx::valid_nucleotide(thrust::hip_rocprim::par, s));
+        CHECK_FALSE(gynx::valid_nucleotide(thrust::hip::par, s));
     }
 
     SECTION( "cuda stream" )
@@ -820,3 +820,31 @@ TEMPLATE_TEST_CASE( "gynx::random::device", "[algorithm][random][cuda]", thrust:
     }
 }
 #endif //__CUDACC__
+
+#if defined(__HIPCC__)
+TEMPLATE_TEST_CASE( "gynx::random::device", "[algorithm][random][rocm]", thrust::device_vector<char>, thrust::universal_vector<char>)
+{   typedef TestType T;
+    gynx::sq_gen<T> s(20);
+    const auto N{10'000};
+
+    SECTION( "device vector" )
+    {   gynx::rand(thrust::hip::par, s.begin(), 20, "ACGT", seed_pi);
+        CHECK(gynx::valid_nucleotide(thrust::hip::par, s));
+        CHECK(s == "TTCGGCCGTCGTTAAACACG");
+        auto t = gynx::random::dna<decltype(s)>(20, seed_pi);
+        CHECK(s == t);
+    }
+
+    SECTION( "hip stream" )
+    {   auto r = gynx::random::dna<decltype(s)>(N, seed_pi);
+        gynx::sq_gen<T> t(N);
+        hipStream_t stream;
+        hipStreamCreate(&stream);
+        gynx::rand(thrust::hip::par.on(stream), t.begin(), N, "ACGT", seed_pi);
+        CHECK(gynx::valid_nucleotide(thrust::hip::par.on(stream), t));
+        CHECK(r == t);
+        hipStreamSynchronize(stream);
+        hipStreamDestroy(stream);
+    }
+}
+#endif //__HIPCC__

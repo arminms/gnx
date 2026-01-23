@@ -13,8 +13,8 @@ endif()
 if(hip_FOUND)
   set_source_files_properties(benchmarks.cpp PROPERTIES LANGUAGE HIP)
   target_compile_options(benchmarks PRIVATE
-    -Wno-unused-result
-    $<$<COMPILE_LANGUAGE:HIP>:--offload-arch=gfx942:xnack+>
+    -Wno-unused-result -Wno-pass-failed
+    $<$<COMPILE_LANGUAGE:HIP>:--offload-arch=gfx942>
   )
 endif()
 
@@ -23,4 +23,5 @@ endif()
 target_link_libraries(benchmarks PRIVATE
   ${PROJECT_NAME}::${PROJECT_NAME}
   benchmark::benchmark
+  ranx::openmp
 )

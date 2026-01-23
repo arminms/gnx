@@ -38,8 +38,8 @@ endif()
 if(hip_FOUND)
   set_source_files_properties(unit_tests.cpp PROPERTIES LANGUAGE HIP)
   target_compile_options(unit_tests PRIVATE
-    -Wno-unused-result
-    $<$<COMPILE_LANGUAGE:HIP>:--offload-arch=gfx942:xnack+>
+    -Wno-unused-result -Wno-pass-failed
+    $<$<COMPILE_LANGUAGE:HIP>:--offload-arch=gfx942>
   )
 endif()
 
@@ -48,6 +48,7 @@ endif()
 target_link_libraries(unit_tests PRIVATE
   ${PROJECT_NAME}::${PROJECT_NAME}
   Catch2::Catch2WithMain
+  ranx::openmp
 )
 
 ## finally adding unit tests

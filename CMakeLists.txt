@@ -74,6 +74,7 @@ check_language(HIP 6)
 if (CMAKE_HIP_COMPILER)
   enable_language(HIP)
   find_package(hip HINTS $ENV{HIP_PATH} /opt/rocm/hip /opt/rocm)
+  set(CMAKE_HIP_FLAGS "${CMAKE_HIP_FLAGS} ${OpenMP_CXX_FLAGS}")
 endif()
 
 ## check for zlib

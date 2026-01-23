@@ -4,6 +4,8 @@
 #include <gynx/algorithms/valid.hpp>
 #include <gynx/algorithms/random.hpp>
 
+using namespace gynx::execution;
+
 const uint64_t seed_pi{3141592654};
 
 //----------------------------------------------------------------------------//
@@ -23,7 +25,7 @@ void random(benchmark::State& st)
         ,   "ACGT"
         ,   seed_pi
         );
-        // benchmark::ClobberMemory();
+        benchmark::ClobberMemory();
     }
 
     st.counters["BW (GB/s)"] = benchmark::Counter
@@ -32,20 +34,20 @@ void random(benchmark::State& st)
     );
 }
 
-BENCHMARK_TEMPLATE2(random, std::vector<char>, gynx::execution::sequenced_policy)
+BENCHMARK_TEMPLATE2(random, std::vector<char>, sequenced_policy)
 ->  RangeMultiplier(2)
 ->  Range(1<<20, 1<<24)
 ->  Unit(benchmark::kMillisecond);
-BENCHMARK_TEMPLATE2(random, std::vector<char>, gynx::execution::unsequenced_policy)
+BENCHMARK_TEMPLATE2(random, std::vector<char>, unsequenced_policy)
 ->  RangeMultiplier(2)
 ->  Range(1<<20, 1<<24)
 ->  Unit(benchmark::kMillisecond);
-BENCHMARK_TEMPLATE2(random, std::vector<char>, gynx::execution::parallel_policy)
+BENCHMARK_TEMPLATE2(random, std::vector<char>, parallel_policy)
 ->  RangeMultiplier(2)
 ->  Range(1<<20, 1<<24)
 ->  UseRealTime()
 ->  Unit(benchmark::kMillisecond);
-BENCHMARK_TEMPLATE2(random, std::vector<char>, gynx::execution::parallel_unsequenced_policy)
+BENCHMARK_TEMPLATE2(random, std::vector<char>, parallel_unsequenced_policy)
 ->  RangeMultiplier(2)
 ->  Range(1<<20, 1<<24)
 ->  UseRealTime()
@@ -89,6 +91,44 @@ BENCHMARK_TEMPLATE(random_cuda, thrust::universal_vector<char>)
 
 #endif //__CUDACC__
 
+#if defined(__HIPCC__)
+template <class T>
+void random_rocm(benchmark::State& st)
+{   size_t n = size_t(st.range());
+    hipEvent_t start, stop;
+    hipEventCreate(&start); hipEventCreate(&stop);
+    gynx::sq_gen<T> s(n);
+
+    for (auto _ : st)
+    {   hipEventRecord(start);
+        gynx::rand(thrust::hip::par, s.begin(), n, "ACGT", seed_pi);
+        hipEventRecord(stop);
+        hipEventSynchronize(stop);
+        float milliseconds = 0;
+        hipEventElapsedTime(&milliseconds, start, stop);
+        st.SetIterationTime(milliseconds * 0.001f);
+    }
+    hipEventDestroy(start); hipEventDestroy(stop);
+
+    st.counters["BW (GB/s)"] = benchmark::Counter
+    (   (n * sizeof(typename T::value_type)) / 1e9
+    ,   benchmark::Counter::kIsIterationInvariantRate
+    );
+}
+
+BENCHMARK_TEMPLATE(random_rocm, thrust::device_vector<char>)
+->  RangeMultiplier(2)
+->  Range(1<<20, 1<<24)
+->  UseManualTime()
+->  Unit(benchmark::kMillisecond);
+BENCHMARK_TEMPLATE(random_rocm, thrust::universal_vector<char>)
+->  RangeMultiplier(2)
+->  Range(1<<20, 1<<24)
+->  UseManualTime()
+->  Unit(benchmark::kMillisecond);
+
+#endif //__HIPCC__
+
 //----------------------------------------------------------------------------//
 // valid() algorithm
 
@@ -107,20 +147,20 @@ void valid(benchmark::State& st)
     );
 }
 
-BENCHMARK_TEMPLATE2(valid, std::vector<char>, gynx::execution::sequenced_policy)
+BENCHMARK_TEMPLATE2(valid, std::vector<char>, sequenced_policy)
 ->  RangeMultiplier(2)
 ->  Range(1<<20, 1<<24)
 ->  Unit(benchmark::kMillisecond);
-BENCHMARK_TEMPLATE2(valid, std::vector<char>, gynx::execution::unsequenced_policy)
+BENCHMARK_TEMPLATE2(valid, std::vector<char>, unsequenced_policy)
 ->  RangeMultiplier(2)
 ->  Range(1<<20, 1<<24)
 ->  Unit(benchmark::kMillisecond);
-BENCHMARK_TEMPLATE2(valid, std::vector<char>, gynx::execution::parallel_policy)
+BENCHMARK_TEMPLATE2(valid, std::vector<char>, parallel_policy)
 ->  RangeMultiplier(2)
 ->  Range(1<<20, 1<<24)
 ->  UseRealTime()
 ->  Unit(benchmark::kMillisecond);
-BENCHMARK_TEMPLATE2(valid, std::vector<char>, gynx::execution::parallel_unsequenced_policy)
+BENCHMARK_TEMPLATE2(valid, std::vector<char>, parallel_unsequenced_policy)
 ->  RangeMultiplier(2)
 ->  Range(1<<20, 1<<24)
 ->  UseRealTime()
@@ -170,6 +210,86 @@ BENCHMARK_TEMPLATE(valid_cuda, thrust::universal_vector<char>)
 
 #endif //__CUDACC__
 
+#if defined(__HIPCC__)
+
+template <class T>
+void valid_rocm(benchmark::State& st)
+{   size_t n = size_t(st.range());
+    // hipStream_t stream;
+    // hipStreamCreate(&stream);
+    hipEvent_t start, stop;
+    hipEventCreate(&start); hipEventCreate(&stop);
+    auto s = gynx::random::dna<gynx::sq_gen<T>>(n, seed_pi);
+
+    for (auto _ : st)
+    {   hipEventRecord(start);
+        // hipEventRecord(start, stream);
+        benchmark::DoNotOptimize(gynx::valid(s));
+        // benchmark::DoNotOptimize(gynx::valid(thrust::hip::par.on(stream), s));
+        hipEventRecord(stop);
+        // hipEventRecord(stop, stream);
+        hipEventSynchronize(stop);
+        float milliseconds = 0;
+        hipEventElapsedTime(&milliseconds, start, stop);
+        st.SetIterationTime(milliseconds * 0.001f);
+    }
+    hipEventDestroy(start); hipEventDestroy(stop);
+
+    st.counters["BW (GB/s)"] = benchmark::Counter
+    (   (n * sizeof(typename T::value_type)) / 1e9
+    ,   benchmark::Counter::kIsIterationInvariantRate
+    );
+}
+
+BENCHMARK_TEMPLATE(valid_rocm, thrust::device_vector<char>)
+->  RangeMultiplier(2)
+->  Range(1<<20, 1<<24)
+->  UseManualTime()
+->  Unit(benchmark::kMillisecond);
+BENCHMARK_TEMPLATE(valid_rocm, thrust::universal_vector<char>)
+->  RangeMultiplier(2)
+->  Range(1<<20, 1<<24)
+->  UseManualTime()
+->  Unit(benchmark::kMillisecond);
+
+#endif //__HIPCC__
+
+//-- get_runtime_version ------------------------------------------------------//
+
+#if defined(__CUDACC__)
+std::string get_runtime_version()
+{   int version{0};
+    cudaError_t err = cudaRuntimeGetVersion(&version);
+    std::stringstream os;
+    os << "\n  CUDA Runtime Version: ";
+    if (err == cudaSuccess)
+    {   int major = version / 1000;
+        int minor = (version % 1000) / 10;
+        int patch = version % 10;
+        os << major << '.' << minor << '.' << patch;
+    }
+    else os << "failed to get CUDA version";
+    return os.str();
+
+}
+#endif //__CUDACC__
+
+#if defined(__HIPCC__)
+std::string get_runtime_version()
+{   int version{0};
+    hipError_t err = hipRuntimeGetVersion(&version);
+    std::stringstream os;
+    os << "\n  ROCm Runtime Version: ";
+    if (err == hipSuccess)
+    {   int major = version / 10000000;
+        int minor = (version / 100000) % 100;
+        os << major << '.' << minor;
+    }
+    else os << "failed to get HIP version";
+    return os.str();
+}
+#endif //__HIPCC__
+
 //----------------------------------------------------------------------------//
 // main()
 
@@ -178,10 +298,18 @@ int main(int argc, char** argv)
     if (benchmark::ReportUnrecognizedArguments(argc, argv))
         return 1;
 
+#if defined(__CUDACC__) || defined(__HIPCC__)
 #if defined(__CUDACC__)
-    // adding GPU context
     cudaDeviceProp prop;
-    cudaGetDeviceProperties(&prop, 0);
+    auto status = cudaGetDeviceProperties(&prop, 0);
+    if (status == cudaSuccess) {
+#else
+    int runtimeVersion;
+    hipRuntimeGetVersion(&runtimeVersion);
+    hipDeviceProp_t prop;
+    auto status = hipGetDeviceProperties(&prop, 0);
+    if (status == hipSuccess) {
+#endif
     std::stringstream os;
     os << "\n  " << prop.name
        << "\n  (" << prop.multiProcessorCount << " X " << prop.clockRate / 1e6
@@ -192,9 +320,17 @@ int main(int argc, char** argv)
        << std::fixed << std::setprecision(0)
        // based on https://developer.nvidia.com/blog/how-implement-performance-metrics-cuda-c
        << 2.0 * prop.memoryClockRate * (prop.memoryBusWidth / 8) / 1.0e6
-       << " (GB/s)";
+       << " (GB/s)"
+       << get_runtime_version();
     benchmark::AddCustomContext("GPU", os.str());
-#endif //__CUDACC__
+#if defined(__CUDACC__)
+    } else
+        benchmark::AddCustomContext("GPU", "No CUDA device found");
+#else
+    } else
+        benchmark::AddCustomContext("GPU", "No ROCm device found");
+#endif // __CUDACC__
+#endif //__CUDACC__ || __HIPCC__
 
     benchmark::RunSpecifiedBenchmarks();
     benchmark::Shutdown();
