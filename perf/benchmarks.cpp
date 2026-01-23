@@ -1,12 +1,95 @@
 #include <benchmark/benchmark.h>
 
 #include <gynx/sq.hpp>
+#include <gynx/io/fastaqz.hpp>
 #include <gynx/algorithms/valid.hpp>
 #include <gynx/algorithms/random.hpp>
 
 using namespace gynx::execution;
 
 const uint64_t seed_pi{3141592654};
+const std::string fasta_filename{"perf_data.fa"};
+
+//----------------------------------------------------------------------------//
+// io_write_fasta()
+
+template <typename T>
+void io_write_fasta(benchmark::State& st)
+{   size_t n = size_t(st.range());
+    auto s = gynx::random::dna<gynx::sq_gen<T>>(n);
+
+    for (auto _ : st)
+    {   s.save(fasta_filename, gynx::out::fasta());
+    }
+    std::remove(fasta_filename.c_str());
+
+    st.counters["BW (GB/s)"] = benchmark::Counter
+    (   (n * sizeof(typename T::value_type)) / 1e9
+    ,   benchmark::Counter::kIsIterationInvariantRate
+    );
+}
+
+BENCHMARK_TEMPLATE(io_write_fasta, std::vector<char>)
+->  RangeMultiplier(2)
+->  Range(1<<28, 1<<29)
+->  Unit(benchmark::kMillisecond);
+BENCHMARK_TEMPLATE(io_write_fasta, std::vector<char, gynx::default_init_allocator<char>>)
+->  RangeMultiplier(2)
+->  Range(1<<28, 1<<29)
+->  Unit(benchmark::kMillisecond);
+
+#if defined(__CUDACC__) || defined(__HIPCC__)
+BENCHMARK_TEMPLATE(io_write_fasta, thrust::host_vector<char>)
+->  RangeMultiplier(2)
+->  Range(1<<28, 1<<29)
+->  Unit(benchmark::kMillisecond);
+BENCHMARK_TEMPLATE(io_write_fasta, thrust::device_vector<char>)
+->  RangeMultiplier(2)
+->  Range(1<<28, 1<<29)
+->  Unit(benchmark::kMillisecond);
+#endif // __CUDACC__ || __HIPCC__
+
+//----------------------------------------------------------------------------//
+// io_read_fasta()
+
+template <typename T>
+void io_read_fasta(benchmark::State& st)
+{   size_t n = size_t(st.range());
+    gynx::sq_gen<T> sr;
+    auto sw = gynx::random::dna<gynx::sq_gen<T>>(n);
+    sw.save(fasta_filename, gynx::out::fasta());
+
+    for (auto _ : st)
+    {   sr.load(fasta_filename);
+        benchmark::ClobberMemory();
+    }
+    std::remove(fasta_filename.c_str());
+
+    st.counters["BW (GB/s)"] = benchmark::Counter
+    (   (n * sizeof(typename T::value_type)) / 1e9
+    ,   benchmark::Counter::kIsIterationInvariantRate
+    );
+}
+
+BENCHMARK_TEMPLATE(io_read_fasta, std::vector<char>)
+->  RangeMultiplier(2)
+->  Range(1<<28, 1<<29)
+->  Unit(benchmark::kMillisecond);
+BENCHMARK_TEMPLATE(io_read_fasta, std::vector<char, gynx::default_init_allocator<char>>)
+->  RangeMultiplier(2)
+->  Range(1<<28, 1<<29)
+->  Unit(benchmark::kMillisecond);
+
+#if defined(__CUDACC__) || defined(__HIPCC__)
+BENCHMARK_TEMPLATE(io_read_fasta, thrust::host_vector<char>)
+->  RangeMultiplier(2)
+->  Range(1<<28, 1<<29)
+->  Unit(benchmark::kMillisecond);
+BENCHMARK_TEMPLATE(io_read_fasta, thrust::device_vector<char>)
+->  RangeMultiplier(2)
+->  Range(1<<28, 1<<29)
+->  Unit(benchmark::kMillisecond);
+#endif // __CUDACC__ || __HIPCC__
 
 //----------------------------------------------------------------------------//
 // rand() algorithm
@@ -36,20 +119,20 @@ void random(benchmark::State& st)
 
 BENCHMARK_TEMPLATE2(random, std::vector<char>, sequenced_policy)
 ->  RangeMultiplier(2)
-->  Range(1<<20, 1<<24)
+->  Range(1<<25, 1<<28)
 ->  Unit(benchmark::kMillisecond);
 BENCHMARK_TEMPLATE2(random, std::vector<char>, unsequenced_policy)
 ->  RangeMultiplier(2)
-->  Range(1<<20, 1<<24)
+->  Range(1<<25, 1<<28)
 ->  Unit(benchmark::kMillisecond);
 BENCHMARK_TEMPLATE2(random, std::vector<char>, parallel_policy)
 ->  RangeMultiplier(2)
-->  Range(1<<20, 1<<24)
+->  Range(1<<25, 1<<28)
 ->  UseRealTime()
 ->  Unit(benchmark::kMillisecond);
 BENCHMARK_TEMPLATE2(random, std::vector<char>, parallel_unsequenced_policy)
 ->  RangeMultiplier(2)
-->  Range(1<<20, 1<<24)
+->  Range(1<<25, 1<<28)
 ->  UseRealTime()
 ->  Unit(benchmark::kMillisecond);
 
@@ -80,12 +163,12 @@ void random_cuda(benchmark::State& st)
 
 BENCHMARK_TEMPLATE(random_cuda, thrust::device_vector<char>)
 ->  RangeMultiplier(2)
-->  Range(1<<20, 1<<24)
+->  Range(1<<25, 1<<28)
 ->  UseManualTime()
 ->  Unit(benchmark::kMillisecond);
 BENCHMARK_TEMPLATE(random_cuda, thrust::universal_vector<char>)
 ->  RangeMultiplier(2)
-->  Range(1<<20, 1<<24)
+->  Range(1<<25, 1<<28)
 ->  UseManualTime()
 ->  Unit(benchmark::kMillisecond);
 
@@ -118,12 +201,12 @@ void random_rocm(benchmark::State& st)
 
 BENCHMARK_TEMPLATE(random_rocm, thrust::device_vector<char>)
 ->  RangeMultiplier(2)
-->  Range(1<<20, 1<<24)
+->  Range(1<<25, 1<<28)
 ->  UseManualTime()
 ->  Unit(benchmark::kMillisecond);
 BENCHMARK_TEMPLATE(random_rocm, thrust::universal_vector<char>)
 ->  RangeMultiplier(2)
-->  Range(1<<20, 1<<24)
+->  Range(1<<25, 1<<28)
 ->  UseManualTime()
 ->  Unit(benchmark::kMillisecond);
 
@@ -149,20 +232,20 @@ void valid(benchmark::State& st)
 
 BENCHMARK_TEMPLATE2(valid, std::vector<char>, sequenced_policy)
 ->  RangeMultiplier(2)
-->  Range(1<<20, 1<<24)
+->  Range(1<<25, 1<<28)
 ->  Unit(benchmark::kMillisecond);
 BENCHMARK_TEMPLATE2(valid, std::vector<char>, unsequenced_policy)
 ->  RangeMultiplier(2)
-->  Range(1<<20, 1<<24)
+->  Range(1<<25, 1<<28)
 ->  Unit(benchmark::kMillisecond);
 BENCHMARK_TEMPLATE2(valid, std::vector<char>, parallel_policy)
 ->  RangeMultiplier(2)
-->  Range(1<<20, 1<<24)
+->  Range(1<<25, 1<<28)
 ->  UseRealTime()
 ->  Unit(benchmark::kMillisecond);
 BENCHMARK_TEMPLATE2(valid, std::vector<char>, parallel_unsequenced_policy)
 ->  RangeMultiplier(2)
-->  Range(1<<20, 1<<24)
+->  Range(1<<25, 1<<28)
 ->  UseRealTime()
 ->  Unit(benchmark::kMillisecond);
 
@@ -199,12 +282,12 @@ void valid_cuda(benchmark::State& st)
 
 BENCHMARK_TEMPLATE(valid_cuda, thrust::device_vector<char>)
 ->  RangeMultiplier(2)
-->  Range(1<<20, 1<<24)
+->  Range(1<<25, 1<<28)
 ->  UseManualTime()
 ->  Unit(benchmark::kMillisecond);
 BENCHMARK_TEMPLATE(valid_cuda, thrust::universal_vector<char>)
 ->  RangeMultiplier(2)
-->  Range(1<<20, 1<<24)
+->  Range(1<<25, 1<<28)
 ->  UseManualTime()
 ->  Unit(benchmark::kMillisecond);
 
@@ -243,12 +326,12 @@ void valid_rocm(benchmark::State& st)
 
 BENCHMARK_TEMPLATE(valid_rocm, thrust::device_vector<char>)
 ->  RangeMultiplier(2)
-->  Range(1<<20, 1<<24)
+->  Range(1<<25, 1<<28)
 ->  UseManualTime()
 ->  Unit(benchmark::kMillisecond);
 BENCHMARK_TEMPLATE(valid_rocm, thrust::universal_vector<char>)
 ->  RangeMultiplier(2)
-->  Range(1<<20, 1<<24)
+->  Range(1<<25, 1<<28)
 ->  UseManualTime()
 ->  Unit(benchmark::kMillisecond);
 
