@@ -1,0 +1,95 @@
+[asobhani@u5.nibi gynx]$ build/perf/benchmarks --benchmark_counters_tabular=true
+2026-01-23T18:44:50-05:00
+Running build/perf/benchmarks
+Run on (96 X 3700 MHz CPU s)
+CPU Caches:
+  L1 Data 32 KiB (x96)
+  L1 Instruction 32 KiB (x96)
+  L2 Unified 1024 KiB (x96)
+  L3 Unified 32768 KiB (x12)
+Load Average: 0.47, 1.00, 1.13
+GPU: 
+  AMD Instinct MI300A
+  (228 X 2.1 MHz SM s)
+  L2 Cache: 4096 KiB (x228)
+  Peak Memory Bandwidth: 2662 (GB/s)
+  ROCm Runtime Version: 6.4
+-------------------------------------------------------------------------------------------------------------------------------------
+Benchmark                                                                                Time             CPU   Iterations  BW (GB/s)
+-------------------------------------------------------------------------------------------------------------------------------------
+io_write_fasta<std::vector<char>>/268435456                                            946 ms          639 ms            1 0.420317/s
+io_write_fasta<std::vector<char>>/536870912                                           1415 ms         1274 ms            1 0.421486/s
+io_write_fasta<std::vector<char, gynx::default_init_allocator<char>>>/268435456        713 ms          638 ms            1 0.420567/s
+io_write_fasta<std::vector<char, gynx::default_init_allocator<char>>>/536870912       1302 ms         1214 ms            1 0.442155/s
+io_write_fasta<thrust::host_vector<char>>/268435456                                    674 ms          601 ms            1 0.446646/s
+io_write_fasta<thrust::host_vector<char>>/536870912                                   1306 ms         1195 ms            1 0.449434/s
+io_write_fasta<thrust::device_vector<char>>/268435456                                 1587 ms         1059 ms            1 0.253499/s
+io_write_fasta<thrust::device_vector<char>>/536870912                                 3281 ms         2016 ms            1 0.266253/s
+io_write_fasta<gynx::unified_vector<char>>/268435456                                  1062 ms          694 ms            1 0.386541/s
+io_write_fasta<gynx::unified_vector<char>>/536870912                                  1722 ms         1339 ms            1 0.400825/s
+io_read_fasta<std::vector<char>>/268435456                                             651 ms          372 ms            2 0.721503/s
+io_read_fasta<std::vector<char>>/536870912                                            1760 ms          747 ms            1 0.718775/s
+io_read_fasta<std::vector<char, gynx::default_init_allocator<char>>>/268435456         635 ms          382 ms            2  0.70312/s
+io_read_fasta<std::vector<char, gynx::default_init_allocator<char>>>/536870912        1845 ms          757 ms            1 0.709257/s
+io_read_fasta<thrust::host_vector<char>>/268435456                                     638 ms          359 ms            2 0.748467/s
+io_read_fasta<thrust::host_vector<char>>/536870912                                    1980 ms          893 ms            1 0.601485/s
+io_read_fasta<thrust::device_vector<char>>/268435456                                  1164 ms          686 ms            1 0.391205/s
+io_read_fasta<thrust::device_vector<char>>/536870912                                  2154 ms         1221 ms            1 0.439691/s
+io_read_fasta<gynx::unified_vector<char>>/268435456                                    686 ms          369 ms            2 0.726633/s
+io_read_fasta<gynx::unified_vector<char>>/536870912                                   2037 ms          874 ms            1  0.61452/s
+random<std::vector<char>,sequenced_policy>/33554432                                   39.2 ms         39.0 ms           18  0.86015/s
+random<std::vector<char>,sequenced_policy>/67108864                                   78.4 ms         78.0 ms            9 0.859961/s
+random<std::vector<char>,sequenced_policy>/134217728                                   157 ms          156 ms            4 0.860111/s
+random<std::vector<char>,sequenced_policy>/268435456                                   314 ms          312 ms            2 0.860068/s
+random<std::vector<char>,unsequenced_policy>/33554432                                 39.2 ms         39.0 ms           18 0.860076/s
+random<std::vector<char>,unsequenced_policy>/67108864                                 78.4 ms         78.0 ms            9 0.860081/s
+random<std::vector<char>,unsequenced_policy>/134217728                                 157 ms          156 ms            4 0.860074/s
+random<std::vector<char>,unsequenced_policy>/268435456                                 313 ms          312 ms            2 0.860103/s
+random<std::vector<char>,parallel_policy>/33554432/real_time                          3.33 ms         1.13 ms          156  10.0903/s
+random<std::vector<char>,parallel_policy>/67108864/real_time                          1.27 ms         1.26 ms          419   52.884/s
+random<std::vector<char>,parallel_policy>/134217728/real_time                         3.09 ms         3.07 ms          269  43.3766/s
+random<std::vector<char>,parallel_policy>/268435456/real_time                         5.50 ms         5.46 ms          134   48.785/s
+random<std::vector<char>,parallel_unsequenced_policy>/33554432/real_time             0.621 ms        0.617 ms         1284  54.0049/s
+random<std::vector<char>,parallel_unsequenced_policy>/67108864/real_time              1.18 ms         1.18 ms          615  56.7163/s
+random<std::vector<char>,parallel_unsequenced_policy>/134217728/real_time             2.40 ms         2.38 ms          271  55.9987/s
+random<std::vector<char>,parallel_unsequenced_policy>/268435456/real_time             5.36 ms         5.31 ms          100  50.1229/s
+random_rocm<thrust::device_vector<char>>/33554432/manual_time                        0.937 ms        0.943 ms          747  35.7919/s
+random_rocm<thrust::device_vector<char>>/67108864/manual_time                         1.84 ms         1.84 ms          381  36.5677/s
+random_rocm<thrust::device_vector<char>>/134217728/manual_time                        3.63 ms         3.63 ms          193  36.9716/s
+random_rocm<thrust::device_vector<char>>/268435456/manual_time                        7.32 ms         7.28 ms           97  36.6933/s
+random_rocm<thrust::universal_vector<char>>/33554432/manual_time                     0.947 ms        0.951 ms          749  35.4459/s
+random_rocm<thrust::universal_vector<char>>/67108864/manual_time                      1.83 ms         1.84 ms          382  36.6102/s
+random_rocm<thrust::universal_vector<char>>/134217728/manual_time                     3.63 ms         3.63 ms          193  36.9881/s
+random_rocm<thrust::universal_vector<char>>/268435456/manual_time                     7.21 ms         7.20 ms           97  37.2055/s
+random_rocm<gynx::unified_vector<char>>/33554432/manual_time                         0.934 ms        0.939 ms          749  35.9106/s
+random_rocm<gynx::unified_vector<char>>/67108864/manual_time                          1.83 ms         1.84 ms          382  36.5811/s
+random_rocm<gynx::unified_vector<char>>/134217728/manual_time                         3.63 ms         3.62 ms          193  36.9863/s
+random_rocm<gynx::unified_vector<char>>/268435456/manual_time                         7.22 ms         7.20 ms           97   37.184/s
+valid<std::vector<char>,sequenced_policy>/33554432                                    6.63 ms         6.60 ms          106  5.08534/s
+valid<std::vector<char>,sequenced_policy>/67108864                                    13.4 ms         13.3 ms           53  5.04042/s
+valid<std::vector<char>,sequenced_policy>/134217728                                   26.7 ms         26.6 ms           26  5.04895/s
+valid<std::vector<char>,sequenced_policy>/268435456                                   53.2 ms         52.9 ms           13  5.07312/s
+valid<std::vector<char>,unsequenced_policy>/33554432                                  10.3 ms         10.3 ms           68  3.27162/s
+valid<std::vector<char>,unsequenced_policy>/67108864                                  20.6 ms         20.5 ms           34  3.26638/s
+valid<std::vector<char>,unsequenced_policy>/134217728                                 41.4 ms         41.1 ms           17  3.26726/s
+valid<std::vector<char>,unsequenced_policy>/268435456                                 82.6 ms         82.1 ms            9  3.26841/s
+valid<std::vector<char>,parallel_policy>/33554432/real_time                          0.372 ms        0.369 ms         1809  90.1694/s
+valid<std::vector<char>,parallel_policy>/67108864/real_time                          0.724 ms        0.718 ms          966   92.729/s
+valid<std::vector<char>,parallel_policy>/134217728/real_time                          1.48 ms         1.46 ms          476   90.818/s
+valid<std::vector<char>,parallel_policy>/268435456/real_time                          2.90 ms         2.88 ms          240  92.4743/s
+valid<std::vector<char>,parallel_unsequenced_policy>/33554432/real_time              0.333 ms        0.330 ms         2138  100.855/s
+valid<std::vector<char>,parallel_unsequenced_policy>/67108864/real_time              0.629 ms        0.623 ms         1194  106.774/s
+valid<std::vector<char>,parallel_unsequenced_policy>/134217728/real_time              1.20 ms         1.19 ms          618   111.44/s
+valid<std::vector<char>,parallel_unsequenced_policy>/268435456/real_time              2.30 ms         2.28 ms          316  116.573/s
+valid_rocm<thrust::device_vector<char>>/33554432/manual_time                         0.091 ms        0.098 ms         7725  369.802/s
+valid_rocm<thrust::device_vector<char>>/67108864/manual_time                         0.149 ms        0.157 ms         5350  449.592/s
+valid_rocm<thrust::device_vector<char>>/134217728/manual_time                        0.212 ms        0.220 ms         3308   633.14/s
+valid_rocm<thrust::device_vector<char>>/268435456/manual_time                        0.670 ms        0.672 ms         1041  400.474/s
+valid_rocm<thrust::universal_vector<char>>/33554432/manual_time                      0.115 ms        0.123 ms         6113  292.791/s
+valid_rocm<thrust::universal_vector<char>>/67108864/manual_time                      0.154 ms        0.163 ms         4541   435.49/s
+valid_rocm<thrust::universal_vector<char>>/134217728/manual_time                     0.214 ms        0.223 ms         3267  626.807/s
+valid_rocm<thrust::universal_vector<char>>/268435456/manual_time                     0.685 ms        0.687 ms         1020  391.956/s
+valid_rocm<gynx::unified_vector<char>>/33554432/manual_time                          0.114 ms        0.123 ms         6102  293.207/s
+valid_rocm<gynx::unified_vector<char>>/67108864/manual_time                          0.154 ms        0.162 ms         4534  436.989/s
+valid_rocm<gynx::unified_vector<char>>/134217728/manual_time                         0.214 ms        0.223 ms         3277  626.045/s
+valid_rocm<gynx::unified_vector<char>>/268435456/manual_time                         0.684 ms        0.687 ms         1023  392.292/s
