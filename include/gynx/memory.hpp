@@ -52,6 +52,9 @@ namespace gynx
         {   T* value = 0;
             // hipMallocManaged creates a unified buffer accessible by CPU & GPU
             hipError_t err = hipMallocManaged(&value, n * sizeof(T));
+            // hipError_t err = hipHostMalloc(&value, n * sizeof(T));
+            // hipError_t err = hipHostAlloc(&value, n * sizeof(T));
+
             if (err != hipSuccess) throw thrust::system_error(err, thrust::hip_category());
             return pointer(value);
         }
@@ -64,7 +67,7 @@ namespace gynx
 
 // Define a unified vector type
 template<class T>
-    using unified_vector = thrust::device_vector<T, ManagedAllocator<T>>;
+    using unified_vector = thrust::host_vector<T, ManagedAllocator<T>>;
 #endif
 
 #if defined(__CUDACC__)

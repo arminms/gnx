@@ -49,6 +49,13 @@ BENCHMARK_TEMPLATE(io_write_fasta, thrust::device_vector<char>)
 ->  Unit(benchmark::kMillisecond);
 #endif // __CUDACC__ || __HIPCC__
 
+#if defined(__HIPCC__)
+BENCHMARK_TEMPLATE(io_write_fasta, gynx::unified_vector<char>)
+->  RangeMultiplier(2)
+->  Range(1<<28, 1<<29)
+->  Unit(benchmark::kMillisecond);
+#endif // __HIPCC__
+
 //----------------------------------------------------------------------------//
 // io_read_fasta()
 
@@ -90,6 +97,13 @@ BENCHMARK_TEMPLATE(io_read_fasta, thrust::device_vector<char>)
 ->  Range(1<<28, 1<<29)
 ->  Unit(benchmark::kMillisecond);
 #endif // __CUDACC__ || __HIPCC__
+
+#if defined(__HIPCC__)
+BENCHMARK_TEMPLATE(io_read_fasta, gynx::unified_vector<char>)
+->  RangeMultiplier(2)
+->  Range(1<<28, 1<<29)
+->  Unit(benchmark::kMillisecond);
+#endif // __HIPCC__
 
 //----------------------------------------------------------------------------//
 // rand() algorithm
@@ -209,7 +223,11 @@ BENCHMARK_TEMPLATE(random_rocm, thrust::universal_vector<char>)
 ->  Range(1<<25, 1<<28)
 ->  UseManualTime()
 ->  Unit(benchmark::kMillisecond);
-
+BENCHMARK_TEMPLATE(random_rocm, gynx::unified_vector<char>)
+->  RangeMultiplier(2)
+->  Range(1<<25, 1<<28)
+->  UseManualTime()
+->  Unit(benchmark::kMillisecond);
 #endif //__HIPCC__
 
 //----------------------------------------------------------------------------//
@@ -330,6 +348,11 @@ BENCHMARK_TEMPLATE(valid_rocm, thrust::device_vector<char>)
 ->  UseManualTime()
 ->  Unit(benchmark::kMillisecond);
 BENCHMARK_TEMPLATE(valid_rocm, thrust::universal_vector<char>)
+->  RangeMultiplier(2)
+->  Range(1<<25, 1<<28)
+->  UseManualTime()
+->  Unit(benchmark::kMillisecond);
+BENCHMARK_TEMPLATE(valid_rocm, gynx::unified_vector<char>)
 ->  RangeMultiplier(2)
 ->  Range(1<<25, 1<<28)
 ->  UseManualTime()

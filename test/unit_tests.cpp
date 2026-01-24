@@ -79,13 +79,13 @@ TEMPLATE_TEST_CASE( "gynx::sq", "[class]", std::vector<char>)
         &&  !std::is_same_v<T, gynx::unified_vector<char>>
 #endif //__HIPCC__
         )
-        {   gynx::sq_gen<T> a4(4);
+        {   gynx::sq_gen<T> a4(4, 'A');
             CHECK(a4 == "AAAA");
             gynx::sq_gen<T> c4(4, 'C');
             CHECK(c4 == "CCCC");
         }
 #else
-        gynx::sq_gen<T> a4(4);
+        gynx::sq_gen<T> a4(4, 'A');
         CHECK(a4 == "AAAA");
         gynx::sq_gen<T> c4(4, 'C');
         CHECK(c4 == "CCCC");

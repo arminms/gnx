@@ -91,23 +91,26 @@ public:
     ,   _ptr_td()
     {}
     ///
+    /// Constructs a sequence with @a count residues.
+    /// @param count The number of residues in the sequence.
+    sq_gen(size_type count)
+    :   _sq(count)
+    ,   _ptr_td()
+    {}
+    ///
     /// Constructs a sequence with @a count residues, each initialized to
     /// @a value (default is 'A' (ASCII 65)).
     /// @param count The number of residues in the sequence.
     /// @param value The residue value to initialize each position with.
 #if defined(__CUDACC__) || defined(__HIPCC__)
-    sq_gen(size_type count)
-    requires (std::is_same_v<Container, thrust::device_vector<value_type>>)
-    :   _sq(count)
-    ,   _ptr_td()
-    {}
-    sq_gen(size_type count, const_reference value = value_type(65))
+    sq_gen(size_type count, const_reference value)
     requires (!std::is_same_v<Container, thrust::device_vector<value_type>>)
+    || (!std::is_same_v<Container, gynx::unified_vector<value_type>>)
     :   _sq(count, value)
     ,   _ptr_td()
     {}
 #else
-    sq_gen(size_type count, const_reference value = value_type(65))
+    sq_gen(size_type count, const_reference value)
     :   _sq(count, value)
     ,   _ptr_td()
     {}
