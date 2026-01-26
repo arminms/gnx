@@ -360,6 +360,53 @@ BENCHMARK_TEMPLATE(valid_rocm, gynx::unified_vector<char>)
 
 #endif //__HIPCC__
 
+//----------------------------------------------------------------------------//
+// test_unified_memory()
+
+template <typename T>
+void unified_physical_memory(benchmark::State& st)
+{   size_t n = size_t(st.range());
+    gynx::sq_gen<T> sr;
+    auto sw = gynx::random::dna<gynx::sq_gen<T>>(n);
+    sw.save(fasta_filename, gynx::out::fasta());
+
+    for (auto _ : st)
+    {   sr.load(fasta_filename);
+        benchmark::ClobberMemory();
+        benchmark::DoNotOptimize(gynx::valid(gynx::execution::unseq, sr));
+    }
+    std::remove(fasta_filename.c_str());
+
+    st.counters["BW (GB/s)"] = benchmark::Counter
+    (   (n * sizeof(typename T::value_type)) / 1e9
+    ,   benchmark::Counter::kIsIterationInvariantRate
+    );
+}
+BENCHMARK_TEMPLATE(unified_physical_memory, std::vector<char>)
+->  RangeMultiplier(2)
+->  Range(1<<28, 1<<29)
+->  Unit(benchmark::kMillisecond);
+#if defined(__CUDACC__) || defined(__HIPCC__)
+BENCHMARK_TEMPLATE(unified_physical_memory, thrust::host_vector<char>)
+->  RangeMultiplier(2)
+->  Range(1<<28, 1<<29)
+->  Unit(benchmark::kMillisecond);
+BENCHMARK_TEMPLATE(unified_physical_memory, thrust::universal_vector<char>)
+->  RangeMultiplier(2)
+->  Range(1<<28, 1<<29)
+->  Unit(benchmark::kMillisecond);
+BENCHMARK_TEMPLATE(unified_physical_memory, thrust::device_vector<char>)
+->  RangeMultiplier(2)
+->  Range(1<<28, 1<<29)
+->  Unit(benchmark::kMillisecond);
+#if defined(__HIPCC__)
+BENCHMARK_TEMPLATE(unified_physical_memory, gynx::unified_vector<char>)
+->  RangeMultiplier(2)
+->  Range(1<<28, 1<<29)
+->  Unit(benchmark::kMillisecond);
+#endif //__HIPCC__
+#endif // __CUDACC__ || __HIPCC__
+
 //-- get_runtime_version ------------------------------------------------------//
 
 #if defined(__CUDACC__)
