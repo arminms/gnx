@@ -156,16 +156,17 @@ struct fasta
         const typename Sequence::value_type* data = nullptr;
 #if defined(__CUDACC__) || defined(__HIPCC__) // handle device_vector
         universal_host_pinned_vector<typename Sequence::value_type> h_seq;
-        if constexpr
-        (   std::is_same_v<typename Sequence::container_type, thrust::device_vector<typename Sequence::value_type>>
-        )
+        // if constexpr
+        // (   std::is_same_v<typename Sequence::container_type, thrust::device_vector<typename Sequence::value_type>>
+        // ||  std::is_same_v<typename Sequence::container_type, gynx::unified_vector<typename Sequence::value_type>>
+        // )
         {   h_seq.resize(std::size(seq));
             thrust::copy(seq.begin(), seq.end(), h_seq.begin());
             data = thrust::raw_pointer_cast(h_seq.data());
         }
-        else
-        {   data = seq.data();
-        }
+        // else
+        // {   data = seq.data();
+        // }
 #else
         data = seq.data();
 #endif //__CUDACC__
@@ -309,16 +310,16 @@ struct fastq
         const typename Sequence::value_type* data = nullptr;
 #if defined(__CUDACC__) || defined(__HIPCC__) // handle device_vector
         universal_host_pinned_vector<typename Sequence::value_type> h_seq;
-        if constexpr
-        (   std::is_same_v<typename Sequence::container_type, thrust::device_vector<typename Sequence::value_type>>
-        )
+        // if constexpr
+        // (   std::is_same_v<typename Sequence::container_type, thrust::device_vector<typename Sequence::value_type>>
+        // )
         {   h_seq.resize(std::size(seq));
             thrust::copy(seq.begin(), seq.end(), h_seq.begin());
             data = thrust::raw_pointer_cast(h_seq.data());
         }
-        else
-        {   data = seq.data();
-        }
+        // else
+        // {   data = seq.data();
+        // }
 #else
         data = seq.data();
 #endif //__CUDACC__
