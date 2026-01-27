@@ -366,11 +366,11 @@ BENCHMARK_TEMPLATE(valid_rocm, gnx::unified_vector<char>)
 template <typename T>
 void unified_physical_memory(benchmark::State& st)
 {   size_t n = size_t(st.range());
+    auto sw = gnx::random::dna<gnx::sq_gen<T>>(n);
+    sw.save(fasta_filename, gnx::out::fasta());
 
     for (auto _ : st)
-    {   auto sw = gnx::random::dna<gnx::sq_gen<T>>(n);
-        sw.save(fasta_filename, gnx::out::fasta());
-        gnx::sq_gen<T> sr;
+    {   gnx::sq_gen<T> sr;
         sr.load(fasta_filename);
         benchmark::DoNotOptimize(gnx::valid(sr));
     }
@@ -385,26 +385,112 @@ BENCHMARK_TEMPLATE(unified_physical_memory, std::vector<char>)
 ->  RangeMultiplier(2)
 ->  Range(1<<28, 1<<29)
 ->  Unit(benchmark::kMillisecond);
-#if defined(__CUDACC__) || defined(__HIPCC__)
-BENCHMARK_TEMPLATE(unified_physical_memory, thrust::host_vector<char>)
+
+#if defined(__CUDACC__)
+template <class T>
+void unified_physical_memory_cuda(benchmark::State& st)
+{   size_t n = size_t(st.range());
+
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start); cudaEventCreate(&stop);
+    cudaEventRecord(start);
+    auto sw = gnx::random::dna<gnx::sq_gen<T>>(n);
+    sw.save(fasta_filename, gnx::out::fasta());
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+
+    for (auto _ : st)
+    {   cudaEventRecord(start);
+        gnx::sq_gen<T> sr;
+        sr.load(fasta_filename);
+        benchmark::DoNotOptimize(gnx::valid(sr));
+        cudaEventRecord(stop);
+        cudaEventSynchronize(stop);
+        float milliseconds = 0;
+        cudaEventElapsedTime(&milliseconds, start, stop);
+        st.SetIterationTime(milliseconds * 0.001f);
+    }
+
+    std::remove(fasta_filename.c_str());
+    cudaEventDestroy(start); cudaEventDestroy(stop);
+
+    st.counters["BW (GB/s)"] = benchmark::Counter
+    (   (n * sizeof(typename T::value_type)) / 1e9
+    ,   benchmark::Counter::kIsIterationInvariantRate
+    );
+}
+
+BENCHMARK_TEMPLATE(unified_physical_memory_cuda, thrust::host_vector<char>)
 ->  RangeMultiplier(2)
 ->  Range(1<<28, 1<<29)
+->  UseManualTime()
 ->  Unit(benchmark::kMillisecond);
-BENCHMARK_TEMPLATE(unified_physical_memory, thrust::device_vector<char>)
+BENCHMARK_TEMPLATE(unified_physical_memory_cuda, thrust::device_vector<char>)
 ->  RangeMultiplier(2)
 ->  Range(1<<28, 1<<29)
+->  UseManualTime()
 ->  Unit(benchmark::kMillisecond);
-BENCHMARK_TEMPLATE(unified_physical_memory, thrust::universal_vector<char>)
+BENCHMARK_TEMPLATE(unified_physical_memory_cuda, thrust::universal_vector<char>)
 ->  RangeMultiplier(2)
 ->  Range(1<<28, 1<<29)
+->  UseManualTime()
 ->  Unit(benchmark::kMillisecond);
+#endif //__CUDACC__
+
 #if defined(__HIPCC__)
-BENCHMARK_TEMPLATE(unified_physical_memory, gnx::unified_vector<char>)
+template <class T>
+void unified_physical_memory_rocm(benchmark::State& st)
+{   size_t n = size_t(st.range());
+
+    hipEvent_t start, stop;
+    hipEventCreate(&start); hipEventCreate(&stop);
+    hipEventRecord(start);
+    auto sw = gnx::random::dna<gnx::sq_gen<T>>(n);
+    sw.save(fasta_filename, gnx::out::fasta());
+    hipEventRecord(stop);
+    hipEventSynchronize(stop);
+
+    for (auto _ : st)
+    {   hipEventRecord(start);
+        gnx::sq_gen<T> sr;
+        sr.load(fasta_filename);
+        benchmark::DoNotOptimize(gnx::valid(sr));
+        hipEventRecord(stop);
+        hipEventSynchronize(stop);
+        float milliseconds = 0;
+        hipEventElapsedTime(&milliseconds, start, stop);
+        st.SetIterationTime(milliseconds * 0.001f);
+    }
+
+    std::remove(fasta_filename.c_str());
+    hipEventDestroy(start); hipEventDestroy(stop);
+
+    st.counters["BW (GB/s)"] = benchmark::Counter
+    (   (n * sizeof(typename T::value_type)) / 1e9
+    ,   benchmark::Counter::kIsIterationInvariantRate
+    );
+}
+
+BENCHMARK_TEMPLATE(unified_physical_memory_rocm, thrust::host_vector<char>)
+->  RangeMultiplier(2)
+->  Range(1<<28, 1<<29)
+->  UseManualTime()
+->  Unit(benchmark::kMillisecond);
+BENCHMARK_TEMPLATE(unified_physical_memory_rocm, thrust::device_vector<char>)
+->  RangeMultiplier(2)
+->  Range(1<<28, 1<<29)
+->  UseManualTime()
+->  Unit(benchmark::kMillisecond);
+BENCHMARK_TEMPLATE(unified_physical_memory_rocm, thrust::universal_vector<char>)
+->  RangeMultiplier(2)
+->  Range(1<<28, 1<<29)
+->  UseManualTime()
+->  Unit(benchmark::kMillisecond);
+BENCHMARK_TEMPLATE(unified_physical_memory_rocm, gnx::unified_vector<char>)
 ->  RangeMultiplier(2)
 ->  Range(1<<28, 1<<29)
 ->  Unit(benchmark::kMillisecond);
 #endif //__HIPCC__
-#endif // __CUDACC__ || __HIPCC__
 
 //-- get_runtime_version ------------------------------------------------------//
 
