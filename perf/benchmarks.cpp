@@ -236,11 +236,16 @@ BENCHMARK_TEMPLATE(random_rocm, gnx::unified_vector<char>)
 template <typename T, typename ExecPolicy>
 void valid(benchmark::State& st)
 {   size_t n = size_t(st.range());
-    auto s = gnx::random::dna<gnx::sq_gen<T>>(n, seed_pi);
     ExecPolicy policy;
+    auto s = gnx::random::dna<gnx::sq_gen<T>>(n, seed_pi);
+    gnx::sq_view_gen<T> v{s}; // to make it compatible with gnx::unified_vector
+    // std::span<typename T::value_type> v // alternative way in C++20
+    // (   s.data()
+    // ,   n
+    // );
 
     for (auto _ : st)
-        benchmark::DoNotOptimize(gnx::valid(policy, s));
+        benchmark::DoNotOptimize(gnx::valid(policy, v));
 
     st.counters["BW (GB/s)"] = benchmark::Counter
     (   (n * sizeof(typename T::value_type)) / 1e9
@@ -266,9 +271,28 @@ BENCHMARK_TEMPLATE2(valid, std::vector<char>, parallel_unsequenced_policy)
 ->  Range(1<<25, 1<<28)
 ->  UseRealTime()
 ->  Unit(benchmark::kMillisecond);
+#if defined(__HIPCC__)
+BENCHMARK_TEMPLATE2(valid, gnx::unified_vector<char>, sequenced_policy)
+->  RangeMultiplier(2)
+->  Range(1<<25, 1<<28)
+->  Unit(benchmark::kMillisecond);
+BENCHMARK_TEMPLATE2(valid, gnx::unified_vector<char>, unsequenced_policy)
+->  RangeMultiplier(2)
+->  Range(1<<25, 1<<28)
+->  Unit(benchmark::kMillisecond);
+BENCHMARK_TEMPLATE2(valid, gnx::unified_vector<char>, parallel_policy)
+->  RangeMultiplier(2)
+->  Range(1<<25, 1<<28)
+->  UseRealTime()
+->  Unit(benchmark::kMillisecond);
+BENCHMARK_TEMPLATE2(valid, gnx::unified_vector<char>, parallel_unsequenced_policy)
+->  RangeMultiplier(2)
+->  Range(1<<25, 1<<28)
+->  UseRealTime()
+->  Unit(benchmark::kMillisecond);
+#endif //__HIPCC__
 
 #if defined(__CUDACC__)
-
 template <class T>
 void valid_cuda(benchmark::State& st)
 {   size_t n = size_t(st.range());
@@ -308,7 +332,6 @@ BENCHMARK_TEMPLATE(valid_cuda, thrust::universal_vector<char>)
 ->  Range(1<<25, 1<<28)
 ->  UseManualTime()
 ->  Unit(benchmark::kMillisecond);
-
 #endif //__CUDACC__
 
 #if defined(__HIPCC__)
