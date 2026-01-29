@@ -859,15 +859,30 @@ TEMPLATE_TEST_CASE( "gnx::random", "[algorithm][random]", std::vector<char>)
         CHECK(t == r);
     }
 
-    // SECTION( "random nucleotide sequence with weights" )
-    // {   gnx::rand(s.begin(), 20, "ACGT", {35, 15, 15, 35}, seed_pi);
-    //     CHECK(gnx::valid_nucleotide(s));
-    //     // CAPTURE(s);
-    //     CHECK(s == "TTCTTAAGTCTTTAAACACG");
-    //     auto t = gnx::random::dna<decltype(s)>(20, 30, seed_pi);
-    //     t[2] = 'C';
-    //     CHECK(s == t);
-    // }
+    SECTION( "random rna sequence" )
+    {   gnx::rand(s.begin(), 20, "ACGU", seed_pi);
+        CHECK(gnx::valid_nucleotide(s));
+        CHECK(s == "UUCGGCCGUCGUUAAACACG");
+        auto t = gnx::random::rna<decltype(s)>(20, seed_pi);
+        CHECK(s == t);
+    }
+
+    SECTION( "random peptide sequence" )
+    {   gnx::rand(s.begin(), 20, "ACDEFGHIKLMNPQRSTVWY", seed_pi);
+        CHECK(gnx::valid_peptide(s));
+        CHECK(s == "TTIQRHHMVKQSSFDALCLM");
+        auto t = gnx::random::peptide<decltype(s)>(20, seed_pi);
+        CHECK(s == t);
+    }
+
+    SECTION( "random nucleotide sequence with weights" )
+    {   gnx::rand(s.begin(), 20, "ACGT", {35, 15, 15, 35}, seed_pi);
+        CHECK(gnx::valid_nucleotide(s));
+        CHECK(s == "TTCTTAAGTCTTTAAACACG");
+        auto t = gnx::random::dna<decltype(s)>(20, 30, seed_pi);
+        t[2] = 'C';
+        CHECK(s == t);
+    }
 }
 
 #if defined(__CUDACC__)
