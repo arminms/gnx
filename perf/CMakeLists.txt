@@ -1,3 +1,7 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025 Armin Sobhani
+#
+
 ## defining target for benchmarks
 #
 add_executable(benchmarks benchmarks.cpp)

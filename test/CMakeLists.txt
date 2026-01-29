@@ -1,3 +1,7 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2023-2025 Armin Sobhani
+#
+
 ## fetching sample genome (Chlamydia psittaci 6BC)
 #
 FetchContent_Declare(

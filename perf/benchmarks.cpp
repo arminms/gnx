@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 Armin Sobhani
+//
 #include <benchmark/benchmark.h>
 
 #include <gnx/sq.hpp>
