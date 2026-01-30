@@ -10,6 +10,9 @@
 
 using namespace gnx::execution;
 
+template<typename T>
+using aligned_vector = std::vector<T, gnx::aligned_allocator<T,  gnx::Alignment::SSE>>;
+
 const uint64_t seed_pi{3141592654};
 const std::string fasta_filename{"perf_data.fa"};
 
@@ -241,14 +244,14 @@ void valid(benchmark::State& st)
 {   size_t n = size_t(st.range());
     ExecPolicy policy;
     auto s = gnx::random::dna<gnx::sq_gen<T>>(n, seed_pi);
-    gnx::sq_view_gen<T> v{s}; // to make it compatible with gnx::unified_vector
     // std::span<typename T::value_type> v // alternative way in C++20
     // (   s.data()
     // ,   n
     // );
 
     for (auto _ : st)
-        benchmark::DoNotOptimize(gnx::valid(policy, v));
+        // passing the view to make it compatible with gnx::unified_vector
+        benchmark::DoNotOptimize(gnx::valid(policy, s()));
 
     st.counters["BW (GB/s)"] = benchmark::Counter
     (   (n * sizeof(typename T::value_type)) / 1e9
@@ -264,6 +267,10 @@ BENCHMARK_TEMPLATE2(valid, std::vector<char>, unsequenced_policy)
 ->  RangeMultiplier(2)
 ->  Range(1<<25, 1<<28)
 ->  Unit(benchmark::kMillisecond);
+// BENCHMARK_TEMPLATE2(valid, aligned_vector<char>, unsequenced_policy)
+// ->  RangeMultiplier(2)
+// ->  Range(1<<25, 1<<28)
+// ->  Unit(benchmark::kMillisecond);
 BENCHMARK_TEMPLATE2(valid, std::vector<char>, parallel_policy)
 ->  RangeMultiplier(2)
 ->  Range(1<<25, 1<<28)
@@ -274,6 +281,11 @@ BENCHMARK_TEMPLATE2(valid, std::vector<char>, parallel_unsequenced_policy)
 ->  Range(1<<25, 1<<28)
 ->  UseRealTime()
 ->  Unit(benchmark::kMillisecond);
+// BENCHMARK_TEMPLATE2(valid, aligned_vector<char>, parallel_unsequenced_policy)
+// ->  RangeMultiplier(2)
+// ->  Range(1<<25, 1<<28)
+// ->  UseRealTime()
+// ->  Unit(benchmark::kMillisecond);
 #if defined(__HIPCC__)
 BENCHMARK_TEMPLATE2(valid, gnx::unified_vector<char>, sequenced_policy)
 ->  RangeMultiplier(2)

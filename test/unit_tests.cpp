@@ -11,11 +11,15 @@
 
 const uint64_t seed_pi{3141592654};
 
+template<typename T>
+using aligned_vector = std::vector<T, gnx::aligned_allocator<T, gnx::Alignment::AVX512>>;
+
 #if defined(__CUDACC__)
 TEMPLATE_TEST_CASE
 (   "gnx::sq"
 ,   "[class][cuda]"
 ,   std::vector<char>
+// ,   aligned_vector<char>
 ,   thrust::host_vector<char>
 ,   thrust::device_vector<char>
 ,   thrust::universal_vector<char>
