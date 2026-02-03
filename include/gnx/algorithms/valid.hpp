@@ -24,9 +24,7 @@ namespace gnx {
 
 namespace detail {
 
-#if defined(_WIN32)
-#pragma omp simd uniform(v, table) linear(i:1)
-#else
+#if !defined(_WIN32)
 #pragma omp declare simd uniform(v, table) linear(i:1)
 #endif
 template<typename T, typename SizeT, typename LutT>
