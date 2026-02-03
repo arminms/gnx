@@ -1,26 +1,7 @@
-//
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2025 Armin Sobhani
 //
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-// SOFTWARE.
-//
-#ifndef _GNX_LUT_VALID_HPP_
-#define _GNX_LUT_VALID_HPP_
+#pragma once
 
 #include <array>
 #include <cstdint>
@@ -49,7 +30,7 @@ constexpr std::array<uint8_t, 256> create_valid_nucleotide_table()
     table['u'] = 0;
     table['n'] = 0;
 
-    // IUPAC ambiguity codes (uppercase)
+    // IupAC ambiguity codes (uppercase)
     table['R'] = 0; // A or G (puRine)
     table['Y'] = 0; // C or T (pYrimidine)
     table['S'] = 0; // G or C (Strong)
@@ -61,7 +42,7 @@ constexpr std::array<uint8_t, 256> create_valid_nucleotide_table()
     table['H'] = 0; // A, C or T (not G)
     table['V'] = 0; // A, C or G (not T)
 
-    // IUPAC ambiguity codes (lowercase)
+    // IupAC ambiguity codes (lowercase)
     table['r'] = 0;
     table['y'] = 0;
     table['s'] = 0;
@@ -155,5 +136,3 @@ inline constexpr auto valid_nucleotide = create_valid_nucleotide_table();
 inline constexpr auto valid_peptide = create_valid_peptide_table();
 
 } // namespace gnx::lut
-
-#endif  // _GNX_LUT_VALID_HPP_
