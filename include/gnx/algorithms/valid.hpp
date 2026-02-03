@@ -36,10 +36,10 @@ namespace kernel {
 #define BLOCK_THREADS 256
 #define ITEMS_PER_THREAD 4
 
-template<typename T, typename SumT, typename SizeT, typename TableT>
+template<typename T, typename ResultT, typename SizeT, typename TableT>
 __global__ void valid_kernel
 (   T* d_in
-,   SumT* d_out
+,   ResultT* d_out
 ,   SizeT n
 ,   TableT* lut
 )
@@ -50,14 +50,14 @@ __global__ void valid_kernel
     __syncthreads();
 
 #if defined(__HIPCC__)
-    typedef hipcub::BlockReduce<SumT, BLOCK_THREADS> BlockReduceT;
+    typedef hipcub::BlockReduce<ResultT, BLOCK_THREADS> BlockReduceT;
 #else
-    typedef cub::BlockReduce<SumT, BLOCK_THREADS> BlockReduceT;
+    typedef cub::BlockReduce<ResultT, BLOCK_THREADS> BlockReduceT;
 #endif
     // allocate shared memory for CUB
     __shared__ typename BlockReduceT::TempStorage temp_storage;
 
-    SumT local_sum = 0;
+    ResultT local_result = 0;
 
     for (SizeT i = 0; i < ITEMS_PER_THREAD; ++i)
     {   // thread Coarsening loop
@@ -69,14 +69,13 @@ __global__ void valid_kernel
         +   i
         ;
         if (idx < n)
-            local_sum += shared_lut[static_cast<TableT>(d_in[idx])];
+            local_result |= shared_lut[static_cast<TableT>(d_in[idx])];
     }
 
     // block reduction (only thread 0 returns the valid aggregate)
-    T block_sum = BlockReduceT(temp_storage).Sum(local_sum);
-
+    ResultT block_result = BlockReduceT(temp_storage).Reduce(local_result, thrust::logical_or<ResultT>());
     if (tid == 0)
-        d_out[blockIdx.x] = block_sum;
+        d_out[blockIdx.x] = block_result;
 }
 
 } // end kernel namespace
@@ -90,13 +89,14 @@ inline bool valid_device
 )
 {   typedef typename std::iterator_traits<Iterator>::value_type value_type;
     typedef typename std::iterator_traits<Iterator>::difference_type difference_type;
+    typedef decltype(lut::valid_nucleotide)::value_type result_type;
 
     difference_type n = last - first;
     if (n <= 0)
         return true;
 
     const auto& table = nucleotide ? lut::valid_nucleotide : lut::valid_peptide;
-    difference_type sum = 0;
+    result_type result = 0;
     difference_type elements_per_block = BLOCK_THREADS * ITEMS_PER_THREAD;
     unsigned int grid_size = (n + elements_per_block - 1) / elements_per_block;
 
@@ -108,24 +108,24 @@ inline bool valid_device
     if constexpr (has_stream_member<ExecPolicy>)
        stream = policy.stream();
 
-    thrust::device_vector<difference_type> d_partial_sums(grid_size);
+    thrust::device_vector<result_type> d_partial_results(grid_size);
     thrust::device_vector<uint8_t> d_lut(table.begin(), table.end());
 
     kernel::valid_kernel<<<grid_size, BLOCK_THREADS, 0, stream>>>
     (   thrust::raw_pointer_cast(&first[0])
-    ,   thrust::raw_pointer_cast(d_partial_sums.data())
+    ,   thrust::raw_pointer_cast(d_partial_results.data())
     ,   n
     ,   thrust::raw_pointer_cast(d_lut.data())
     );
 
-    sum = thrust::reduce
-    (   d_partial_sums.begin()
-    ,   d_partial_sums.end()
+    result = thrust::reduce
+    (   d_partial_results.begin()
+    ,   d_partial_results.end()
     ,   0
-    ,   thrust::plus<difference_type>()
+    ,   thrust::logical_or<result_type>()
     );
 
-    return sum == 0;
+    return result == 0;
 }
 #endif // __CUDACC__
 
