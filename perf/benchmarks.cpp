@@ -11,7 +11,7 @@
 using namespace gnx::execution;
 
 template<typename T>
-using aligned_vector = std::vector<T, gnx::aligned_allocator<T, gnx::Alignment::AVX512>>;
+using aligned_vector = std::vector<T, gnx::aligned_allocator<T, gnx::Alignment::AVX>>;
 
 const uint64_t seed_pi{3141592654};
 const std::string fasta_filename{"perf_data.fa"};
