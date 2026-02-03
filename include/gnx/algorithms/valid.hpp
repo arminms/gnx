@@ -24,16 +24,10 @@ namespace gnx {
 
 namespace detail {
 
-#pragma omp declare simd uniform(table) simdlen(16)
-template<typename T, typename LutT>
-inline LutT valid_value(T v, const LutT* table)
-{   return table[static_cast<LutT>(v)];
-}
-
-#pragma omp declare simd uniform(v, table) linear(i:1) simdlen(16)
+#pragma omp declare simd uniform(v, table) linear(i:1)
 template<typename T, typename SizeT, typename LutT>
-inline LutT valid_func(const T* v, SizeT i, LutT r, const LutT* table)
-{   return r |= valid_value(v[i], table);
+inline LutT valid_func(const T* v, SizeT i, const LutT* table)
+{   return table[static_cast<LutT>(v[i])];
 }
 
 #if defined(__CUDACC__) || defined(__HIPCC__)
@@ -221,26 +215,26 @@ inline bool valid
 
     // compile-time dispatch based on execution policy
     if constexpr (std::is_same_v<std::decay_t<ExecPolicy>, gnx::execution::unsequenced_policy>)
-    {
-        #pragma omp simd
+    {   const auto vptr = &first[0];
+        #pragma omp simd reduction(|:result)
         for (int i = 0; i < n; ++i)
-            result = detail::valid_func(&first[0], i, result, table.data());
+            result |= detail::valid_func(vptr, i, table.data());
     }
     else if constexpr (std::is_same_v<std::decay_t<ExecPolicy>, gnx::execution::parallel_policy>)
     {   // firstprivate(table) must be used once the reference is avoided
         #pragma omp parallel for default(none) reduction(|:result) shared(first,table,n)
         for (int i = 0; i < n; ++i)
-            result = detail::valid_func(&first[0], i, result, table.data());
+            result |= detail::valid_func(&first[0], i, table.data());
     }
     else if constexpr (std::is_same_v<std::decay_t<ExecPolicy>, gnx::execution::parallel_unsequenced_policy>)
-    {
+    {   const auto vptr = &first[0];
 #if defined(_WIN32)
-        #pragma omp parallel for default(none) reduction(|:result) shared(first,table,n)
+        #pragma omp parallel for default(none) reduction(|:result) shared(vptr,table,n)
 #else
-        #pragma omp parallel for simd default(none) reduction(|:result) shared(first,table,n)
+        #pragma omp parallel for simd default(none) reduction(|:result) shared(vptr,table,n)
 #endif // _WIN32
         for (int i = 0; i < n; ++i)
-            result = detail::valid_func(&first[0], i, result, table.data());
+            result |= detail::valid_func(vptr, i, table.data());
     }
     else
         return valid(first, last, nucleotide);
