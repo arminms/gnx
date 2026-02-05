@@ -580,8 +580,6 @@ int main(int argc, char** argv)
     auto status = cudaGetDeviceProperties(&prop, 0);
     if (status == cudaSuccess) {
 #else
-    int runtimeVersion;
-    hipRuntimeGetVersion(&runtimeVersion);
     hipDeviceProp_t prop;
     auto status = hipGetDeviceProperties(&prop, 0);
     if (status == hipSuccess) {
