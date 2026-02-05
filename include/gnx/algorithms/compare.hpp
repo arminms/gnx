@@ -28,8 +28,7 @@ namespace detail {
 #endif
 template<typename T1, typename T2, typename SizeT>
 inline int compare_func(const T1* v1, const T2* v2, SizeT i)
-{   auto to_upper = [](auto c) { return (c >= 'a' && c <= 'z') ? c - 32 : c; };
-    return to_upper(v1[i]) != to_upper(v2[i]);
+{   return ((v1[i] ^ v2[i]) & 0xDF) != 0;
 }
 
 #if defined(__CUDACC__) || defined(__HIPCC__)
@@ -176,12 +175,9 @@ constexpr bool compare
 ,   Iterator2 first2
 ,   Iterator2 last2
 )
-{   auto to_upper = [](auto c) { return (c >= 'a' && c <= 'z') ? c - 32 : c; };
-    while (first1 != last1 && first2 != last2)
-    {
-        if (to_upper(*first1++) != to_upper(*first2++))
+{   while (first1 != last1 && first2 != last2)
+        if ((((*first1++) ^ (*first2++)) & 0xDF) != 0)
             return false;
-    }
     return first1 == last1 && first2 == last2;
 }
 
@@ -226,29 +222,39 @@ inline bool compare
 )
 {   typedef typename std::iterator_traits<Iterator1>::difference_type difference_type;
     int result = 0;
-    
+
     difference_type n1 = last1 - first1;
     difference_type n2 = last2 - first2;
     if (n1 != n2) return false;
     difference_type n = n1;
+    const auto vptr1 = &first1[0];
+    const auto vptr2 = &first2[0];
 
     // compile-time dispatch based on execution policy
-    if constexpr (std::is_same_v<std::decay_t<ExecPolicy>, gnx::execution::unsequenced_policy>)
-    {   const auto vptr1 = &first1[0];
-        const auto vptr2 = &first2[0];
+    if constexpr
+    (   std::is_same_v<std::decay_t<ExecPolicy>
+    ,   gnx::execution::unsequenced_policy>
+    )
+    {
         #pragma omp simd reduction(|:result)
         for (int i = 0; i < n; ++i)
             result |= detail::compare_func(vptr1, vptr2, i);
     }
-    else if constexpr (std::is_same_v<std::decay_t<ExecPolicy>, gnx::execution::parallel_policy>)
-    {   // firstprivate(table) must be used once the reference is avoided
-        #pragma omp parallel for default(none) reduction(|:result) shared(first1, first2, n)
+    else if constexpr
+    (   std::is_same_v<std::decay_t<ExecPolicy>
+    ,   gnx::execution::parallel_policy>
+    )
+    {
+        #pragma omp parallel for default(none) reduction(|:result) shared(vptr1, vptr2, n)
         for (int i = 0; i < n; ++i)
-            result |= detail::compare_func(&first1[0], &first2[0], i);
+            result |= detail::compare_func(vptr1, vptr2, i);
     }
-    else if constexpr (std::is_same_v<std::decay_t<ExecPolicy>, gnx::execution::parallel_unsequenced_policy>)
-    {   const auto vptr1 = &first1[0];
-        const auto vptr2 = &first2[0];
+    else if
+    constexpr
+    (   std::is_same_v<std::decay_t<ExecPolicy>
+    ,   gnx::execution::parallel_unsequenced_policy>
+    )
+    {
 #if defined(_WIN32)
         #pragma omp parallel for default(none) reduction(|:result) shared(vptr1, vptr2, n)
 #else
@@ -274,7 +280,12 @@ constexpr bool compare
 (   const Range1& seq1
 ,   const Range2& seq2
 )
-{   return compare(std::begin(seq1), std::end(seq1), std::begin(seq2), std::end(seq2));
+{   return compare
+    (   std::begin(seq1)
+    ,   std::end(seq1)
+    ,   std::begin(seq2)
+    ,   std::end(seq2)
+    );
 }
 
 /// @brief Parallel-enabled comparison of two sequence ranges.
