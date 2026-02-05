@@ -708,9 +708,10 @@ std::string get_runtime_version()
     std::stringstream os;
     os << "\n  ROCm Runtime Version: ";
     if (err == hipSuccess)
-    {   int major = version / 10000000;
-        int minor = (version / 100000) % 100;
-        os << major << '.' << minor;
+    {    int major = version / 10000000;
+         int minor = (version % 10000000) / 100000;
+         int patch = version % 100000;
+         os << major << '.' << minor << '.' << patch;
     }
     else os << "failed to get HIP version";
     return os.str();
