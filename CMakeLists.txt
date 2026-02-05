@@ -15,6 +15,8 @@ endif()
 #
 option(GNX_ENABLE_TESTS "Enable the unit tests ?" ON)
 option(GNX_ENABLE_BENCHMARKS "Enable benchmarks ?" ON)
+option(GNX_ENABLE_CUDA "Enable CUDA support ?" ON)
+option(GNX_ENABLE_HIP "Enable ROCm HIP support ?" ON)
 
 ## finally our project...
 #
@@ -43,20 +45,30 @@ find_package(OpenMP REQUIRED)
 
 ## check for CUDA support
 #
-check_language(CUDA 12)
-if(CMAKE_CUDA_COMPILER)
-  enable_language(CUDA)
-  find_package(CUDAToolkit)
-  set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} ${OpenMP_CXX_FLAGS}")
+if (${GNX_ENABLE_CUDA})
+  check_language(CUDA 12)
+  if(CMAKE_CUDA_COMPILER)
+    if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
+      set(CMAKE_CUDA_ARCHITECTURES native) # set to all-major for distribution
+    endif()
+    enable_language(CUDA)
+    find_package(CUDAToolkit)
+    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} ${OpenMP_CXX_FLAGS}")
+  endif()
 endif()
 
 ## check for ROCm support
 #
-check_language(HIP 6)
-if (CMAKE_HIP_COMPILER)
-  enable_language(HIP)
-  find_package(hip HINTS $ENV{HIP_PATH} /opt/rocm/hip /opt/rocm)
-  set(CMAKE_HIP_FLAGS "${CMAKE_HIP_FLAGS} ${OpenMP_CXX_FLAGS}")
+if (${GNX_ENABLE_HIP})
+  check_language(HIP 6)
+  if (CMAKE_HIP_COMPILER)
+    if(NOT DEFINED CMAKE_HIP_ARCHITECTURES)
+      set(CMAKE_HIP_ARCHITECTURES native) # set to all-major for distribution
+    endif()
+    enable_language(HIP)
+    find_package(hip HINTS $ENV{HIP_PATH} /opt/rocm/hip /opt/rocm)
+    set(CMAKE_HIP_FLAGS "${CMAKE_HIP_FLAGS} ${OpenMP_CXX_FLAGS}")
+  endif()
 endif()
 
 ## check for zlib
@@ -82,19 +94,19 @@ endif()
 
 ## check for g3p
 #
-find_package(
-  g3p CONFIG
-  HINTS $ENV{HOME} $ENV{HOME}/.local /usr/local /opt/local /opt
-)
-if(NOT g3p_FOUND)
-    message(STATUS "Fetching g3p library...")
-    FetchContent_Declare(
-      g3p
-      GIT_REPOSITORY https://github.com/arminms/g3p.git
-      GIT_TAG        v1.2.0
-    )
-    FetchContent_MakeAvailable(g3p)
-endif()
+# find_package(
+#   g3p CONFIG
+#   HINTS $ENV{HOME} $ENV{HOME}/.local /usr/local /opt/local /opt
+# )
+# if(NOT g3p_FOUND)
+#     message(STATUS "Fetching g3p library...")
+#     FetchContent_Declare(
+#       g3p
+#       GIT_REPOSITORY https://github.com/arminms/g3p.git
+#       GIT_TAG        v1.2.0
+#     )
+#     FetchContent_MakeAvailable(g3p)
+# endif()
 
 ## defining gnx target
 #
@@ -104,7 +116,7 @@ target_compile_features(${PROJECT_NAME} INTERFACE cxx_std_20)
 target_link_libraries(${PROJECT_NAME} INTERFACE
   OpenMP::OpenMP_CXX
   ZLIB::ZLIB
-  g3p::g3p
+  # g3p::g3p
 )
 if(MSVC)
   target_compile_options(${PROJECT_NAME} INTERFACE /openmp:llvm -openmp:experimental)
