@@ -879,11 +879,11 @@ TEMPLATE_TEST_CASE( "gnx::random", "[algorithm][random]", std::vector<char>)
         CHECK(s == t);
     }
 
-    SECTION( "random peptide sequence" )
+    SECTION( "random protein sequence" )
     {   gnx::rand(s.begin(), 20, "ACDEFGHIKLMNPQRSTVWY", seed_pi);
         CHECK(gnx::valid_peptide(s));
         CHECK(s == "TTIQRHHMVKQSSFDALCLM");
-        auto t = gnx::random::peptide<decltype(s)>(20, seed_pi);
+        auto t = gnx::random::protein<decltype(s)>(20, seed_pi);
         CHECK(s == t);
     }
 
@@ -1157,17 +1157,23 @@ TEMPLATE_TEST_CASE
 #endif //__CUDACC__ || __HIPCC__
 
 // =============================================================================
-// local_align() algorithm tests
+// local_align_n() algorithm tests
 // =============================================================================
 
-TEST_CASE( "gnx::local_align", "[algorithm][local_align]")
+TEMPLATE_TEST_CASE
+(   "gnx::local_align_n"
+,   "[algorithm][local_align]"
+,   std::vector<char>
+)
 {
+    typedef TestType T;
+
 // -- basic alignment ----------------------------------------------------------
 
     SECTION( "identical sequences" )
-    {   std::string s1 = "ACGT";
-        std::string s2 = "ACGT";
-        auto result = gnx::local_align(s1, s2);
+    {   gnx::sq_gen<T> s1{"ACGT"};
+        gnx::sq_gen<T> s2{"ACGT"};
+        auto result = gnx::local_align_n(s1, s2);
 
         CHECK(result.score == 8);  // 4 matches * 2
         CHECK(result.aligned_seq1 == "ACGT");
@@ -1178,9 +1184,9 @@ TEST_CASE( "gnx::local_align", "[algorithm][local_align]")
     }
 
     SECTION( "single mismatch" )
-    {   std::string s1 = "ACGT";
-        std::string s2 = "ACAT";
-        auto result = gnx::local_align(s1, s2);
+    {   gnx::sq_gen<T> s1{"ACGT"};
+        gnx::sq_gen<T> s2{"ACAT"};
+        auto result = gnx::local_align_n(s1, s2);
 
         // Best local alignment should still find matching regions
         CHECK(result.score > 0);
@@ -1188,9 +1194,9 @@ TEST_CASE( "gnx::local_align", "[algorithm][local_align]")
     }
 
     SECTION( "no alignment (completely different)" )
-    {   std::string s1 = "AAAA";
-        std::string s2 = "TTTT";
-        auto result = gnx::local_align(s1.begin(), s1.end(), s2.begin(), s2.end(), 2, -3, -1);
+    {   gnx::sq_gen<T> s1{"AAAA"};
+        gnx::sq_gen<T> s2{"TTTT"};
+        auto result = gnx::local_align_n(s1, s2, 2, -3, -1);
 
         // With strong mismatch penalty, may have low or zero score
         CHECK(result.score >= 0);  // Smith-Waterman never goes negative
@@ -1199,9 +1205,9 @@ TEST_CASE( "gnx::local_align", "[algorithm][local_align]")
 // -- subsequence alignment ----------------------------------------------------
 
     SECTION( "subsequence in larger sequence" )
-    {   std::string s1 = "ACGTACGT";
-        std::string s2 = "ACGT";
-        auto result = gnx::local_align(s1, s2);
+    {   gnx::sq_gen<T> s1{"ACGTACGT"};
+        gnx::sq_gen<T> s2{"ACGT"};
+        auto result = gnx::local_align_n(s1, s2);
 
         CHECK(result.score == 8);  // Perfect match of ACGT
         CHECK(result.aligned_seq1 == "ACGT");
@@ -1209,9 +1215,9 @@ TEST_CASE( "gnx::local_align", "[algorithm][local_align]")
     }
 
     SECTION( "overlapping sequences" )
-    {   std::string s1 = "ACGTACGT";
-        std::string s2 = "TACGTACG";
-        auto result = gnx::local_align(s1, s2);
+    {   gnx::sq_gen<T> s1{"ACGTACGT"};
+        gnx::sq_gen<T> s2{"TACGTACG"};
+        auto result = gnx::local_align_n(s1, s2);
 
         // Should find significant alignment
         CHECK(result.score > 10);
@@ -1221,18 +1227,18 @@ TEST_CASE( "gnx::local_align", "[algorithm][local_align]")
 // -- gap handling -------------------------------------------------------------
 
     SECTION( "alignment with gap in first sequence" )
-    {   std::string s1 = "ACGT";
-        std::string s2 = "ACGGT";
-        auto result = gnx::local_align(s1.begin(), s1.end(), s2.begin(), s2.end(), 2, -1, -1);
+    {   gnx::sq_gen<T> s1{"ACGT"};
+        gnx::sq_gen<T> s2{"ACGGT"};
+        auto result = gnx::local_align_n(s1, s2, 2, -1, -1);
 
         CHECK(result.score >= 4);  // At least some matches
         // May or may not have gap depending on scoring
     }
 
     SECTION( "alignment with gap in second sequence" )
-    {   std::string s1 = "ACGGT";
-        std::string s2 = "ACGT";
-        auto result = gnx::local_align(s1.begin(), s1.end(), s2.begin(), s2.end(), 2, -1, -1);
+    {   gnx::sq_gen<T> s1{"ACGGT"};
+        gnx::sq_gen<T> s2{"ACGT"};
+        auto result = gnx::local_align_n(s1, s2, 2, -1, -1);
 
         CHECK(result.score >= 4);
     }
@@ -1240,26 +1246,26 @@ TEST_CASE( "gnx::local_align", "[algorithm][local_align]")
 // -- custom scoring -----------------------------------------------------------
 
     SECTION( "custom match score" )
-    {   std::string s1 = "ACGT";
-        std::string s2 = "ACGT";
-        auto result = gnx::local_align(s1.begin(), s1.end(), s2.begin(), s2.end(), 5, -1, -1);
+    {   gnx::sq_gen<T> s1{"ACGT"};
+        gnx::sq_gen<T> s2{"ACGT"};
+        auto result = gnx::local_align_n(s1, s2, 5, -1, -1);
 
         CHECK(result.score == 20);  // 4 matches * 5
     }
 
     SECTION( "custom mismatch penalty" )
-    {   std::string s1 = "ACGT";
-        std::string s2 = "TTTT";
-        auto result = gnx::local_align(s1.begin(), s1.end(), s2.begin(), s2.end(), 2, -10, -1);
+    {   gnx::sq_gen<T> s1{"ACGT"};
+        gnx::sq_gen<T> s2{"TTTT"};
+        auto result = gnx::local_align_n(s1, s2, 2, -10, -1);
 
         // Strong mismatch penalty should result in low score
         CHECK(result.score <= 2);
     }
 
     SECTION( "custom gap penalty" )
-    {   std::string s1 = "ACGT";
-        std::string s2 = "ACGGT";
-        auto result = gnx::local_align(s1.begin(), s1.end(), s2.begin(), s2.end(), 2, -1, -5);
+    {   gnx::sq_gen<T> s1{"ACGT"};
+        gnx::sq_gen<T> s2{"ACGGT"};
+        auto result = gnx::local_align_n(s1, s2, 2, -1, -5);
 
         // Strong gap penalty should discourage gaps
         CHECK(result.score >= 0);
@@ -1268,9 +1274,9 @@ TEST_CASE( "gnx::local_align", "[algorithm][local_align]")
 // -- edge cases ---------------------------------------------------------------
 
     SECTION( "empty first sequence" )
-    {   std::string s1 = "";
-        std::string s2 = "ACGT";
-        auto result = gnx::local_align(s1, s2);
+    {   gnx::sq_gen<T> s1;
+        gnx::sq_gen<T> s2{"ACGT"};
+        auto result = gnx::local_align_n(s1, s2);
 
         CHECK(result.score == 0);
         CHECK(result.aligned_seq1.empty());
@@ -1278,9 +1284,9 @@ TEST_CASE( "gnx::local_align", "[algorithm][local_align]")
     }
 
     SECTION( "empty second sequence" )
-    {   std::string s1 = "ACGT";
-        std::string s2 = "";
-        auto result = gnx::local_align(s1, s2);
+    {   gnx::sq_gen<T> s1{"ACGT"};
+        gnx::sq_gen<T> s2;
+        auto result = gnx::local_align_n(s1, s2);
 
         CHECK(result.score == 0);
         CHECK(result.aligned_seq1.empty());
@@ -1288,9 +1294,9 @@ TEST_CASE( "gnx::local_align", "[algorithm][local_align]")
     }
 
     SECTION( "both sequences empty" )
-    {   std::string s1 = "";
-        std::string s2 = "";
-        auto result = gnx::local_align(s1, s2);
+    {   gnx::sq_gen<T> s1;
+        gnx::sq_gen<T> s2;
+        auto result = gnx::local_align_n(s1, s2);
 
         CHECK(result.score == 0);
         CHECK(result.aligned_seq1.empty());
@@ -1298,9 +1304,9 @@ TEST_CASE( "gnx::local_align", "[algorithm][local_align]")
     }
 
     SECTION( "single character sequences" )
-    {   std::string s1 = "A";
-        std::string s2 = "A";
-        auto result = gnx::local_align(s1, s2);
+    {   gnx::sq_gen<T> s1{"A"};
+        gnx::sq_gen<T> s2{"A"};
+        auto result = gnx::local_align_n(s1, s2);
 
         CHECK(result.score == 2);  // Default match score
         CHECK(result.aligned_seq1 == "A");
@@ -1308,9 +1314,9 @@ TEST_CASE( "gnx::local_align", "[algorithm][local_align]")
     }
 
     SECTION( "single character mismatch" )
-    {   std::string s1 = "A";
-        std::string s2 = "T";
-        auto result = gnx::local_align(s1, s2);
+    {   gnx::sq_gen<T> s1{"A"};
+        gnx::sq_gen<T> s2{"T"};
+        auto result = gnx::local_align_n(s1, s2);
 
         CHECK(result.score == 0);  // SW doesn't allow negative scores
     }
@@ -1318,9 +1324,9 @@ TEST_CASE( "gnx::local_align", "[algorithm][local_align]")
 // -- case insensitivity -------------------------------------------------------
 
     SECTION( "lowercase sequences" )
-    {   std::string s1 = "acgt";
-        std::string s2 = "acgt";
-        auto result = gnx::local_align(s1, s2);
+    {   gnx::sq_gen<T> s1{"acgt"};
+        gnx::sq_gen<T> s2{"acgt"};
+        auto result = gnx::local_align_n(s1, s2);
 
         CHECK(result.score == 8);
         CHECK(result.aligned_seq1 == "acgt");
@@ -1328,9 +1334,9 @@ TEST_CASE( "gnx::local_align", "[algorithm][local_align]")
     }
 
     SECTION( "mixed case sequences" )
-    {   std::string s1 = "AcGt";
-        std::string s2 = "aCgT";
-        auto result = gnx::local_align(s1, s2);
+    {   gnx::sq_gen<T> s1{"AcGt"};
+        gnx::sq_gen<T> s2{"aCgT"};
+        auto result = gnx::local_align_n(s1, s2);
 
         CHECK(result.score == 8);  // Should match regardless of case
     }
@@ -1338,9 +1344,9 @@ TEST_CASE( "gnx::local_align", "[algorithm][local_align]")
 // -- gnx::sq_gen tests --------------------------------------------------------
 
     SECTION( "gnx::sq alignment" )
-    {   gnx::sq s1{"ACGTACGT"};
-        gnx::sq s2{"TACGT"};
-        auto result = gnx::local_align(s1, s2);
+    {   auto s1 = "ACGTACGT"_sq;
+        auto s2 = "TACGT"_sq;
+        auto result = gnx::local_align_n(s1, s2);
 
         CHECK(result.score > 0);
         CHECK(result.aligned_seq1.length() > 0);
@@ -1351,9 +1357,9 @@ TEST_CASE( "gnx::local_align", "[algorithm][local_align]")
 
     SECTION( "realistic DNA sequences with SNP" )
     {   // Two sequences with single nucleotide polymorphism
-        std::string s1 = "ATCGATCGATCG";
-        std::string s2 = "ATCGCTCGATCG";  // C instead of A at position 5
-        auto result = gnx::local_align(s1, s2);
+        gnx::sq_gen<T> s1{"ATCGATCGATCG"};
+        gnx::sq_gen<T> s2{"ATCGCTCGATCG"};  // C instead of A at position 5
+        auto result = gnx::local_align_n(s1, s2);
 
         CHECK(result.score >= 16);  // Most bases should match
         CHECK(result.aligned_seq1.length() >= 10);
@@ -1361,9 +1367,9 @@ TEST_CASE( "gnx::local_align", "[algorithm][local_align]")
 
     SECTION( "realistic DNA with indel" )
     {   // Sequence with insertion/deletion
-        std::string s1 = "ATCGATCGATCG";
-        std::string s2 = "ATCGTCGATCG";  // Missing 'A' at position 5
-        auto result = gnx::local_align(s1, s2);
+        gnx::sq_gen<T> s1{"ATCGATCGATCG"};
+        gnx::sq_gen<T> s2{"ATCGTCGATCG"};  // Missing 'A' at position 5
+        auto result = gnx::local_align_n(s1, s2);
 
         CHECK(result.score > 0);
         // Should find good alignment around the indel
@@ -1372,9 +1378,9 @@ TEST_CASE( "gnx::local_align", "[algorithm][local_align]")
 // -- longer sequences ---------------------------------------------------------
 
     SECTION( "longer sequences" )
-    {   std::string s1 = "ACGTACGTACGTACGTACGTACGTACGTACGT";
-        std::string s2 = "ACGTACGTACGTACGTACGTACGTACGTACGT";
-        auto result = gnx::local_align(s1, s2);
+    {   gnx::sq_gen<T> s1{"ACGTACGTACGTACGTACGTACGTACGTACGT"};
+        gnx::sq_gen<T> s2{"ACGTACGTACGTACGTACGTACGTACGTACGT"};
+        auto result = gnx::local_align_n(s1, s2);
 
         CHECK(result.score == 64);  // 32 matches * 2
         CHECK(result.aligned_seq1 == s1);
@@ -1382,9 +1388,9 @@ TEST_CASE( "gnx::local_align", "[algorithm][local_align]")
     }
 
     SECTION( "partially matching longer sequences" )
-    {   std::string s1 = "AAAAAAACGTACGTACGTTTTTTT";
-        std::string s2 = "ACGTACGTACGT";
-        auto result = gnx::local_align(s1, s2);
+    {   gnx::sq_gen<T> s1{"AAAAAAACGTACGTACGTTTTTTT"};
+        gnx::sq_gen<T> s2{"ACGTACGTACGT"};
+        auto result = gnx::local_align_n(s1, s2);
 
         // Should find the matching middle part
         CHECK(result.score == 24);  // 12 matches * 2
@@ -1394,17 +1400,23 @@ TEST_CASE( "gnx::local_align", "[algorithm][local_align]")
 }
 
 // =============================================================================
-// local_align() algorithm with substitution matrices tests
+// local_align_p() algorithm with substitution matrices tests
 // =============================================================================
 
-TEST_CASE( "gnx::local_align with substitution matrices", "[algorithm][local_align][blosum][pam]")
+TEMPLATE_TEST_CASE
+(   "gnx::local_align_p"
+,   "[algorithm][peptide][local_align][blosum][pam]"
+,   std::vector<char>
+)
 {
+    typedef TestType T;
+
 // -- BLOSUM62 tests -----------------------------------------------------------
 
     SECTION( "BLOSUM62 - identical peptide sequences" )
-    {   std::string s1 = "ARNDCQEGHILKMFPSTWYV";
-        std::string s2 = "ARNDCQEGHILKMFPSTWYV";
-        auto result = gnx::local_align(s1, s2, gnx::lut::blosum62);
+    {   gnx::sq_gen<T> s1{"ARNDCQEGHILKMFPSTWYV"};
+        gnx::sq_gen<T> s2{"ARNDCQEGHILKMFPSTWYV"};
+        auto result = gnx::local_align_p(s1, s2, gnx::lut::blosum62);
 
         // Score should be sum of diagonal elements for each amino acid
         CHECK(result.score > 0);
@@ -1413,9 +1425,9 @@ TEST_CASE( "gnx::local_align with substitution matrices", "[algorithm][local_ali
     }
 
     SECTION( "BLOSUM62 - single amino acid difference" )
-    {   std::string s1 = "ARNDCQEG";
-        std::string s2 = "ARNDCQKG";  // E->K substitution
-        auto result = gnx::local_align(s1, s2, gnx::lut::blosum62);
+    {   gnx::sq_gen<T> s1{"ARNDCQEG"};
+        gnx::sq_gen<T> s2{"ARNDCQKG"};  // E->K substitution
+        auto result = gnx::local_align_p(s1, s2, gnx::lut::blosum62);
 
         // Should align well with one mismatch
         CHECK(result.score > 20);
@@ -1424,37 +1436,37 @@ TEST_CASE( "gnx::local_align with substitution matrices", "[algorithm][local_ali
 
     SECTION( "BLOSUM62 - conservative substitution" )
     {   // Leucine (L) and Isoleucine (I) are similar hydrophobic amino acids
-        std::string s1 = "ACDEFGHIKLMNPQRSTVWY";
-        std::string s2 = "ACDEFGHIKLMNPQRSTVWY";
-        auto result = gnx::local_align(s1, s2, gnx::lut::blosum62);
+        gnx::sq_gen<T> s1{"ACDEFGHIKLMNPQRSTVWY"};
+        gnx::sq_gen<T> s2{"ACDEFGHIKLMNPQRSTVWY"};
+        auto result = gnx::local_align_p(s1, s2, gnx::lut::blosum62);
 
         CHECK(result.score > 50);
         CHECK(result.aligned_seq1 == s1);
     }
 
     SECTION( "BLOSUM62 - peptide with gaps" )
-    {   std::string s1 = "ARNDCQEG";
-        std::string s2 = "ARNDQEG";  // C removed
-        auto result = gnx::local_align(s1, s2, gnx::lut::blosum62, -8);
+    {   gnx::sq_gen<T> s1{"ARNDCQEG"};
+        gnx::sq_gen<T> s2{"ARNDQEG"};  // C removed
+        auto result = gnx::local_align_p(s1, s2, gnx::lut::blosum62, -8);
 
         CHECK(result.score > 0);
         // Should align with one gap
     }
 
     SECTION( "BLOSUM62 - different gap penalty" )
-    {   std::string s1 = "ACDEFG";
-        std::string s2 = "ACDEFG";
-        auto result1 = gnx::local_align(s1, s2, gnx::lut::blosum62, -8);
-        auto result2 = gnx::local_align(s1, s2, gnx::lut::blosum62, -2);
+    {   gnx::sq_gen<T> s1{"ACDEFG"};
+        gnx::sq_gen<T> s2{"ACDEFG"};
+        auto result1 = gnx::local_align_p(s1, s2, gnx::lut::blosum62, -8);
+        auto result2 = gnx::local_align_p(s1, s2, gnx::lut::blosum62, -2);
 
         // With identical sequences, gap penalty shouldn't matter
         CHECK(result1.score == result2.score);
     }
 
     SECTION( "BLOSUM62 - case insensitive" )
-    {   std::string s1 = "ARNDCQEG";
-        std::string s2 = "arndcqeg";
-        auto result = gnx::local_align(s1, s2, gnx::lut::blosum62);
+    {   gnx::sq_gen<T> s1{"ARNDCQEG"};
+        gnx::sq_gen<T> s2{"arndcqeg"};
+        auto result = gnx::local_align_p(s1, s2, gnx::lut::blosum62);
 
         // Should match regardless of case
         CHECK(result.score > 0);
@@ -1464,9 +1476,9 @@ TEST_CASE( "gnx::local_align with substitution matrices", "[algorithm][local_ali
 // -- BLOSUM80 tests -----------------------------------------------------------
 
     SECTION( "BLOSUM80 - identical sequences" )
-    {   std::string s1 = "MVHLTPEEK";
-        std::string s2 = "MVHLTPEEK";
-        auto result = gnx::local_align(s1, s2, gnx::lut::blosum80);
+    {   gnx::sq_gen<T> s1{"MVHLTPEEK"};
+        gnx::sq_gen<T> s2{"MVHLTPEEK"};
+        auto result = gnx::local_align_p(s1, s2, gnx::lut::blosum80);
 
         CHECK(result.score > 0);
         CHECK(result.aligned_seq1 == s1);
@@ -1475,10 +1487,10 @@ TEST_CASE( "gnx::local_align with substitution matrices", "[algorithm][local_ali
 
     SECTION( "BLOSUM80 vs BLOSUM62 comparison" )
     {   // BLOSUM80 is more stringent for closely related sequences
-        std::string s1 = "ACDEFG";
-        std::string s2 = "ACDEFG";
-        auto result62 = gnx::local_align(s1, s2, gnx::lut::blosum62);
-        auto result80 = gnx::local_align(s1, s2, gnx::lut::blosum80);
+        gnx::sq_gen<T> s1{"ACDEFG"};
+        gnx::sq_gen<T> s2{"ACDEFG"};
+        auto result62 = gnx::local_align_p(s1, s2, gnx::lut::blosum62);
+        auto result80 = gnx::local_align_p(s1, s2, gnx::lut::blosum80);
 
         // BLOSUM80 typically gives higher scores for identical sequences
         CHECK(result80.score >= result62.score);
@@ -1487,9 +1499,9 @@ TEST_CASE( "gnx::local_align with substitution matrices", "[algorithm][local_ali
 // -- BLOSUM45 tests -----------------------------------------------------------
 
     SECTION( "BLOSUM45 - distantly related sequences" )
-    {   std::string s1 = "ARNDCQEG";
-        std::string s2 = "ARNDCQEG";
-        auto result = gnx::local_align(s1, s2, gnx::lut::blosum45);
+    {   gnx::sq_gen<T> s1{"ARNDCQEG"};
+        gnx::sq_gen<T> s2{"ARNDCQEG"};
+        auto result = gnx::local_align_p(s1, s2, gnx::lut::blosum45);
 
         CHECK(result.score > 0);
         CHECK(result.aligned_seq1 == s1);
@@ -1499,9 +1511,9 @@ TEST_CASE( "gnx::local_align with substitution matrices", "[algorithm][local_ali
 // -- PAM250 tests -------------------------------------------------------------
 
     SECTION( "PAM250 - identical sequences" )
-    {   std::string s1 = "MVHLTPEEK";
-        std::string s2 = "MVHLTPEEK";
-        auto result = gnx::local_align(s1, s2, gnx::lut::pam250);
+    {   gnx::sq_gen<T> s1{"MVHLTPEEK"};
+        gnx::sq_gen<T> s2{"MVHLTPEEK"};
+        auto result = gnx::local_align_p(s1, s2, gnx::lut::pam250);
 
         CHECK(result.score > 0);
         CHECK(result.aligned_seq1 == s1);
@@ -1509,9 +1521,9 @@ TEST_CASE( "gnx::local_align with substitution matrices", "[algorithm][local_ali
     }
 
     SECTION( "PAM250 - with mismatches" )
-    {   std::string s1 = "ARNDCQEG";
-        std::string s2 = "ARNDCQKG";  // E->K substitution
-        auto result = gnx::local_align(s1, s2, gnx::lut::pam250);
+    {   gnx::sq_gen<T> s1{"ARNDCQEG"};
+        gnx::sq_gen<T> s2{"ARNDCQKG"};  // E->K substitution
+        auto result = gnx::local_align_p(s1, s2, gnx::lut::pam250);
 
         CHECK(result.score > 0);
         CHECK(result.aligned_seq1.length() == result.aligned_seq2.length());
@@ -1520,9 +1532,9 @@ TEST_CASE( "gnx::local_align with substitution matrices", "[algorithm][local_ali
 // -- PAM120 tests -------------------------------------------------------------
 
     SECTION( "PAM120 - closely related sequences" )
-    {   std::string s1 = "ACDEFGHIKL";
-        std::string s2 = "ACDEFGHIKL";
-        auto result = gnx::local_align(s1, s2, gnx::lut::pam120);
+    {   gnx::sq_gen<T> s1{"ACDEFGHIKL"};
+        gnx::sq_gen<T> s2{"ACDEFGHIKL"};
+        auto result = gnx::local_align_p(s1, s2, gnx::lut::pam120);
 
         CHECK(result.score > 0);
         CHECK(result.aligned_seq1 == s1);
@@ -1531,10 +1543,10 @@ TEST_CASE( "gnx::local_align with substitution matrices", "[algorithm][local_ali
 
     SECTION( "PAM120 vs PAM250 comparison" )
     {   // Different PAM matrices for different evolutionary distances
-        std::string s1 = "ACDEFG";
-        std::string s2 = "ACDEFG";
-        auto result120 = gnx::local_align(s1, s2, gnx::lut::pam120);
-        auto result250 = gnx::local_align(s1, s2, gnx::lut::pam250);
+        gnx::sq_gen<T> s1{"ACDEFG"};
+        gnx::sq_gen<T> s2{"ACDEFG"};
+        auto result120 = gnx::local_align_p(s1, s2, gnx::lut::pam120);
+        auto result250 = gnx::local_align_p(s1, s2, gnx::lut::pam250);
 
         // Both should align perfectly
         CHECK(result120.score > 0);
@@ -1544,9 +1556,9 @@ TEST_CASE( "gnx::local_align with substitution matrices", "[algorithm][local_ali
 // -- PAM30 tests --------------------------------------------------------------
 
     SECTION( "PAM30 - very closely related sequences" )
-    {   std::string s1 = "MVHLTPEEK";
-        std::string s2 = "MVHLTPEEK";
-        auto result = gnx::local_align(s1, s2, gnx::lut::pam30);
+    {   gnx::sq_gen<T> s1{"MVHLTPEEK"};
+        gnx::sq_gen<T> s2{"MVHLTPEEK"};
+        auto result = gnx::local_align_p(s1, s2, gnx::lut::pam30);
 
         CHECK(result.score > 0);
         CHECK(result.aligned_seq1 == s1);
@@ -1557,9 +1569,9 @@ TEST_CASE( "gnx::local_align with substitution matrices", "[algorithm][local_ali
 
     SECTION( "realistic - human vs mouse hemoglobin fragment" )
     {   // Simplified example of conserved protein region
-        std::string human = "VLSPADKTNVKAAW";
-        std::string mouse = "VLSAADKTNVKAAW";  // P->A substitution
-        auto result = gnx::local_align(human, mouse, gnx::lut::blosum62);
+        gnx::sq_gen<T> human{"VLSPADKTNVKAAW"};
+        gnx::sq_gen<T> mouse{"VLSAADKTNVKAAW"};  // P->A substitution
+        auto result = gnx::local_align_p(human, mouse, gnx::lut::blosum62);
 
         // Should find good alignment despite one difference
         CHECK(result.score > 40);
@@ -1568,18 +1580,18 @@ TEST_CASE( "gnx::local_align with substitution matrices", "[algorithm][local_ali
 
     SECTION( "realistic - enzyme active site comparison" )
     {   // Catalytic triad-like sequence
-        std::string enzyme1 = "HDSGICN";
-        std::string enzyme2 = "HDSGVCN";  // I->V conservative substitution
-        auto result = gnx::local_align(enzyme1, enzyme2, gnx::lut::blosum62);
+        gnx::sq_gen<T> enzyme1{"HDSGICN"};
+        gnx::sq_gen<T> enzyme2{"HDSGVCN"};  // I->V conservative substitution
+        auto result = gnx::local_align_p(enzyme1, enzyme2, gnx::lut::blosum62);
 
         // Conservative substitution should still score well
         CHECK(result.score > 20);
     }
 
     SECTION( "realistic - signal peptide vs mature protein" )
-    {   std::string full_seq = "MKTIIALSYIFCLVFAACDEFGHIKL";
-        std::string mature  = "ACDEFGHIKL";  // After signal peptide cleavage
-        auto result = gnx::local_align(full_seq, mature, gnx::lut::blosum62);
+    {   gnx::sq_gen<T> full_seq{"MKTIIALSYIFCLVFAACDEFGHIKL"};
+        gnx::sq_gen<T> mature{"ACDEFGHIKL"};  // After signal peptide cleavage
+        auto result = gnx::local_align_p(full_seq, mature, gnx::lut::blosum62);
 
         // Should find the mature protein region
         CHECK(result.score > 30);
@@ -1589,26 +1601,26 @@ TEST_CASE( "gnx::local_align with substitution matrices", "[algorithm][local_ali
 // -- ambiguous amino acids ----------------------------------------------------
 
     SECTION( "ambiguous amino acids - B (D or N)" )
-    {   std::string s1 = "ACDEFG";
-        std::string s2 = "ACBEFG";  // D->B
-        auto result = gnx::local_align(s1, s2, gnx::lut::blosum62);
+    {   gnx::sq_gen<T> s1{"ACDEFG"};
+        gnx::sq_gen<T> s2{"ACBEFG"};  // D->B
+        auto result = gnx::local_align_p(s1, s2, gnx::lut::blosum62);
 
         // B should have reasonable score with D
         CHECK(result.score > 0);
     }
 
     SECTION( "ambiguous amino acids - Z (E or Q)" )
-    {   std::string s1 = "ACDEFG";
-        std::string s2 = "ACDQFG";  // E->Q
-        auto result = gnx::local_align(s1, s2, gnx::lut::blosum62);
+    {   gnx::sq_gen<T> s1{"ACDEFG"};
+        gnx::sq_gen<T> s2{"ACDQFG"};  // E->Q
+        auto result = gnx::local_align_p(s1, s2, gnx::lut::blosum62);
 
         CHECK(result.score > 0);
     }
 
     SECTION( "ambiguous amino acids - X (any)" )
-    {   std::string s1 = "ACDEFG";
-        std::string s2 = "ACXEFG";  // D->X
-        auto result = gnx::local_align(s1, s2, gnx::lut::blosum62);
+    {   gnx::sq_gen<T> s1{"ACDEFG"};
+        gnx::sq_gen<T> s2{"ACXEFG"};  // D->X
+        auto result = gnx::local_align_p(s1, s2, gnx::lut::blosum62);
 
         // X should have neutral or small penalty
         CHECK(result.score >= 0);
@@ -1617,9 +1629,9 @@ TEST_CASE( "gnx::local_align with substitution matrices", "[algorithm][local_ali
 // -- stop codon handling ------------------------------------------------------
 
     SECTION( "stop codon in sequence" )
-    {   std::string s1 = "ACDEFG*";
-        std::string s2 = "ACDEFG*";
-        auto result = gnx::local_align(s1, s2, gnx::lut::blosum62);
+    {   gnx::sq_gen<T> s1{"ACDEFG*"};  // * represents stop codon
+        gnx::sq_gen<T> s2{"ACDEFG*"};
+        auto result = gnx::local_align_p(s1, s2, gnx::lut::blosum62);
 
         // Should handle stop codon
         CHECK(result.score > 0);
@@ -1628,9 +1640,9 @@ TEST_CASE( "gnx::local_align with substitution matrices", "[algorithm][local_ali
 // -- edge cases with matrices -------------------------------------------------
 
     SECTION( "empty sequences with matrix" )
-    {   std::string s1 = "";
-        std::string s2 = "ACDEFG";
-        auto result = gnx::local_align(s1, s2, gnx::lut::blosum62);
+    {   gnx::sq_gen<T> s1;
+        gnx::sq_gen<T> s2{"ACDEFG"};
+        auto result = gnx::local_align_p(s1, s2, gnx::lut::blosum62);
 
         CHECK(result.score == 0);
         CHECK(result.aligned_seq1.empty());
@@ -1638,9 +1650,9 @@ TEST_CASE( "gnx::local_align with substitution matrices", "[algorithm][local_ali
     }
 
     SECTION( "single amino acid with matrix" )
-    {   std::string s1 = "A";
-        std::string s2 = "A";
-        auto result = gnx::local_align(s1, s2, gnx::lut::blosum62);
+    {   gnx::sq_gen<T> s1{"A"};
+        gnx::sq_gen<T> s2{"A"};
+        auto result = gnx::local_align_p(s1, s2, gnx::lut::blosum62);
 
         // BLOSUM62[A][A] = 4
         CHECK(result.score == 4);
@@ -1651,9 +1663,9 @@ TEST_CASE( "gnx::local_align with substitution matrices", "[algorithm][local_ali
 // -- gnx::sq with matrices ----------------------------------------------------
 
     SECTION( "gnx::sq with BLOSUM62" )
-    {   gnx::sq s1{"MVHLTPEEK"};
-        gnx::sq s2{"MVHLTPEEK"};
-        auto result = gnx::local_align(s1, s2, gnx::lut::blosum62);
+    {   auto s1 = "MVHLTPEEK"_sq;
+        auto s2 = "MVHLTPEEK"_sq;
+        auto result = gnx::local_align_p(s1, s2, gnx::lut::blosum62);
         
         CHECK(result.score > 0);
         CHECK(result.aligned_seq1 == "MVHLTPEEK");
@@ -1661,9 +1673,9 @@ TEST_CASE( "gnx::local_align with substitution matrices", "[algorithm][local_ali
     }
 
     SECTION( "gnx::sq with PAM250" )
-    {   gnx::sq s1{"ACDEFGHIKL"};
-        gnx::sq s2{"ACDEFGHIKL"};
-        auto result = gnx::local_align(s1, s2, gnx::lut::pam250);
+    {   auto s1 = "ACDEFGHIKL"_sq;
+        auto s2 = "ACDEFGHIKL"_sq;
+        auto result = gnx::local_align_p(s1, s2, gnx::lut::pam250);
 
         CHECK(result.score > 0);
         CHECK(result.aligned_seq1.length() > 0);
@@ -1672,9 +1684,9 @@ TEST_CASE( "gnx::local_align with substitution matrices", "[algorithm][local_ali
 // -- performance test with longer sequences -----------------------------------
 
     SECTION( "longer peptide sequences with BLOSUM62" )
-    {   std::string s1 = "MVHLTPEEKSAVTALWGKVNVDEVGGEALGRLLVVYPWTQRFFESFGDLSTPDAVMGNPKVKAHGKKVLGAFSDGLAHLDNLKGTFATLSELHCDKLHVDPENFRLLGNVLVCVLAHHFGKEFTPPVQAAYQKVVAGVANALAHKYH";
-        std::string s2 = "MVHLTPEEKSAVTALWGKVNVDEVGGEALGRLLVVYPWTQRFFESFGDLSTPDAVMGNPKVKAHGKKVLGAFSDGLAHLDNLKGTFATLSELHCDKLHVDPENFRLLGNVLVCVLAHHFGKEFTPPVQAAYQKVVAGVANALAHKYH";
-        auto result = gnx::local_align(s1, s2, gnx::lut::blosum62);
+    {   gnx::sq_gen<T> s1{"MVHLTPEEKSAVTALWGKVNVDEVGGEALGRLLVVYPWTQRFFESFGDLSTPDAVMGNPKVKAHGKKVLGAFSDGLAHLDNLKGTFATLSELHCDKLHVDPENFRLLGNVLVCVLAHHFGKEFTPPVQAAYQKVVAGVANALAHKYH"};
+        gnx::sq_gen<T> s2{"MVHLTPEEKSAVTALWGKVNVDEVGGEALGRLLVVYPWTQRFFESFGDLSTPDAVMGNPKVKAHGKKVLGAFSDGLAHLDNLKGTFATLSELHCDKLHVDPENFRLLGNVLVCVLAHHFGKEFTPPVQAAYQKVVAGVANALAHKYH"};
+        auto result = gnx::local_align_p(s1, s2, gnx::lut::blosum62);
 
         // Human beta-globin, should align perfectly with itself
         CHECK(result.score > 500);
