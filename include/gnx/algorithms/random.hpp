@@ -343,13 +343,13 @@ inline Sequence rna
     rand(seq.begin(), length, alphabet, seed);
     return seq;
 }
-/// @brief Generate a random peptide sequence.
+/// @brief Generate a random protein sequence.
 /// @tparam Sequence Sequence container type
 /// @param length Length of the sequence to generate
 /// @param seed Optional seed for the random number generator (default: current time)
-/// @return Randomly generated peptide sequence
+/// @return Randomly generated protein sequence
 template <sequence_container Sequence>
-inline Sequence peptide
+inline Sequence protein
 (   std::size_t length
 ,   std::uint64_t seed = 0
 )
