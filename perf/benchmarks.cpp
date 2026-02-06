@@ -8,13 +8,16 @@
 #include <gnx/algorithms/valid.hpp>
 #include <gnx/algorithms/random.hpp>
 #include <gnx/algorithms/compare.hpp>
+#include <gnx/algorithms/local_align.hpp>
+#include <gnx/lut/blosum.hpp>
+#include <gnx/lut/pam.hpp>
 
 using namespace gnx::execution;
 
 template<typename T>
 using aligned_vector = std::vector<T, gnx::aligned_allocator<T, gnx::Alignment::AVX>>;
 
-const uint64_t seed_pi{3141592654};
+const uint64_t seed_pi{3141592654}, seed_e{2718281828};
 const std::string fasta_filename{"perf_data.fa"};
 
 //----------------------------------------------------------------------------//
@@ -680,6 +683,60 @@ BENCHMARK_TEMPLATE(unified_vnp_memory_rocm, gnx::unified_vector<char>)
 ->  Range(1<<25, 1<<28)
 ->  Unit(benchmark::kMillisecond);
 #endif //__HIPCC__
+
+//----------------------------------------------------------------------------//
+// local_align_n() algorithm - nucleotide alignment
+
+template <typename T>
+void local_align_n(benchmark::State& st)
+{   size_t n = size_t(st.range());
+    auto s1 = gnx::random::dna<gnx::sq>(n / 20, seed_pi);
+    auto s2 = gnx::random::dna<gnx::sq>(n, seed_e);
+
+    for (auto _ : st)
+    {   auto result = gnx::local_align_n(s1, s2);
+        benchmark::DoNotOptimize(result);
+    }
+
+    st.counters["BW (GB/s)"] = benchmark::Counter
+    (   ((n * sizeof(typename T::value_type))
+    +   (n/20 * sizeof(typename T::value_type)))
+    /   1e9
+    ,   benchmark::Counter::kIsIterationInvariantRate
+    );
+}
+
+BENCHMARK_TEMPLATE(local_align_n, std::vector<char>)
+->  RangeMultiplier(2)
+->  Range(1<<13, 1<<16)
+->  Unit(benchmark::kMillisecond);
+
+//----------------------------------------------------------------------------//
+// local_align_p() algorithm - protein alignment with substitution matrices
+
+template <typename T>
+void local_align_p(benchmark::State& st)
+{   size_t n = size_t(st.range());
+    auto s1 = gnx::random::protein<gnx::sq>(n / 20, seed_pi);
+    auto s2 = gnx::random::protein<gnx::sq>(n, seed_e);
+
+    for (auto _ : st)
+    {   auto result = gnx::local_align_p(s1, s2, gnx::lut::blosum62);
+        benchmark::DoNotOptimize(result);
+    }
+
+    st.counters["BW (GB/s)"] = benchmark::Counter
+    (   ((n * sizeof(typename T::value_type))
+    +   (n/20 * sizeof(typename T::value_type)))
+    /   1e9
+    ,   benchmark::Counter::kIsIterationInvariantRate
+    );
+}
+
+BENCHMARK_TEMPLATE(local_align_p, std::vector<char>)
+->  RangeMultiplier(2)
+->  Range(1<<13, 1<<16)
+->  Unit(benchmark::kMillisecond);
 
 //-- get_runtime_version ------------------------------------------------------//
 
