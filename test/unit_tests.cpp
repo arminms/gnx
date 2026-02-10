@@ -3,14 +3,17 @@
 //
 #include <catch2/catch_all.hpp>
 
+#include <utility>
+
 #include <gnx/sq.hpp>
 #include <gnx/sq_view.hpp>
+#include <gnx/sqb.hpp>
+#include <gnx/interface/forward_stream.hpp>
 #include <gnx/io/fastaqz.hpp>
 #include <gnx/algorithms/valid.hpp>
 #include <gnx/algorithms/random.hpp>
 #include <gnx/algorithms/compare.hpp>
 #include <gnx/algorithms/local_align.hpp>
-
 const uint64_t seed_pi{3141592654};
 
 template<typename T>
@@ -1165,8 +1168,7 @@ TEMPLATE_TEST_CASE
 ,   "[algorithm][local_align]"
 ,   std::vector<char>
 )
-{
-    typedef TestType T;
+{   typedef TestType T;
 
 // -- basic alignment ----------------------------------------------------------
 
@@ -1408,8 +1410,7 @@ TEMPLATE_TEST_CASE
 ,   "[algorithm][peptide][local_align][blosum][pam]"
 ,   std::vector<char>
 )
-{
-    typedef TestType T;
+{   typedef TestType T;
 
 // -- BLOSUM62 tests -----------------------------------------------------------
 
@@ -1695,3 +1696,22 @@ TEMPLATE_TEST_CASE
     }
 }
 
+// =============================================================================
+// forward stream sequence bank tests
+// =============================================================================
+
+TEMPLATE_TEST_CASE
+(   "gnx::sequence_bank"
+,   "[interface][forward_stream]"
+,   std::vector<char>
+)
+{   typedef TestType T;
+
+    SECTION( "forward_stream" )
+    {   gnx::sequence_bank sb{gnx::forward_stream<gnx::sq_gen<T>>{SAMPLE_GENOME}};
+        for (const auto& s : sb)
+        {   CHECK(gnx::valid(s.sequence()));
+            CHECK(s.quality().empty());  // No quality scores in this test
+        }
+    }
+}

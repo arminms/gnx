@@ -13,10 +13,10 @@
 
 namespace gnx {
 
+KSEQ_INIT(gzFile, gzread)
+
 /// Input file formats
 namespace in {
-
-KSEQ_INIT(gzFile, gzread)
 
 /// @brief A function object for reading FASTA/FASTQ files (possibly compressed
 /// with gzip) and returning a @a Sequence type.
