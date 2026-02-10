@@ -49,6 +49,30 @@ plasmid.load("GCF_000204255.1_ASM20425v1_genomic.fna.gz", "NC_017288.1");
 ```
 +++
 ```{code-cell} cpp
+int w = 200;
+auto plot = plasmid(0, w);
+g3p::gnuplot gp;
+
+gp  ("set term pngcairo size %d,%d", w, w)
+    ("unset key; unset colorbox; unset border; unset tics")
+    ("set margins 0,0,0,0")
+    ("set bmargin 0; set lmargin 0; set rmargin 0; set tmargin 0")
+    ("set origin 0,0")
+    ("set size 1,1")
+    ("set xrange [0:%d]", w)
+    ("set yrange [0:%d]", w)
+    ("plot '-' u 1:2:3:4:5 w rgbimage");
+;
+for (size_t i = 0; i < std::size(plot); ++i)
+{   for (size_t j = 0; j < std::size(plot); ++j)
+    {   int c = ((plot[i] ^ plot[j]) & 0xFF) ? 0xFFFFFF : 0x000000;
+        gp << i << j << c << c << c << "\n";
+    }
+}
+gp.end()
+```
++++
+```{code-cell} cpp
 gnx::sq plot = plasmid(0, 500);
 // g3p::gnuplot gp("test.log");
 g3p::gnuplot gp;
