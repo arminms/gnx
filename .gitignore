@@ -12,7 +12,6 @@ CMakeLists.txt.user
 CMakeCache.txt
 CMakeFiles
 CMakeScripts
-copilot-instructions.md
 Testing
 Makefile
 cmake_install.cmake
