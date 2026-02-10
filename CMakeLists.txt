@@ -3,7 +3,7 @@
 #
 cmake_minimum_required(VERSION 3.25.2...3.31)
 
-## detect if gnx is being bundled, disable unit tests in that case
+## detect if gnx is being bundled, disable unit tests and benchmarks in that case
 #
 if(NOT DEFINED PROJECT_NAME)
   set(NOT_SUBPROJECT ON)
@@ -94,19 +94,19 @@ endif()
 
 ## check for g3p
 #
-# find_package(
-#   g3p CONFIG
-#   HINTS $ENV{HOME} $ENV{HOME}/.local /usr/local /opt/local /opt
-# )
-# if(NOT g3p_FOUND)
-#     message(STATUS "Fetching g3p library...")
-#     FetchContent_Declare(
-#       g3p
-#       GIT_REPOSITORY https://github.com/arminms/g3p.git
-#       GIT_TAG        v1.2.0
-#     )
-#     FetchContent_MakeAvailable(g3p)
-# endif()
+find_package(
+  g3p CONFIG
+  HINTS $ENV{HOME} $ENV{HOME}/.local /usr/local /opt/local /opt
+)
+if(NOT g3p_FOUND)
+    message(STATUS "Fetching g3p library...")
+    FetchContent_Declare(
+      g3p
+      GIT_REPOSITORY https://github.com/arminms/g3p.git
+      GIT_TAG        v1.2.0
+    )
+    FetchContent_MakeAvailable(g3p)
+endif()
 
 ## defining gnx target
 #
@@ -116,10 +116,11 @@ target_compile_features(${PROJECT_NAME} INTERFACE cxx_std_20)
 target_link_libraries(${PROJECT_NAME} INTERFACE
   OpenMP::OpenMP_CXX
   ZLIB::ZLIB
-  # g3p::g3p
+  g3p::g3p
 )
 if(MSVC)
-  target_compile_options(${PROJECT_NAME} INTERFACE /openmp:llvm -openmp:experimental)
+  target_compile_options(${PROJECT_NAME} INTERFACE
+    /openmp:llvm -openmp:experimental)
 endif()
 target_include_directories(${PROJECT_NAME} INTERFACE
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -130,61 +131,60 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
   SOVERSION ${gnx_VERSION_MAJOR}
 )
 
-## specifying the export name for the targets
-#
-install(
-  TARGETS ${PROJECT_NAME}
-  EXPORT ${PROJECT_NAME}-targets
-)
-
-## installing gnx header files
-#
-add_subdirectory(include)
-
-## installing gnx export target file
-#
-install(
-  EXPORT ${PROJECT_NAME}-targets
-  FILE ${PROJECT_NAME}-targets.cmake
-  NAMESPACE ${PROJECT_NAME}::
-  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
-)
-
-## generate the config file that includes the exports
-#
-include(CMakePackageConfigHelpers)
-configure_package_config_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/cmake/${PROJECT_NAME}-config.cmake.in
-  "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config.cmake"
-  INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
-)
-
-## creating version file
-#
-write_basic_package_version_file(
-  "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config-version.cmake"
-  VERSION "${gnx_VERSION_MAJOR}.${gnx_VERSION_MINOR}"
-  COMPATIBILITY AnyNewerVersion
-)
-
-## installing gnx export config files
-#
-install(FILES
-  ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config.cmake
-  ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config-version.cmake
-  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
-)
-
-## make export target available from the build tree
-#
-export(EXPORT ${PROJECT_NAME}-targets
-  FILE "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-targets.cmake"
-  NAMESPACE ${PROJECT_NAME}::
-)
-
-## include unit tests only when gnx is not being used as a subproject
+## only perform the installation when ranx is not being used as a subproject
 #
 if (NOT_SUBPROJECT)
+  ## specifying the export name for the targets
+  #
+  install(
+    TARGETS ${PROJECT_NAME}
+    EXPORT ${PROJECT_NAME}-targets
+  )
+
+  ## installing gnx header files
+  #
+  add_subdirectory(include)
+
+  ## installing gnx export target file
+  #
+  install(
+    EXPORT ${PROJECT_NAME}-targets
+    FILE ${PROJECT_NAME}-targets.cmake
+    NAMESPACE ${PROJECT_NAME}::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
+  )
+
+  ## generate the config file that includes the exports
+  #
+  include(CMakePackageConfigHelpers)
+  configure_package_config_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/${PROJECT_NAME}-config.cmake.in
+    "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config.cmake"
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
+  )
+
+  ## creating version file
+  #
+  write_basic_package_version_file(
+    "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config-version.cmake"
+    VERSION "${gnx_VERSION_MAJOR}.${gnx_VERSION_MINOR}"
+    COMPATIBILITY AnyNewerVersion
+  )
+
+  ## installing gnx export config files
+  #
+  install(FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config-version.cmake
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
+  )
+
+  ## make export target available from the build tree
+  #
+  export(EXPORT ${PROJECT_NAME}-targets
+    FILE "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-targets.cmake"
+    NAMESPACE ${PROJECT_NAME}::
+  )
 
   ## add unit tests
   #
@@ -207,12 +207,6 @@ if (NOT_SUBPROJECT)
     include(Catch)
     add_subdirectory(test)
   endif()
-
-endif(NOT_SUBPROJECT)
-
-## include benchmarks only when gnx is not being used as a subproject
-#
-if (NOT_SUBPROJECT)
 
   ## add benchmarks
   #
