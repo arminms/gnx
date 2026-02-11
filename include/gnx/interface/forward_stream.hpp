@@ -3,6 +3,8 @@
 //
 #pragma once
 
+#include <fmt/core.h>
+#include <fmt/format.h>
 #include <gnx/concepts.hpp>
 #include <gnx/io/fastaqz.hpp>
 
@@ -79,8 +81,7 @@ public:
     ,   _read_result(0)
     {   if (nullptr == _fp)
             throw std::runtime_error
-            (   "gnx::forward_stream: could not open file -> "
-            +   std::string(filename)
+            (   fmt::format("gnx::forward_stream: could not open file -> {}", filename)
             );
     }
     forward_stream(const forward_stream&) = delete;
