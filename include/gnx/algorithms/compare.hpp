@@ -127,6 +127,10 @@ inline bool compare_device
 
     return result == 0;
 }
+
+#undef BLOCK_THREADS
+#undef ITEMS_PER_THREAD
+
 #endif // __CUDACC__
 
 } // end detail namespace
