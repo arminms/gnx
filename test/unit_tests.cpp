@@ -14,6 +14,7 @@
 #include <gnx/algorithms/random.hpp>
 #include <gnx/algorithms/compare.hpp>
 #include <gnx/algorithms/local_align.hpp>
+#include <gnx/algorithms/count.hpp>
 const uint64_t seed_pi{3141592654};
 
 template<typename T>
@@ -1693,6 +1694,196 @@ TEMPLATE_TEST_CASE
         CHECK(result.score > 500);
         CHECK(result.aligned_seq1 == s1);
         CHECK(result.aligned_seq2 == s2);
+    }
+}
+
+// =============================================================================
+// count() algorithm tests
+// =============================================================================
+
+#if defined(__CUDACC__)
+TEMPLATE_TEST_CASE
+(   "gnx::count"
+,   "[algorithm][count][cuda]"
+,   std::vector<char>
+,   thrust::host_vector<char>
+,   thrust::device_vector<char>
+,   thrust::universal_vector<char>
+)
+#elif defined(__HIPCC__)
+TEMPLATE_TEST_CASE
+(   "gnx::count"
+,   "[algorithm][count][rocm]"
+,   std::vector<char>
+,   thrust::host_vector<char>
+,   thrust::device_vector<char>
+,   thrust::universal_vector<char>
+,   gnx::unified_vector<char>
+)
+#else
+TEMPLATE_TEST_CASE( "gnx::count", "[algorithm][count]", std::vector<char>)
+#endif
+{   typedef TestType T;
+
+    // Test data
+    gnx::sq_gen<T> s1("ACGTacgt");
+    gnx::sq_gen<T> s2("AAAACCCCGGGGTTTT");
+    gnx::sq_gen<T> s3("AaCcGgTtNn");
+
+// -- basic counting -----------------------------------------------------------
+
+    SECTION( "count all bases in mixed-case sequence" )
+    {   auto result = gnx::count(s1);
+        CHECK(result['A'] == 2);
+        CHECK(result['C'] == 2);
+        CHECK(result['G'] == 2);
+        CHECK(result['T'] == 2);
+        CHECK(result.size() == 4);
+    }
+
+    SECTION( "count bases in homogeneous blocks" )
+    {   auto result = gnx::count(s2);
+        CHECK(result['A'] == 4);
+        CHECK(result['C'] == 4);
+        CHECK(result['G'] == 4);
+        CHECK(result['T'] == 4);
+        CHECK(result.size() == 4);
+    }
+
+    SECTION( "count with ambiguous nucleotides" )
+    {   auto result = gnx::count(s3);
+        CHECK(result['A'] == 2);
+        CHECK(result['C'] == 2);
+        CHECK(result['G'] == 2);
+        CHECK(result['T'] == 2);
+        CHECK(result['N'] == 2);
+        CHECK(result.size() == 5);
+    }
+
+// -- case-insensitive counting ------------------------------------------------
+
+    SECTION( "verify case-insensitive counting" )
+    {   gnx::sq_gen<T> lower("acgt");
+        gnx::sq_gen<T> upper("ACGT");
+        
+        auto result_lower = gnx::count(lower);
+        auto result_upper = gnx::count(upper);
+        
+        CHECK(result_lower == result_upper);
+        CHECK(result_lower['A'] == 1);
+        CHECK(result_lower.count('a') == 0);  // lowercase not in map
+    }
+
+// -- iterator counting --------------------------------------------------------
+
+    SECTION( "count with iterators" )
+    {   auto result = gnx::count(s1.begin(), s1.end());
+        CHECK(result['A'] == 2);
+        CHECK(result['C'] == 2);
+        CHECK(result['G'] == 2);
+        CHECK(result['T'] == 2);
+    }
+
+// -- empty sequences ----------------------------------------------------------
+
+    SECTION( "count empty sequence" )
+    {   T empty;
+        auto result = gnx::count(empty);
+        CHECK(result.empty());
+    }
+
+// -- single character sequences -----------------------------------------------
+
+    SECTION( "count single character" )
+    {   gnx::sq_gen<T> single_a("A");
+        gnx::sq_gen<T> single_lower("a");
+        
+        auto result1 = gnx::count(single_a);
+        auto result2 = gnx::count(single_lower);
+        
+        CHECK(result1['A'] == 1);
+        CHECK(result1.size() == 1);
+        CHECK(result1 == result2);
+    }
+
+// -- amino acid sequences -----------------------------------------------------
+
+    SECTION( "count amino acids" )
+    {   gnx::sq_gen<T> peptide("ARNDCQEGHILKMFPSTWYVarnDcqeghilkmfpstwyv");
+        auto result = gnx::count(peptide);
+        
+        // Each standard amino acid should appear twice (upper and lower)
+        CHECK(result['A'] == 2);
+        CHECK(result['R'] == 2);
+        CHECK(result['N'] == 2);
+        CHECK(result['D'] == 2);
+        CHECK(result.size() == 20);
+    }
+}
+
+// =============================================================================
+// count() algorithm execution policy tests
+// =============================================================================
+
+TEMPLATE_TEST_CASE
+(   "gnx::count execution policies"
+,   "[algorithm][count][policy]"
+,   std::vector<char>
+)
+{   typedef TestType T;
+
+    using gnx::execution::seq;
+    using gnx::execution::par;
+    using gnx::execution::unseq;
+    using gnx::execution::par_unseq;
+
+    const auto N{10'000};
+
+    gnx::sq_gen<T> s1(N);
+    gnx::rand(s1.begin(), N, "ACGTacgt", seed_pi);
+
+    // Get baseline result
+    auto expected = gnx::count(s1);
+
+// -- sequential policy --------------------------------------------------------
+
+    SECTION( "count with seq policy" )
+    {   auto result = gnx::count(seq, s1);
+        CHECK(result == expected);
+        // Verify case-insensitive counting
+        CHECK(result['A'] > 0);
+        CHECK(result.count('a') == 0);  // lowercase not in result
+    }
+
+// -- unsequenced policy -------------------------------------------------------
+
+    SECTION( "count with unseq policy" )
+    {   auto result = gnx::count(unseq, s1);
+        CHECK(result == expected);
+    }
+
+// -- parallel policy ----------------------------------------------------------
+
+    SECTION( "count with par policy" )
+    {   auto result = gnx::count(par, s1);
+        CHECK(result == expected);
+    }
+
+// -- parallel unsequenced policy ----------------------------------------------
+
+    SECTION( "count with par_unseq policy" )
+    {   auto result = gnx::count(par_unseq, s1);
+        CHECK(result == expected);
+    }
+
+// -- verify total count matches length ----------------------------------------
+
+    SECTION( "total count equals sequence length" )
+    {   auto result = gnx::count(par, s1);
+        std::size_t total = 0;
+        for (const auto& [key, value] : result)
+            total += value;
+        CHECK(total == N);
     }
 }
 
