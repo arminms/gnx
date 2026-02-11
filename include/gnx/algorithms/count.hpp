@@ -35,8 +35,8 @@ namespace detail {
 #pragma omp declare simd uniform(v, table) linear(i:1)
 #endif
 template<typename T, typename SizeT, typename LutT>
-inline LutT normalize_case_func(const T* v, SizeT i, const LutT* table)
-{   return table[static_cast<uint8_t>(v[i])];
+inline void count_func(const T* v, SizeT i, LutT* table)
+{   ++table[static_cast<uint8_t>(v[i])];
 }
 
 #if defined(__CUDACC__) || defined(__HIPCC__)
@@ -190,7 +190,6 @@ inline std::map<char, std::size_t> count
         return {};
 
     const auto vptr = &first[0];
-    const auto& table = lut::case_fold;
 
     // compile-time dispatch based on execution policy
     if constexpr
@@ -203,47 +202,53 @@ inline std::map<char, std::size_t> count
     (   std::is_same_v<std::decay_t<ExecPolicy>
     ,   gnx::execution::unsequenced_policy>
     )
-    {   // Use SIMD-friendly approach: normalize then count
-        std::vector<char> normalized(n);
+    {   std::array<std::size_t, 256> counts{};
+        std::fill(counts.begin(), counts.end(), 0);
 
         #pragma omp simd
         for (difference_type i = 0; i < n; ++i)
-            normalized[i] = detail::normalize_case_func(vptr, i, table.data());
+            detail::count_func(vptr, i, counts.data());
 
+        for (char c = 'a'; c <= 'z'; ++c)
+        {   counts[static_cast<uint8_t>(c - 32)] += counts[static_cast<uint8_t>(c)];
+            counts[static_cast<uint8_t>(c)] = 0;
+        }
         std::map<char, std::size_t> result;
-        for (char c : normalized)
-            ++result[c];
-        
+        for (char c = ' '; c <= '~'; ++c)
+            if (counts[static_cast<uint8_t>(c)] > 0)
+                result[c] = counts[static_cast<uint8_t>(c)];
         return result;
     }
     else if constexpr
     (   std::is_same_v<std::decay_t<ExecPolicy>
     ,   gnx::execution::parallel_policy>
-    ||  std::is_same_v<std::decay_t<ExecPolicy>
-    ,   gnx::execution::parallel_unsequenced_policy>
     )
-    {   // Parallel approach: each thread builds local map, then merge
-        std::map<char, std::size_t> result;
-
+    {   // parallel approach: each thread builds local count, then merge
+        std::array<std::size_t, 256> counts{};
+        std::fill(counts.begin(), counts.end(), 0);
         #pragma omp parallel
-        {   std::map<char, std::size_t> local_result;
-            
-            #if defined(_WIN32)
+        {   std::array<std::size_t, 256> local_counts{};
+            std::fill(local_counts.begin(), local_counts.end(), 0);
             #pragma omp for
-            #else
-            #pragma omp for simd
-            #endif
             for (difference_type i = 0; i < n; ++i)
-            {   char normalized = detail::normalize_case_func(vptr, i, table.data());
-                ++local_result[normalized];
+            {   detail::count_func(vptr, i, local_counts.data());
             }
-
+            for (char c = 'a'; c <= 'z'; ++c)
+            {   local_counts[static_cast<uint8_t>(c - 32)]
+            +=  local_counts[static_cast<uint8_t>(c)];
+                local_counts[static_cast<uint8_t>(c)] = 0;
+            }
             #pragma omp critical
-            {   for (const auto& [key, value] : local_result)
-                    result[key] += value;
+            {   for (char c = ' '; c <= '~'; ++c)
+                {   counts[static_cast<uint8_t>(c)]
+                +=  local_counts[static_cast<uint8_t>(c)];
+                }
             }
         }
-
+        std::map<char, std::size_t> result;
+        for (char c = ' '; c <= '~'; ++c)
+            if (counts[static_cast<uint8_t>(c)] > 0)
+                result[c] = counts[static_cast<uint8_t>(c)];
         return result;
     }
     else
