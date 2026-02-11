@@ -22,7 +22,7 @@ option(GNX_ENABLE_HIP "Enable ROCm HIP support ?" ON)
 #
 project(
   gnx
-  VERSION 0.1.0
+  VERSION 0.2.0
   LANGUAGES CXX
   DESCRIPTION "Biological sequences for Modern C++"
 )
@@ -75,6 +75,22 @@ endif()
 #
 find_package(ZLIB REQUIRED)
 
+## check for fmt
+#
+find_package(fmt CONFIG
+  HINTS $ENV{HOME} $ENV{HOME}/.local /usr/local /opt/local /opt
+)
+if(NOT fmt_FOUND)
+  message(STATUS "Fetching fmt library...")
+  FetchContent_Declare(
+    fmt
+    GIT_REPOSITORY https://github.com/fmtlib/fmt.git
+    GIT_TAG        11.0.2
+  )
+  set(FMT_HEADER_ONLY ON CACHE BOOL "Use header-only fmt" FORCE)
+  FetchContent_MakeAvailable(fmt)
+endif()
+
 ## check for ranx
 #
 find_package(ranx CONFIG COMPONENTS openmp
@@ -116,6 +132,7 @@ target_compile_features(${PROJECT_NAME} INTERFACE cxx_std_20)
 target_link_libraries(${PROJECT_NAME} INTERFACE
   OpenMP::OpenMP_CXX
   ZLIB::ZLIB
+  fmt::fmt-header-only
   g3p::g3p
 )
 if(MSVC)
