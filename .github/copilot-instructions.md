@@ -11,19 +11,20 @@ Purpose: Make AI agents immediately productive in this Modern C++ header-only li
   - **OpenMP** (for CPU parallelism)
 - **SIMD:** Prioritize explicit SIMD optimizations (AVX2, AVX-512) or portable wrappers where applicable.
 - **Core model:** `gnx::sq_gen<Container>` (aliased as `gnx::sq` for `std::vector<char>`) represents a sequence plus a map of tagged metadata (`std::unordered_map<std::string, std::any>`).
-- **I/O format:** Extensible visitors in `gnx/visitor.hpp` serialize/deserialize tagged metadata via two registries: `td_print_visitor` (type-index keyed) and `td_scan_visitor` (string keyed). Add types by registering handlers.
+- **I/O format:** Extensible visitors in `gnx/visitor.hpp` serialize/deserialize tagged metadata via two registries: `td_print_visitor` (type-index keyed, using `fmt::memory_buffer`) and `td_scan_visitor` (string keyed). Add types by registering handlers.
 - **FASTA/Q gz input:** `gnx/io/fastaqz.hpp` provides `gnx::in::faqz` which loads a single record by `id` from `.fa.gz/.fq.gz` or stdin using `zlib` + `kseq.h` (embedded in `include/gnx/io/kseq.h`).
 - **Execution policies:** `gnx/execution.hpp` provides execution policies (`seq`, `par`, `unseq`, `par_unseq`, `cuda`, `rocm`, `oneapi`) for controlling parallelization strategy.
 - **Memory utilities:** `gnx/memory.hpp` provides allocators and utilities for heterogeneous memory (host, device, pinned, unified).
-- **External deps:** `ZLIB::ZLIB`, `g3p::g3p`, and `ranx::openmp` (all fetched if not found). `Catch2` and `Google Benchmark` fetched for tests/benchmarks.
+- **External deps:** `ZLIB::ZLIB`, `fmt::fmt-header-only` (v11.0.2+), `g3p::g3p`, and `ranx::openmp` (all fetched if not found). `Catch2` and `Google Benchmark` fetched for tests/benchmarks.
 
 ## Coding Style & Conventions
 - **Naming:** Follow standard C++ library conventions (snake_case for functions/variables, PascalCase for Template Concepts).
+- **Output:** Use `fmt::print()` for all console output and `fmt::format()` for string formatting. The library uses fmt (header-only) for modern, type-safe formatting.
 - **Memory Management:**
   - Prioritize **Zero-Copy** operations. Use `std::string_view` or `std::span` over `std::string` or `std::vector` when parsing sequences (FASTA/FASTQ).
   - Avoid implicit allocations in hot loops.
 - **Safety:** Use `[[nodiscard]]` for pure functions.
-- **Error Handling:** Prefer compile-time errors (`static_assert`, `concepts`) over runtime exceptions.
+- **Error Handling:** Prefer compile-time errors (`static_assert`, `concepts`) over runtime exceptions. Use `fmt::format()` for exception messages.
 - **Execution Policies:**
   - Algorithms should provide both policy-free and policy-accepting overloads.
   - Use `requires gnx::is_execution_policy_v<std::decay_t<ExecPolicy>>` to constrain policy-accepting overloads.
@@ -99,9 +100,10 @@ build/perf/benchmarks --benchmark_counters_tabular=true
   - Quality scores: `phred33.hpp`, `phred64.hpp`
   - Sequence validation: `valid.hpp`
 - **Visitors (`gnx/visitor.hpp`):**
-  - Printing: `td_print_visitor` maps `std::type_index` → printer. Register with `register_td_print_visitor<T>(lambda)`.
+  - Printing: `td_print_visitor` maps `std::type_index` → printer using `fmt::memory_buffer`. Register with `register_td_print_visitor<T>(lambda)`.
   - Scanning: `td_scan_visitor` maps type-name strings → scanner. Register with `register_td_scan_visitor(type_name, lambda)`.
   - Built-in handlers for `void, bool, int, unsigned, float, double, string, std::vector<int>`.
+  - Use `quote_with_delimiter(buf, str, delim)` helper for custom type formatting.
 - **FASTAQZ Loader (`gnx/io/fastaqz.hpp`):**
   - `faqz_gen<Container>::operator()` opens gz file/stdin, iterates `kseq_read`, matches `name == id`, fills `_id`, optional `_qs` (quality), `_desc` (comment), and assigns to sequence.
   - Returns `true` if record was found (`s.has("_id")`).
@@ -119,6 +121,7 @@ build/perf/benchmarks --benchmark_counters_tabular=true
 - **Visitor symmetry:** When adding a printer for a new type, also add a scanner entry using the exact type-name string produced by the printer.
 - **String literal helper:** Global `operator""_sq` creates `gnx::sq` from string literals.
 - **Dependencies:**
+  - `fmt` v11.0.2+: Modern C++ formatting library (header-only mode).
   - `g3p` v1.2.0: Modern C++ interface library for Gnuplot with Jupyter support.
   - `ranx`: Modern parallel random number generation library (OpenMP component required).
   - Avoid changing dependency versions unless necessary.
@@ -150,8 +153,19 @@ auto result = gnx::compare(par, s1, s2);
 ```cpp
 #include <gnx/visitor.hpp>
 struct MyTag { int a; };
-register_td_print_visitor<MyTag>([](std::ostream& os, const MyTag& t){ os << std::quoted("MyTag", '|') << t.a; });
+register_td_print_visitor<MyTag>([](fmt::memory_buffer& buf, const MyTag& t){ 
+    quote_with_delimiter(buf, "MyTag"); 
+    fmt::format_to(std::back_inserter(buf), "{}", t.a); 
+});
 register_td_scan_visitor("MyTag", [](std::istream& is, std::any& a){ int x; is >> x; a = MyTag{x}; });
+```
+- Output sequences using fmt:
+```cpp
+#include <fmt/core.h>
+#include <gnx/sq.hpp>
+using gnx::sq;
+sq s = "ACGTACGT"_sq;
+fmt::print("Sequence: {}\n", s);  // Uses custom fmt::formatter
 ```
 - **Real examples:** Check `example/` directory for complete working examples:
   - `local_align_example.cpp`: Smith-Waterman alignment with various scoring schemes
