@@ -121,6 +121,7 @@ struct alignment_result
 ### Basic Usage (Nucleotide Sequences)
 
 ```cpp
+#include <fmt/core.h>
 #include <gnx/sq.hpp>
 #include <gnx/algorithms/local_align.hpp>
 
@@ -132,14 +133,15 @@ sq seq1{"ACGTACGT"};
 sq seq2{"TACGT"};
 auto result = local_align(seq1, seq2);
 
-std::cout << "Score: " << result.score << "\n";
-std::cout << "Aligned 1: " << result.aligned_seq1 << "\n";
-std::cout << "Aligned 2: " << result.aligned_seq2 << "\n";
+fmt::print("Score: {}\n", result.score);
+fmt::print("Aligned 1: {}\n", result.aligned_seq1);
+fmt::print("Aligned 2: {}\n", result.aligned_seq2);
 ```
 
 ### Protein Alignment with BLOSUM62
 
 ```cpp
+#include <fmt/core.h>
 #include <gnx/sq.hpp>
 #include <gnx/algorithms/local_align.hpp>
 
@@ -152,7 +154,7 @@ sq protein1{"MVHLTPEEKSAV"};
 sq protein2{"MVHLTPEEKSAV"};
 auto result = local_align(protein1, protein2, blosum62);
 
-std::cout << "Score: " << result.score << "\n";
+fmt::print("Score: {}\n", result.score);
 ```
 
 ### Comparing Human and Mouse Proteins
