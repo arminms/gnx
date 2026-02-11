@@ -3,71 +3,81 @@
 //
 #pragma once
 
-#include <iostream>
-#include <iomanip>
+#include <fmt/core.h>
+#include <fmt/format.h>
 #include <vector>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <utility>
 #include <typeindex>
 #include <functional>
 #include <any>
+#include <sstream>
 
 namespace gnx {
+
+// -- quote_with_delimiter -----------------------------------------------------
+
+inline void quote_with_delimiter(fmt::memory_buffer& buf, std::string_view str, char delimiter = '|')
+{
+    fmt::format_to(std::back_inserter(buf), "{}{}{}", delimiter, str, delimiter);
+}
 
 // -- make_td_print_visitor() --------------------------------------------------
 
 template<class T, class F>
 inline
-std::pair<const std::type_index, std::function<void(std::ostream&, const std::any&)>>
+std::pair<const std::type_index, std::function<void(fmt::memory_buffer&, const std::any&)>>
     make_td_print_visitor(const F& f)
 {   return
     {   std::type_index(typeid(T)),
-        [g = f](std::ostream& os, const std::any& a)
-        {   if constexpr (std::is_void_v<T>) g(os);
-            else g(os, std::any_cast<const T&>(a));
+        [g = f](fmt::memory_buffer& buf, const std::any& a)
+        {   if constexpr (std::is_void_v<T>) g(buf);
+            else g(buf, std::any_cast<const T&>(a));
         }
     };
 }
 
 // -- td_print_visitor ---------------------------------------------------------
 
-static std::unordered_map<std::type_index, std::function<void(std::ostream&, const std::any&)>>
+static std::unordered_map<std::type_index, std::function<void(fmt::memory_buffer&, const std::any&)>>
     td_print_visitor
 {   make_td_print_visitor<void>
-    (   [] (std::ostream& os)
-        { os << std::quoted("void", '|') << "{}"; }
+    (   [] (fmt::memory_buffer& buf)
+        { quote_with_delimiter(buf, "void"); fmt::format_to(std::back_inserter(buf), "{{}}"); }
     )
 ,   make_td_print_visitor<bool>
-    (   [](std::ostream& os, bool x)
-        { os << std::quoted("bool", '|') << x; }
+    (   [](fmt::memory_buffer& buf, bool x)
+        { quote_with_delimiter(buf, "bool"); fmt::format_to(std::back_inserter(buf), "{}", x); }
     )
 ,   make_td_print_visitor<int>
-    (   [](std::ostream& os, int x)
-        { os << std::quoted("int", '|') << x; }
+    (   [](fmt::memory_buffer& buf, int x)
+        { quote_with_delimiter(buf, "int"); fmt::format_to(std::back_inserter(buf), "{}", x); }
     )
 ,   make_td_print_visitor<unsigned>
-    (   [](std::ostream& os, unsigned x)
-        { os << std::quoted("unsigned", '|') << x; }
+    (   [](fmt::memory_buffer& buf, unsigned x)
+        { quote_with_delimiter(buf, "unsigned"); fmt::format_to(std::back_inserter(buf), "{}", x); }
     )
 ,   make_td_print_visitor<float>
-    (   [](std::ostream& os, float x)
-        { os << std::quoted("float", '|') << x; }
+    (   [](fmt::memory_buffer& buf, float x)
+        { quote_with_delimiter(buf, "float"); fmt::format_to(std::back_inserter(buf), "{}", x); }
     )
 ,   make_td_print_visitor<double>
-    (   [](std::ostream& os, double x)
-        { os << std::quoted("double", '|') << x; }
+    (   [](fmt::memory_buffer& buf, double x)
+        { quote_with_delimiter(buf, "double"); fmt::format_to(std::back_inserter(buf), "{}", x); }
     )
 ,   make_td_print_visitor<std::string>
-    (   [] (std::ostream& os, std::string s)
-        { os << std::quoted("string", '|') << std::quoted(s); }
+    (   [] (fmt::memory_buffer& buf, const std::string& s)
+        { quote_with_delimiter(buf, "string"); fmt::format_to(std::back_inserter(buf), "\"{}\"", s); }
     )
 ,   make_td_print_visitor<std::vector<int>>
-    (   [] (std::ostream& os, std::vector<int> v)
-        {   os << std::quoted("std::vector<int>", '|') << '{';
+    (   [] (fmt::memory_buffer& buf, const std::vector<int>& v)
+        {   quote_with_delimiter(buf, "std::vector<int>"); 
+            fmt::format_to(std::back_inserter(buf), "{{");
             for (auto i : v)
-                os << i << ',';
-            os << '}';
+                fmt::format_to(std::back_inserter(buf), "{},", i);
+            fmt::format_to(std::back_inserter(buf), "}}");
         }
     )
     // ... add more handlers here ...
@@ -90,7 +100,7 @@ static std::unordered_map<std::string, std::function<void(std::istream&, std::an
     ,
     {   "bool"
     ,   [] (std::istream& is, std::any& a)
-        { bool x; is >> x; a = x; }
+        { bool x; is >> std::boolalpha >> x; a = x; }
     }
     ,
     {   "int"
@@ -115,7 +125,12 @@ static std::unordered_map<std::string, std::function<void(std::istream&, std::an
     ,
     {   "string"
     ,   [] (std::istream& is, std::any& a)
-        { std::string s; is >> std::quoted(s); a = s; }
+        { std::string s; 
+          char delim;
+          is >> delim; // Read opening quote
+          std::getline(is, s, '"'); // Read until closing quote
+          a = s; 
+        }
     }
     ,
     {   "std::vector<int>"
