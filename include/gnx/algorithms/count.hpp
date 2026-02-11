@@ -133,12 +133,22 @@ inline std::map<char, std::size_t> count
 ,   Iterator last
 )
 {   std::map<char, std::size_t> result;
-    const auto& table = lut::case_fold;
+    std::array<std::size_t, 256> counts{};
+    std::fill(counts.begin(), counts.end(), 0);
 
     while (first != last)
-    {   char normalized = table[static_cast<uint8_t>(*first++)];
-        ++result[normalized];
+        ++counts[static_cast<uint8_t>(*first++)];
+
+    // add lowercase ASCII letters's counts to uppercase
+    for (char c = 'a'; c <= 'z'; ++c)
+    {   counts[static_cast<uint8_t>(c - 32)] += counts[static_cast<uint8_t>(c)];
+        counts[static_cast<uint8_t>(c)] = 0;
     }
+
+    // fill the result map with non-zero counts
+    for (char c = ' '; c <= '~'; ++c)
+        if (counts[static_cast<uint8_t>(c)] > 0)
+            result[c] = counts[static_cast<uint8_t>(c)];
 
     return result;
 }
