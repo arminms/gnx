@@ -3,8 +3,11 @@
 //
 #pragma once
 
+#include <fmt/core.h>
+#include <fmt/format.h>
 #include <concepts>
 #include <sstream>
+#include <iomanip>
 #include <algorithm>
 #include <initializer_list>
 #include <stdexcept>
@@ -402,44 +405,59 @@ public:
     {   write(filename, *this);
     }
     ///
-    /// Prints the sequence and its tagged data to the output stream @a os.
-    void print(std::ostream& os) const
-    {   os << std::boolalpha << _sq.size();
+    /// Returns the sequence and its tagged data as a formatted string.
+    std::string print() const
+    {   fmt::memory_buffer buf;
+        fmt::format_to(std::back_inserter(buf), "{}", _sq.size());
+        
+        // Write raw sequence data
 #if defined(__CUDACC__) || defined(__HIPCC__)
         if constexpr
         (   std::is_same_v<Container, thrust::device_vector<value_type>>
         )
         {   universal_host_pinned_vector<value_type> uhpv(_sq);
-            os.write(thrust::raw_pointer_cast(uhpv.data()), uhpv.size());
+            buf.append(thrust::raw_pointer_cast(uhpv.data()), 
+                      thrust::raw_pointer_cast(uhpv.data()) + uhpv.size());
         }
         else if constexpr
         (   std::is_same_v<Container, thrust::universal_vector<value_type>>
         )
-        {   os.write(thrust::raw_pointer_cast(_sq.data()), _sq.size());
+        {   buf.append(thrust::raw_pointer_cast(_sq.data()), 
+                      thrust::raw_pointer_cast(_sq.data()) + _sq.size());
         }
 #if defined(__HIPCC__)
         else if constexpr
         (   std::is_same_v<Container, gnx::unified_vector<value_type>>
         )
-        {   os.write(thrust::raw_pointer_cast(_sq.data()), _sq.size());
+        {   buf.append(thrust::raw_pointer_cast(_sq.data()), 
+                      thrust::raw_pointer_cast(_sq.data()) + _sq.size());
         }
 #endif //__HIPCC__
         else
 #endif  //__CUDACC__
-            os.write(_sq.data(), _sq.size());
+            buf.append(_sq.data(), _sq.data() + _sq.size());
+            
+        // Write tagged data
         if (_ptr_td)
             for (const auto& [tag, data] : *_ptr_td)
-            {   os << std::quoted(tag, '#');
+            {   // Print tag in quoted format: #tag#
+                fmt::format_to(std::back_inserter(buf), "#{0}#", tag);
                 if
                 (   const auto it = td_print_visitor.find(std::type_index(data.type()))
                 ;    it != td_print_visitor.cend()
                 )
-                    it->second(os, data);
+                    it->second(buf, data);
                 else
-                    os << std::quoted("UNREGISTERED TYPE", '|')
-                    //    << std::quoted(data.type().name())
-                    << "{}";
+                {   quote_with_delimiter(buf, "UNREGISTERED TYPE");
+                    fmt::format_to(std::back_inserter(buf), "{{}}");
+                }
             }
+        return fmt::to_string(buf);
+    }
+    ///
+    /// Prints the sequence to an output stream (for backward compatibility).
+    void print(std::ostream& os) const
+    {   os << print();
     }
     ///
     /// Scans the sequence and its tagged data from the input stream @a is.
@@ -484,8 +502,7 @@ public:
                 it->second(is, a);
             else
                 throw std::runtime_error
-                (   "gnx::sq: unregistered type -> "
-                +   type
+                (   fmt::format("gnx::sq: unregistered type -> {}", type)
                 );
             (*_ptr_td)[tag] = a;
         }
@@ -554,3 +571,19 @@ public:
 
     gnx::sq operator""_sq (const char* str, std::size_t len)
     {   return gnx::sq(str);   }
+
+// -- fmt formatter for gnx::sq ------------------------------------------------
+
+template <>
+struct fmt::formatter<gnx::sq> : fmt::formatter<std::string>
+{   auto format(const gnx::sq& s, format_context& ctx) const
+    {   return fmt::formatter<std::string>::format(s.print(), ctx);
+    }
+};
+
+template <typename Container, typename Map>
+struct fmt::formatter<gnx::sq_gen<Container, Map>> : fmt::formatter<std::string>
+{   auto format(const gnx::sq_gen<Container, Map>& s, format_context& ctx) const
+    {   return fmt::formatter<std::string>::format(s.print(), ctx);
+    }
+};
