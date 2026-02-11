@@ -3,6 +3,8 @@
 //
 #pragma once
 
+#include <fmt/core.h>
+#include <fmt/format.h>
 #include <string>
 #include <string_view>
 #include <stdexcept>
@@ -29,7 +31,7 @@ struct fast_aqz
         :   gzopen(std::string(filename).c_str(), "r");
         if (nullptr == fp)
             throw std::runtime_error
-                ("gnx::fast_aqz: could not open file -> " + std::string(filename));
+                (fmt::format("gnx::fast_aqz: could not open file -> {}", filename));
         kseq_t* seq = kseq_init(fp);
         size_t count = 0;
         int r{};
@@ -64,8 +66,7 @@ struct fast_aqz
         :   gzopen(std::string(filename).c_str(), "r");
         if (nullptr == fp)
             throw std::runtime_error
-            (   "gnx::fast_aqz: could not open file -> "
-            +   std::string(filename)
+            (   fmt::format("gnx::fast_aqz: could not open file -> {}", filename)
             );
         kseq_t* seq = kseq_init(fp);
         int r{};
@@ -86,13 +87,11 @@ struct fast_aqz
         gzclose(fp);
         if (-2 == r)
             throw std::runtime_error
-            (   "gnx::fast_aqz: truncated quality string in file -> "
-            +   std::string(filename)
+            (   fmt::format("gnx::fast_aqz: truncated quality string in file -> {}", filename)
             );
         if (-3 == r)
             throw std::runtime_error
-            (   "gnx::fast_aqz: error reading file -> "
-            +   std::string(filename)
+            (   fmt::format("gnx::fast_aqz: error reading file -> {}", filename)
             );
         return s;
     }
@@ -119,8 +118,7 @@ struct fasta
         :   fopen(std::string(filename).c_str(), "w");
         if (nullptr == fp)
             throw std::runtime_error
-            (   "gnx::fasta: could not open file -> "
-            +   std::string(filename)
+            (   fmt::format("gnx::fasta: could not open file -> {}", filename)
             );
         std::string id = seq.has("_id")
         ?   std::any_cast<std::string>(seq["_id"])
@@ -204,8 +202,7 @@ struct fasta_gz
         :   gzopen(std::string(filename).c_str(), "w");
         if (nullptr == fp)
             throw std::runtime_error
-            (   "gnx::fasta_gz: could not open file -> "
-            +   std::string(filename)
+            (   fmt::format("gnx::fasta_gz: could not open file -> {}", filename)
             );
         std::string id = seq.has("_id")
         ?   std::any_cast<std::string>(seq["_id"])
@@ -273,8 +270,7 @@ struct fastq
         :   fopen(std::string(filename).c_str(), "w");
         if (nullptr == fp)
             throw std::runtime_error
-            (   "gnx::fastq: could not open file -> "
-            +   std::string(filename)
+            (   fmt::format("gnx::fastq: could not open file -> {}", filename)
             );
         std::string id = seq.has("_id")
         ?   std::any_cast<std::string>(seq["_id"])
@@ -389,8 +385,7 @@ struct fastq_gz
         :   gzopen(std::string(filename).c_str(), "w");
         if (nullptr == fp)
             throw std::runtime_error
-            (   "gnx::fastq_gz: could not open file -> "
-            +   std::string(filename)
+            (   fmt::format("gnx::fastq_gz: could not open file -> {}", filename)
             );
         std::string id = seq.has("_id")
         ?   std::any_cast<std::string>(seq["_id"])
