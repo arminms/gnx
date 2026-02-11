@@ -18,6 +18,7 @@ kernelspec:
 
 #include <fstream>
 
+#include <fmt/core.h>
 #include <g3p/gnuplot>
 #include <gnx/sq.hpp>
 #include <gnx/sq_view.hpp>
@@ -138,13 +139,13 @@ gp
 plasmid["int_test"] = 19;
 plasmid["float_test"] = 3.14f;
 // plasmid["wrong"] = std::vector<int>{1, 2, 3, 4};
-std::cout << plasmid;
+fmt::print("{}", plasmid);
 ```
 +++
 ```{code-cell} cpp
 gnx::sq s{"ACGT"};
 s["test"] = 33;
-// std::cout << s;
+// fmt::print("{}", s);
 s
 ```
 +++
@@ -157,7 +158,7 @@ ss >> t;
 ```
 +++
 ```{code-cell} cpp
-std::cout << t;
+fmt::print("{}", t);
 ```
 ++
 ## Non-owning sequence views
@@ -209,7 +210,7 @@ s["test-void"] = {};
 s["test-bool"] = true;
 s["test-float"] = 3.14f;
 s["test-vector-int"] = std::vector<int>{ 1, 2, 3, 4 };
-std::cout << s;
+fmt::print("{}", s);
 ```
 +++
 ```{code-cell} cpp
@@ -217,7 +218,7 @@ std::stringstream ss;
 ss << s;
 gnx::sq t;
 ss >> t;
-std::cout << t;
+fmt::print("{}", t);
 ```
 ### valid() algorithm
 +++
@@ -253,25 +254,24 @@ gnx::valid_nucleotide(gnx::execution::par_unseq, s);
 ### local_align() algorithm
 ```{code-cell} cpp
 void print_alignment(const gnx::alignment_result& result)
-{   std::cout << "Alignment Score: " << result.score << "\n";
-    std::cout << "Position: (" << result.max_i << ", " << result.max_j << ")\n";
-    std::cout << "Aligned Sequence 1: " << result.aligned_seq1 << "\n";
-    std::cout << "Aligned Sequence 2: " << result.aligned_seq2 << "\n";
+{   fmt::print("Alignment Score: {}\n", result.score);
+    fmt::print("Position: ({}, {})\n", result.max_i, result.max_j);
+    fmt::print("Aligned Sequence 1: {}\n", result.aligned_seq1);
+    fmt::print("Aligned Sequence 2: {}\n", result.aligned_seq2);
     
     // Print alignment visualization
-    std::cout << "Alignment:\n";
-    std::cout << "  " << result.aligned_seq1 << "\n";
-    std::cout << "  ";
+    fmt::print("Alignment:\n");
+    fmt::print("  {}\n", result.aligned_seq1);
+    fmt::print("  ");
     for (size_t i = 0; i < result.aligned_seq1.length(); ++i)
     {   if (result.aligned_seq1[i] == result.aligned_seq2[i])
-            std::cout << '|';
+            fmt::print("|");
         else if (result.aligned_seq1[i] == '-' || result.aligned_seq2[i] == '-')
-            std::cout << ' ';
+            fmt::print(" ");
         else
-            std::cout << 'x';
+            fmt::print("x");
     }
-    std::cout << "\n  " << result.aligned_seq2 << "\n";
-    std::cout << std::endl;
+    fmt::print("\n  {}\n", result.aligned_seq2);
 }
 ```
 +++
