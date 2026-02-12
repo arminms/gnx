@@ -87,7 +87,6 @@ if(NOT fmt_FOUND)
     GIT_REPOSITORY https://github.com/fmtlib/fmt.git
     GIT_TAG        11.0.2
   )
-  set(FMT_HEADER_ONLY ON CACHE BOOL "Use header-only fmt" FORCE)
   FetchContent_MakeAvailable(fmt)
 endif()
 
