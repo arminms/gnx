@@ -46,15 +46,14 @@ __global__ void count_kernel
     int tid = threadIdx.x;
     local_counts[tid] = 0;
     __syncthreads();
-    for // count characters in the assigned portion of the input
-    (   SizeT i = blockIdx.x * blockDim.x + tid
-    ;   i < n
-    ;   i += blockDim.x * gridDim.x
-    )
-    {   uint8_t c = static_cast<uint8_t>(d_in[i]);
+
+    auto idx = blockDim.x * blockIdx.x + tid;
+    if (idx < n)
+    {   uint8_t c = static_cast<uint8_t>(d_in[idx]);
         atomicAdd(&local_counts[c], 1);
     }
     __syncthreads();
+
     // write local counts to global memory
     atomicAdd(&d_out[tid], local_counts[tid]);
 }
