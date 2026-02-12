@@ -229,6 +229,8 @@ inline std::map<char, std::size_t> count
     else if constexpr
     (   std::is_same_v<std::decay_t<ExecPolicy>
     ,   gnx::execution::parallel_policy>
+    ||  std::is_same_v<std::decay_t<ExecPolicy>
+    ,   gnx::execution::parallel_unsequenced_policy>
     )
     {   // parallel approach: each thread builds local count, then merge
         std::array<std::size_t, 256> counts{};
