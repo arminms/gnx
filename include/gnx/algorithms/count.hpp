@@ -29,7 +29,7 @@ namespace detail {
 #endif
 template<typename T, typename SizeT, typename LutT>
 inline void count_func(const T* v, SizeT i, LutT* table)
-{   ++table[static_cast<uint8_t>(v[i])];
+{   table[static_cast<uint8_t>(v[i])]++;
 }
 
 #if defined(__CUDACC__) || defined(__HIPCC__)
