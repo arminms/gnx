@@ -12,8 +12,12 @@
 
 #if defined(__CUDACC__)
 #include <cub/cub.cuh>
+#include <thrust/device_vector.h>
+#include <thrust/reduce.h>
 #elif defined(__HIPCC__)
 #include <hipcub/hipcub.hpp>
+#include <thrust/device_vector.h>
+#include <thrust/reduce.h>
 #endif // __CUDACC__
 
 #include <gnx/concepts.hpp>

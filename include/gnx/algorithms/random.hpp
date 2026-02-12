@@ -17,7 +17,7 @@
 #include <omp.h>
 
 #if defined(__CUDACC__) || defined(__HIPCC__)
-    #include <thrust/device_vector.h>
+#include <thrust/device_vector.h>
 #endif
 
 #include <ranx/bind.hpp>
