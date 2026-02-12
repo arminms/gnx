@@ -26,7 +26,7 @@ jobs:
           core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
 
     - name: Install dependencies via vcpkg
-      run: vcpkg install catch2 zlib --binarysource="clear;x-gha,readwrite"
+      run: vcpkg install catch2 zlib fmt benchmark --binarysource="clear;x-gha,readwrite"
 
     - name: Install libomp on macOS
       run: brew install libomp
