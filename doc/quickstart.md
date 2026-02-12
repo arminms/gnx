@@ -18,13 +18,16 @@ kernelspec:
 
 #include <fstream>
 
+#define FMT_HEADER_ONLY
 #include <fmt/core.h>
+
 #include <g3p/gnuplot>
 #include <gnx/sq.hpp>
 #include <gnx/sq_view.hpp>
 #include <gnx/io/fastaqz.hpp>
 #include <gnx/algorithms/valid.hpp>
 #include <gnx/algorithms/random.hpp>
+#include <gnx/algorithms/count.hpp>
 #include <gnx/algorithms/local_align.hpp>
 ```
 
@@ -45,8 +48,8 @@ It's also easy to load from compressed/uncompressed fasta/fastq files. First let
 +++
 ```{code-cell} cpp
 gnx::sq plasmid;
-plasmid.load("GCF_000204255.1_ASM20425v1_genomic.fna.gz", "NC_017288.1");
-(7553 == std::size(plasmid))
+plasmid.load("GCF_000204255.1_ASM20425v1_genomic.fna.gz", 1);
+gnx::count(plasmid)
 ```
 +++
 ```{code-cell} cpp
