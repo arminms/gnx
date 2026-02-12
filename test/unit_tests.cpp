@@ -1140,7 +1140,7 @@ TEMPLATE_TEST_CASE
         CHECK_FALSE(gnx::compare(policy, s1, s3));
     }
 
-// -- larger sequences on device -----------------------------------------------
+// -- streams on device --------------------------------------------------------
 
 #if defined(__CUDACC__)
     SECTION( "CUDA stream as policy" )
@@ -1886,6 +1886,61 @@ TEMPLATE_TEST_CASE
         CHECK(total == N);
     }
 }
+
+// =============================================================================
+// count() algorithm device tests
+// =============================================================================
+
+#if defined(__CUDACC__) || defined(__HIPCC__)
+TEMPLATE_TEST_CASE
+(   "gnx::count::device"
+,   "[algorithm][count][device]"
+,   thrust::device_vector<char>
+,   thrust::universal_vector<char>
+)
+{   typedef TestType T;
+    const auto N{10'000};
+
+    gnx::sq_gen<T> s(N); // device
+    gnx::sq baseline(N); // host
+    gnx::rand(s.begin(), N, "ACGTacgt", seed_pi);
+    gnx::rand(baseline.begin(), N, "ACGTacgt", seed_pi);
+
+    // Get baseline result
+    auto expected = gnx::count(baseline);
+
+#if defined(__CUDACC__)
+    auto policy = thrust::cuda::par;
+#else
+    auto policy = thrust::hip::par;
+#endif
+
+// -- device comparison --------------------------------------------------------
+
+    SECTION( "count on device" )
+    {   auto result = gnx::count(policy, s);
+        CHECK(result == expected);
+    }
+
+// -- streams on device --------------------------------------------------------
+
+#if defined(__CUDACC__)
+    SECTION( "CUDA stream as policy" )
+    {   cudaStream_t stream; cudaStreamCreate(&stream);
+        auto result = gnx::count(thrust::cuda::par.on(stream), s);
+        CHECK(result == expected);
+        cudaStreamSynchronize(stream); cudaStreamDestroy(stream);
+    }
+#else // __HIPCC__
+    SECTION( "HIP stream as policy" )
+    {   hipStream_t stream; hipStreamCreate(&stream);
+        auto result = gnx::count(thrust::hip::par.on(stream), s);
+        CHECK(result == expected);
+        hipStreamSynchronize(stream); hipStreamDestroy(stream);
+    }
+#endif // __CUDACC__
+}
+#endif // __CUDACC__ || __HIPCC__
 
 // =============================================================================
 // forward stream sequence bank tests
