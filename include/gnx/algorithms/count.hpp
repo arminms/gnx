@@ -11,17 +11,10 @@
 #include <utility>
 #include <cstddef>
 
-#if defined(__CUDACC__)
+#if defined(__CUDACC__) || defined(__HIPCC__)
 #include <thrust/device_vector.h>
-#include <thrust/sort.h>
-#include <thrust/reduce.h>
-#include <thrust/iterator/constant_iterator.h>
-#elif defined(__HIPCC__)
-#include <thrust/device_vector.h>
-#include <thrust/sort.h>
-#include <thrust/reduce.h>
-#include <thrust/iterator/constant_iterator.h>
-#endif // __CUDACC__
+#include <thrust/host_vector.h>
+#endif // __CUDACC__ || __HIPCC__
 
 #include <gnx/concepts.hpp>
 #include <gnx/execution.hpp>
@@ -41,6 +34,33 @@ inline void count_func(const T* v, SizeT i, LutT* table)
 
 #if defined(__CUDACC__) || defined(__HIPCC__)
 
+namespace kernel {
+
+template<typename T, typename SizeT>
+__global__ void count_kernel
+(   T* d_in
+,   unsigned int* d_out
+,   SizeT n
+)
+{   __shared__ unsigned int local_counts[256];
+    int tid = threadIdx.x;
+    local_counts[tid] = 0;
+    __syncthreads();
+    for // count characters in the assigned portion of the input
+    (   SizeT i = blockIdx.x * blockDim.x + tid
+    ;   i < n
+    ;   i += blockDim.x * gridDim.x
+    )
+    {   uint8_t c = static_cast<uint8_t>(d_in[i]);
+        atomicAdd(&local_counts[c], 1);
+    }
+    __syncthreads();
+    // write local counts to global memory
+    atomicAdd(&d_out[tid], local_counts[tid]);
+}
+
+} // end kernel namespace
+
 template<typename ExecPolicy, device_resident_iterator Iterator>
 inline std::map<char, std::size_t> count_device
 (   const ExecPolicy& policy
@@ -54,47 +74,34 @@ inline std::map<char, std::size_t> count_device
     if (n <= 0)
         return {};
 
-    // Create device vectors for normalized characters
-    thrust::device_vector<char> d_normalized(n);
-    thrust::device_vector<uint8_t> d_lut(lut::case_fold.begin(), lut::case_fold.end());
+    thrust::device_vector<unsigned int> d_counts(256);
+    difference_type threads_per_block{256};
+    difference_type grid_size{n / threads_per_block + 1};
 
-    // Normalize all characters using the lookup table
-    auto lut_ptr = thrust::raw_pointer_cast(d_lut.data());
-    thrust::transform
-    (   first
-    ,   last
-    ,   d_normalized.begin()
-    ,   [lut_ptr] __host__ __device__ (value_type c)
-        {   return static_cast<char>(lut_ptr[static_cast<uint8_t>(c)]);
-        }
+#if defined(__HIPCC__)
+    hipStream_t stream = 0;
+#else
+    cudaStream_t stream = 0;
+#endif
+    if constexpr (has_stream_member<ExecPolicy>)
+       stream = policy.stream();
+
+    kernel::count_kernel<<<grid_size, threads_per_block, 0, stream>>>
+    (   thrust::raw_pointer_cast(&first[0])
+    ,   thrust::raw_pointer_cast(d_counts.data())
+    ,   n
     );
 
-    // Sort normalized characters
-    thrust::sort(d_normalized.begin(), d_normalized.end());
-
-    // Count occurrences using reduce_by_key
-    thrust::device_vector<char> d_unique_chars(n);
-    thrust::device_vector<std::size_t> d_counts(n);
-
-    auto end_pair = thrust::reduce_by_key
-    (   d_normalized.begin()
-    ,   d_normalized.end()
-    ,   thrust::constant_iterator<std::size_t>(1)
-    ,   d_unique_chars.begin()
-    ,   d_counts.begin()
-    );
-
-    // Copy results back to host and build the map
-    std::size_t num_unique = end_pair.first - d_unique_chars.begin();
-    std::vector<char> h_chars(num_unique);
-    std::vector<std::size_t> h_counts(num_unique);
-
-    thrust::copy(d_unique_chars.begin(), end_pair.first, h_chars.begin());
-    thrust::copy(d_counts.begin(), end_pair.second, h_counts.begin());
-
+    // copy results back to host and build the map
+    thrust::host_vector<unsigned int> counts = d_counts;
+    for (char c = 'a'; c <= 'z'; ++c)
+    {   counts[static_cast<uint8_t>(c - 32)] += counts[static_cast<uint8_t>(c)];
+        counts[static_cast<uint8_t>(c)] = 0;
+    }
     std::map<char, std::size_t> result;
-    for (std::size_t i = 0; i < num_unique; ++i)
-        result[h_chars[i]] = h_counts[i];
+    for (char c = ' '; c <= '~'; ++c)
+        if (counts[static_cast<uint8_t>(c)] > 0)
+            result[c] = counts[static_cast<uint8_t>(c)];
 
     return result;
 }
