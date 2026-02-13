@@ -131,7 +131,7 @@ target_compile_features(${PROJECT_NAME} INTERFACE cxx_std_20)
 target_link_libraries(${PROJECT_NAME} INTERFACE
   OpenMP::OpenMP_CXX
   ZLIB::ZLIB
-  fmt::fmt-header-only
+  fmt::fmt
   g3p::g3p
 )
 if(MSVC)
