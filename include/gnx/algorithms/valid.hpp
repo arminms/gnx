@@ -115,7 +115,7 @@ inline bool valid_device
        stream = policy.stream();
 
     thrust::device_vector<result_type> d_partial_results(grid_size);
-    thrust::device_vector<uint8_t> d_lut(table.begin(), table.end());
+    auto d_lut = lut::get_static_device(table);
 
     kernel::valid_kernel<<<grid_size, BLOCK_THREADS, 0, stream>>>
     (   thrust::raw_pointer_cast(&first[0])
