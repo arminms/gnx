@@ -6,6 +6,8 @@
 #include <array>
 #include <cstdint>
 
+#include <gnx/lut/lut_commons.hpp>
+
 namespace gnx::lut {
 
 /// @brief Compile-time generated lookup table for nucleotide complements.
@@ -63,5 +65,5 @@ constexpr std::array<char, 256> create_complement_table()
 /// @brief Lookup table instance for nucleotide complements
 constexpr auto complement = create_complement_table();
 
-} // namespace gnx::lut
+} // end gnx::lut namespace
 
