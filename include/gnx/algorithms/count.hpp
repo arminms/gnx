@@ -18,7 +18,6 @@
 
 #include <gnx/concepts.hpp>
 #include <gnx/execution.hpp>
-#include <gnx/lut/case_fold.hpp>
 
 namespace gnx {
 
@@ -201,29 +200,10 @@ inline std::map<char, std::size_t> count
     if constexpr
     (   std::is_same_v<std::decay_t<ExecPolicy>
     ,   gnx::execution::sequenced_policy>
-    )
-    {   return count(first, last);
-    }
-    else if constexpr
-    (   std::is_same_v<std::decay_t<ExecPolicy>
+    ||  std::is_same_v<std::decay_t<ExecPolicy>
     ,   gnx::execution::unsequenced_policy>
     )
-    {   std::array<std::size_t, 256> counts{};
-        std::fill(counts.begin(), counts.end(), 0);
-
-        #pragma omp simd
-        for (difference_type i = 0; i < n; ++i)
-            detail::count_func(vptr, i, counts.data());
-
-        for (char c = 'a'; c <= 'z'; ++c)
-        {   counts[static_cast<uint8_t>(c - 32)] += counts[static_cast<uint8_t>(c)];
-            counts[static_cast<uint8_t>(c)] = 0;
-        }
-        std::map<char, std::size_t> result;
-        for (char c = ' '; c <= '~'; ++c)
-            if (counts[static_cast<uint8_t>(c)] > 0)
-                result[c] = counts[static_cast<uint8_t>(c)];
-        return result;
+    {   return count(first, last);
     }
     else if constexpr
     (   std::is_same_v<std::decay_t<ExecPolicy>
