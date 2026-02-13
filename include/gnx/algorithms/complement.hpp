@@ -70,7 +70,8 @@ inline void complement_device
     if (n <= 0)
         return;
 
-    thrust::device_vector<char> d_lut(lut::complement.begin(), lut::complement.end());
+    // create static device-resident copy of the complement lookup table
+    auto d_lut = lut::get_static_device(lut::complement);
 
     difference_type threads_per_block{256};
     difference_type grid_size{(n + threads_per_block - 1) / threads_per_block};
