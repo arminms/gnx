@@ -10,6 +10,7 @@
 #include <gnx/algorithms/compare.hpp>
 #include <gnx/algorithms/local_align.hpp>
 #include <gnx/algorithms/count.hpp>
+#include <gnx/algorithms/complement.hpp>
 #include <gnx/lut/blosum.hpp>
 #include <gnx/lut/pam.hpp>
 
@@ -693,6 +694,155 @@ BENCHMARK_TEMPLATE(count_rocm, thrust::universal_vector<char>)
 ->  UseManualTime()
 ->  Unit(benchmark::kMillisecond);
 BENCHMARK_TEMPLATE(count_rocm, gnx::unified_vector<char>)
+->  RangeMultiplier(2)
+->  Range(1<<25, 1<<28)
+->  UseManualTime()
+->  Unit(benchmark::kMillisecond);
+
+#endif //__HIPCC__
+
+//----------------------------------------------------------------------------//
+// complement() algorithm
+
+template <class T, class ExecPolicy>
+void complement(benchmark::State& st)
+{   size_t n = size_t(st.range());
+    ExecPolicy policy;
+    auto s = gnx::random::dna<gnx::sq_gen<T>>(n, seed_pi);
+
+    for (auto _ : st)
+    {   gnx::complement(policy, s);
+        benchmark::ClobberMemory();
+    }
+
+    st.counters["BW (GB/s)"] = benchmark::Counter
+    (   (n * sizeof(typename T::value_type)) / 1e9
+    ,   benchmark::Counter::kIsIterationInvariantRate
+    );
+}
+
+BENCHMARK_TEMPLATE2(complement, std::vector<char>, sequenced_policy)
+->  RangeMultiplier(2)
+->  Range(1<<25, 1<<28)
+->  Unit(benchmark::kMillisecond);
+BENCHMARK_TEMPLATE2(complement, std::vector<char>, unsequenced_policy)
+->  RangeMultiplier(2)
+->  Range(1<<25, 1<<28)
+->  Unit(benchmark::kMillisecond);
+BENCHMARK_TEMPLATE2(complement, aligned_vector<char>, unsequenced_policy)
+->  RangeMultiplier(2)
+->  Range(1<<25, 1<<28)
+->  Unit(benchmark::kMillisecond);
+BENCHMARK_TEMPLATE2(complement, std::vector<char>, parallel_policy)
+->  RangeMultiplier(2)
+->  Range(1<<25, 1<<28)
+->  UseRealTime()
+->  Unit(benchmark::kMillisecond);
+BENCHMARK_TEMPLATE2(complement, std::vector<char>, parallel_unsequenced_policy)
+->  RangeMultiplier(2)
+->  Range(1<<25, 1<<28)
+->  UseRealTime()
+->  Unit(benchmark::kMillisecond);
+BENCHMARK_TEMPLATE2(complement, aligned_vector<char>, parallel_unsequenced_policy)
+->  RangeMultiplier(2)
+->  Range(1<<25, 1<<28)
+->  UseRealTime()
+->  Unit(benchmark::kMillisecond);
+#if defined(__HIPCC__)
+BENCHMARK_TEMPLATE2(complement, gnx::unified_vector<char>, sequenced_policy)
+->  RangeMultiplier(2)
+->  Range(1<<25, 1<<28)
+->  Unit(benchmark::kMillisecond);
+BENCHMARK_TEMPLATE2(complement, gnx::unified_vector<char>, unsequenced_policy)
+->  RangeMultiplier(2)
+->  Range(1<<25, 1<<28)
+->  Unit(benchmark::kMillisecond);
+BENCHMARK_TEMPLATE2(complement, gnx::unified_vector<char>, parallel_policy)
+->  RangeMultiplier(2)
+->  Range(1<<25, 1<<28)
+->  UseRealTime()
+->  Unit(benchmark::kMillisecond);
+BENCHMARK_TEMPLATE2(complement, gnx::unified_vector<char>, parallel_unsequenced_policy)
+->  RangeMultiplier(2)
+->  Range(1<<25, 1<<28)
+->  UseRealTime()
+->  Unit(benchmark::kMillisecond);
+#endif //__HIPCC__
+
+#if defined(__CUDACC__)
+template <class T>
+void complement_cuda(benchmark::State& st)
+{   size_t n = size_t(st.range());
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start); cudaEventCreate(&stop);
+    auto s = gnx::random::dna<gnx::sq_gen<T>>(n, seed_pi);
+
+    for (auto _ : st)
+    {   cudaEventRecord(start);
+        gnx::complement(s);
+        cudaEventRecord(stop);
+        cudaEventSynchronize(stop);
+        float milliseconds = 0;
+        cudaEventElapsedTime(&milliseconds, start, stop);
+        st.SetIterationTime(milliseconds * 0.001f);
+    }
+    cudaEventDestroy(start); cudaEventDestroy(stop);
+
+    st.counters["BW (GB/s)"] = benchmark::Counter
+    (   (n * sizeof(typename T::value_type)) / 1e9
+    ,   benchmark::Counter::kIsIterationInvariantRate
+    );
+}
+
+BENCHMARK_TEMPLATE(complement_cuda, thrust::device_vector<char>)
+->  RangeMultiplier(2)
+->  Range(1<<25, 1<<28)
+->  UseManualTime()
+->  Unit(benchmark::kMillisecond);
+BENCHMARK_TEMPLATE(complement_cuda, thrust::universal_vector<char>)
+->  RangeMultiplier(2)
+->  Range(1<<25, 1<<28)
+->  UseManualTime()
+->  Unit(benchmark::kMillisecond);
+#endif //__CUDACC__
+
+#if defined(__HIPCC__)
+
+template <class T>
+void complement_rocm(benchmark::State& st)
+{   size_t n = size_t(st.range());
+    hipEvent_t start, stop;
+    hipEventCreate(&start); hipEventCreate(&stop);
+    auto s = gnx::random::dna<gnx::sq_gen<T>>(n, seed_pi);
+
+    for (auto _ : st)
+    {   hipEventRecord(start);
+        gnx::complement(s);
+        hipEventRecord(stop);
+        hipEventSynchronize(stop);
+        float milliseconds = 0;
+        hipEventElapsedTime(&milliseconds, start, stop);
+        st.SetIterationTime(milliseconds * 0.001f);
+    }
+    hipEventDestroy(start); hipEventDestroy(stop);
+
+    st.counters["BW (GB/s)"] = benchmark::Counter
+    (   (n * sizeof(typename T::value_type)) / 1e9
+    ,   benchmark::Counter::kIsIterationInvariantRate
+    );
+}
+
+BENCHMARK_TEMPLATE(complement_rocm, thrust::device_vector<char>)
+->  RangeMultiplier(2)
+->  Range(1<<25, 1<<28)
+->  UseManualTime()
+->  Unit(benchmark::kMillisecond);
+BENCHMARK_TEMPLATE(complement_rocm, thrust::universal_vector<char>)
+->  RangeMultiplier(2)
+->  Range(1<<25, 1<<28)
+->  UseManualTime()
+->  Unit(benchmark::kMillisecond);
+BENCHMARK_TEMPLATE(complement_rocm, gnx::unified_vector<char>)
 ->  RangeMultiplier(2)
 ->  Range(1<<25, 1<<28)
 ->  UseManualTime()
