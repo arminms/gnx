@@ -75,20 +75,15 @@ endif()
 #
 find_package(ZLIB REQUIRED)
 
-## check for fmt
+## fetch {fmt} library
 #
-find_package(fmt CONFIG
-  HINTS $ENV{HOME} $ENV{HOME}/.local /usr/local /opt/local /opt
+message(STATUS "Fetching fmt library...")
+FetchContent_Declare(
+  fmt
+  GIT_REPOSITORY https://github.com/fmtlib/fmt.git
+  GIT_TAG        11.0.2
 )
-if(NOT fmt_FOUND)
-  message(STATUS "Fetching fmt library...")
-  FetchContent_Declare(
-    fmt
-    GIT_REPOSITORY https://github.com/fmtlib/fmt.git
-    GIT_TAG        11.0.2
-  )
-  FetchContent_MakeAvailable(fmt)
-endif()
+FetchContent_MakeAvailable(fmt)
 
 ## check for ranx
 #
