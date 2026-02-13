@@ -6,6 +6,8 @@
 #include <array>
 #include <cstdint>
 
+#include <gnx/lut/lut_commons.hpp>
+
 namespace gnx::lut {
 
 /// @brief Compile-time generated lookup table for valid nucleotide characters.
