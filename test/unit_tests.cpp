@@ -16,6 +16,8 @@
 #include <gnx/algorithms/local_align.hpp>
 #include <gnx/algorithms/count.hpp>
 #include <gnx/algorithms/complement.hpp>
+#include <gnx/utility/gc-content.hpp>
+
 const uint64_t seed_pi{3141592654};
 
 template<typename T>
@@ -2279,6 +2281,31 @@ TEMPLATE_TEST_CASE
 #endif // __CUDACC__
 }
 #endif // __CUDACC__ || __HIPCC__
+
+// =============================================================================
+// gc_content() and at_content() utilities tests
+// =============================================================================
+
+TEMPLATE_TEST_CASE
+(   "gnx::gc_content()"
+,   "[utility][gc_content][gc_ratio][at_content][at_ratio]"
+,   std::vector<char>
+)
+{   typedef TestType T;
+    const auto N{10'000};
+    gnx::sq_gen<T> s(N);
+    gnx::rand(s.begin(), N, "ACGT", {35, 15, 15, 35}, seed_pi);
+
+    SECTION( "gc-content and gc-ratio" )
+    {   REQUIRE_THAT(gnx::gc_content(s), Catch::Matchers::WithinAbs(30.16, 0.001));
+        REQUIRE_THAT(gnx::gc_ratio(s), Catch::Matchers::WithinAbs(0.3016, 0.001));
+    }
+
+    SECTION( "at-content and at-ratio" )
+    {   REQUIRE_THAT(gnx::at_content(s), Catch::Matchers::WithinAbs(69.84, 0.001));
+        REQUIRE_THAT(gnx::at_ratio(s), Catch::Matchers::WithinAbs(0.6984, 0.001));
+    }
+}
 
 // =============================================================================
 // forward stream sequence bank tests
