@@ -198,9 +198,157 @@ For parallel execution on CPUs:
 2. Local maps are merged in a critical section
 3. Final result is returned
 
-## See Also
+---
 
-- [gnx::compare](compare.md) - Case-insensitive sequence comparison
-- [gnx::valid](valid.md) - Sequence validation
-- [Execution Policies](../execution.md) - Controlling parallelization
-- [Lookup Tables](../lut.md) - Compile-time lookup tables
+## K-mer Counting
+
+The `gnx::count` algorithm also provides k-mer (word) counting functionality. K-mers are subsequences of length k within a biological sequence. This is useful for motif finding, sequence composition analysis, and many bioinformatics applications.
+
+### Basic K-mer Counting
+
+```cpp
+#include <gnx/sq.hpp>
+#include <gnx/algorithms/count.hpp>
+
+using gnx::sq;
+
+// Count dinucleotides (2-mers)
+sq dna = "ACGTACGT"_sq;
+auto dinucs = gnx::count(dna, 2);
+
+// Result: AC:2, CG:2, GT:2, TA:1
+for (const auto& [kmer, count] : dinucs)
+    fmt::print("{}: {}\n", kmer, count);
+
+// Count trinucleotides (3-mers)
+auto trinucs = gnx::count(dna, 3);
+// Result: ACG:2, CGT:2, GTA:1, TAC:1
+```
+
+### K-mer Counting with Execution Policies
+
+```cpp
+#include <gnx/execution.hpp>
+
+using gnx::execution::par;
+
+// Parallel k-mer counting on large sequences
+sq large_seq = gnx::random::dna<sq>(1'000'000);
+
+// Count 5-mers in parallel
+auto kmers = gnx::count(par, large_seq, 5);
+
+fmt::print("Found {} unique 5-mers\n", kmers.size());
+
+// Find most frequent k-mer
+auto max_kmer = std::max_element(
+    kmers.begin(), kmers.end(),
+    [](const auto& a, const auto& b) { return a.second < b.second; }
+);
+fmt::print("Most frequent 5-mer: {} ({}x)\n", 
+           max_kmer->first, max_kmer->second);
+```
+
+### K-mer Counting API
+
+```cpp
+// Range-based (policy-free)
+template<std::ranges::input_range Range>
+std::unordered_map<std::string, std::size_t> count
+(   const Range& seq
+,   std::size_t word_length
+);
+
+// Iterator-based (policy-free)
+template<typename Iterator>
+std::unordered_map<std::string, std::size_t> count
+(   Iterator first
+,   Iterator last
+,   std::size_t word_length
+);
+
+// Range-based with execution policy
+template<typename ExecPolicy, std::ranges::input_range Range>
+std::unordered_map<std::string, std::size_t> count
+(   ExecPolicy&& policy
+,   const Range& seq
+,   std::size_t word_length
+);
+
+// Iterator-based with execution policy
+template<typename ExecPolicy, typename Iterator>
+std::unordered_map<std::string, std::size_t> count
+(   ExecPolicy&& policy
+,   Iterator first
+,   Iterator last
+,   std::size_t word_length
+);
+```
+
+### K-mer Properties
+
+- **Overlapping**: K-mers are counted with overlapping windows. For example, "AAAA" contains 3 occurrences of "AA"
+- **Case-insensitive**: Like single-character counting, k-mers are normalized to uppercase
+- **Total count**: For a sequence of length n, there are (n - k + 1) k-mers of length k
+
+```cpp
+sq seq = "ACGTACGT"_sq;  // 8 bases
+
+auto kmers3 = gnx::count(seq, 3);  // 3-mers
+std::size_t total = 0;
+for (const auto& [kmer, count] : kmers3)
+    total += count;
+
+// total == 8 - 3 + 1 == 6
+assert(total == 6);
+```
+
+### K-mer Performance
+
+| Execution Policy | Time Complexity | Space Complexity | Use Case |
+|-----------------|-----------------|------------------|----------|
+| `seq` | O(n*k) | O(m*k) | Small sequences |
+| `par` | O((n*k)/p) | O(m*k*p) | Large sequences |
+| GPU (CUDA/ROCm) | O((n*k)/p) | O(m*k) | Massive sequences |
+
+Where:
+- n = sequence length
+- k = k-mer length
+- m = number of unique k-mers
+- p = number of processing elements
+
+### GPU K-mer Implementation
+
+The GPU implementation currently provides a fallback to the CPU version by copying device data to the host. A future optimized version will use:
+
+- **CUDA**: [cuCollections](https://github.com/NVIDIA/cuCollections) concurrent hash maps
+- **ROCm**: [hipCollections](https://github.com/ROCm/hipCollections) concurrent hash maps
+
+These libraries provide high-performance concurrent hash tables optimized for GPU architectures.
+
+### Common K-mer Applications
+
+**Dinucleotides (k=2)**: CpG island detection, codon usage bias
+```cpp
+auto dinucs = gnx::count(dna, 2);
+double cpg_ratio = static_cast<double>(dinucs["CG"]) / dna.size();
+```
+
+**Trinucleotides (k=3)**: Codon analysis, reading frame detection
+```cpp
+auto codons = gnx::count(dna, 3);
+fmt::print("ATG (start codon) count: {}\n", codons["ATG"]);
+```
+
+**5-mers and longer**: Motif finding, sequence signatures
+```cpp
+// Find over-represented 6-mers
+auto kmers6 = gnx::count(dna, 6);
+double expected_freq = 1.0 / std::pow(4.0, 6.0);  // Random expectation
+for (const auto& [kmer, count] : kmers6) {
+    double observed_freq = static_cast<double>(count) / (dna.size() - 6 + 1);
+    if (observed_freq > 2.0 * expected_freq)
+        fmt::print("Over-represented: {} ({}x expected)\n", kmer, observed_freq / expected_freq);
+}
+```
+

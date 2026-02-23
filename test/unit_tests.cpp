@@ -2283,6 +2283,251 @@ TEMPLATE_TEST_CASE
 #endif // __CUDACC__ || __HIPCC__
 
 // =============================================================================
+// count() k-mer counting tests
+// =============================================================================
+
+TEMPLATE_TEST_CASE
+(   "gnx::count k-mers"
+,   "[algorithm][count][kmer]"
+,   std::vector<char>
+)
+{   typedef TestType T;
+
+// -- basic k-mer counting -----------------------------------------------------
+
+    SECTION( "count 2-mers (dinucleotides)" )
+    {   gnx::sq_gen<T> s("ACGTACGT");
+        auto result = gnx::count(s, 2);
+
+        CHECK(result["AC"] == 2);
+        CHECK(result["CG"] == 2);
+        CHECK(result["GT"] == 2);
+        CHECK(result["TA"] == 1);
+        CHECK(result.size() == 4);
+    }
+
+    SECTION( "count 3-mers (trinucleotides)" )
+    {   gnx::sq_gen<T> s("ACGTACGTACGT");
+        auto result = gnx::count(s, 3);
+
+        CHECK(result["ACG"] == 3);
+        CHECK(result["CGT"] == 3);
+        CHECK(result["GTA"] == 2);
+        CHECK(result["TAC"] == 2);
+        CHECK(result.size() == 4);
+    }
+
+    SECTION( "count 4-mers (tetranucleotides)" )
+    {   gnx::sq_gen<T> s("ACGTACGTACGT");
+        auto result = gnx::count(s, 4);
+
+        CHECK(result["ACGT"] == 3);
+        CHECK(result["CGTA"] == 2);
+        CHECK(result["GTAC"] == 2);
+        CHECK(result["TACG"] == 2);
+        CHECK(result.size() == 4);
+    }
+
+// -- case-insensitive k-mer counting ------------------------------------------
+
+    SECTION( "k-mer counting is case-insensitive" )
+    {   gnx::sq_gen<T> lower("acgtacgt");
+        gnx::sq_gen<T> upper("ACGTACGT");
+        gnx::sq_gen<T> mixed("AcGtAcGt");
+
+        auto result_lower = gnx::count(lower, 2);
+        auto result_upper = gnx::count(upper, 2);
+        auto result_mixed = gnx::count(mixed, 2);
+
+        CHECK(result_lower == result_upper);
+        CHECK(result_lower == result_mixed);
+        CHECK(result_lower["AC"] == 2);
+        CHECK(result_lower.count("ac") == 0);  // should be uppercase
+    }
+
+// -- edge cases ---------------------------------------------------------------
+
+    SECTION( "empty sequence" )
+    {   T empty;
+        auto result = gnx::count(empty, 2);
+        CHECK(result.empty());
+    }
+
+    SECTION( "sequence shorter than word_length" )
+    {   gnx::sq_gen<T> short_seq("ACG");
+        auto result = gnx::count(short_seq, 5);
+        CHECK(result.empty());
+    }
+
+    SECTION( "sequence equal to word_length" )
+    {   gnx::sq_gen<T> exact("ACGT");
+        auto result = gnx::count(exact, 4);
+        CHECK(result["ACGT"] == 1);
+        CHECK(result.size() == 1);
+    }
+
+    SECTION( "single k-mer" )
+    {   gnx::sq_gen<T> single("AAA");
+        auto result = gnx::count(single, 2);
+        CHECK(result["AA"] == 2);
+        CHECK(result.size() == 1);
+    }
+
+// -- iterator k-mer counting --------------------------------------------------
+
+    SECTION( "count k-mers with iterators" )
+    {   gnx::sq_gen<T> s("ACGTACGT");
+        auto result = gnx::count(s.begin(), s.end(), 2);
+        
+        CHECK(result["AC"] == 2);
+        CHECK(result["CG"] == 2);
+        CHECK(result["GT"] == 2);
+        CHECK(result["TA"] == 1);
+    }
+
+// -- overlapping k-mers -------------------------------------------------------
+
+    SECTION( "overlapping k-mers are counted" )
+    {   gnx::sq_gen<T> s("AAAA");
+        auto result = gnx::count(s, 2);
+        
+        CHECK(result["AA"] == 3);  // AA at positions 0,1,2
+        CHECK(result.size() == 1);
+    }
+
+    SECTION( "verify total k-mer count" )
+    {   gnx::sq_gen<T> s("ACGTACGT");  // 8 bases
+        auto result = gnx::count(s, 3);  // 3-mers
+        
+        std::size_t total = 0;
+        for (const auto& [kmer, count] : result)
+            total += count;
+        
+        // For an n-length sequence, there are (n - k + 1) k-mers
+        CHECK(total == 8 - 3 + 1);  // 6 total 3-mers
+    }
+}
+
+// =============================================================================
+// count() k-mer execution policy tests
+// =============================================================================
+
+TEMPLATE_TEST_CASE
+(   "gnx::count k-mers execution policies"
+,   "[algorithm][count][kmer][policy]"
+,   std::vector<char>
+)
+{   typedef TestType T;
+
+    using gnx::execution::seq;
+    using gnx::execution::par;
+    using gnx::execution::unseq;
+    using gnx::execution::par_unseq;
+
+    const auto N{10'000};
+
+    gnx::sq_gen<T> s1(N);
+    gnx::rand(s1.begin(), N, "ACGTacgt", seed_pi);
+
+    // Get baseline result
+    auto expected = gnx::count(s1, 5);  // count 5-mers
+
+// -- sequential policy --------------------------------------------------------
+
+    SECTION( "count k-mers with seq policy" )
+    {   auto result = gnx::count(seq, s1, 5);
+        CHECK(result == expected);
+    }
+
+// -- unsequenced policy -------------------------------------------------------
+
+    SECTION( "count k-mers with unseq policy" )
+    {   auto result = gnx::count(unseq, s1, 5);
+        CHECK(result == expected);
+    }
+
+// -- parallel policy ----------------------------------------------------------
+
+    SECTION( "count k-mers with par policy" )
+    {   auto result = gnx::count(par, s1, 5);
+        CHECK(result == expected);
+    }
+
+// -- parallel unsequenced policy ----------------------------------------------
+
+    SECTION( "count k-mers with par_unseq policy" )
+    {   auto result = gnx::count(par_unseq, s1, 5);
+        CHECK(result == expected);
+    }
+
+// -- verify total count -------------------------------------------------------
+
+    SECTION( "total k-mer count is correct" )
+    {   auto result = gnx::count(par, s1, 5);
+        std::size_t total = 0;
+        for (const auto& [kmer, count] : result)
+            total += count;
+        // For a sequence of length N, there are N - k + 1 k-mers
+        CHECK(total == N - 5 + 1);
+    }
+}
+
+// =============================================================================
+// count() k-mer device tests
+// =============================================================================
+
+#if defined(__CUDACC__) || defined(__HIPCC__)
+TEMPLATE_TEST_CASE
+(   "gnx::count k-mers::device"
+,   "[algorithm][count][kmer][device]"
+,   thrust::device_vector<char>
+,   thrust::universal_vector<char>
+)
+{   typedef TestType T;
+    const auto N{1'000};
+
+    gnx::sq_gen<T> s(N); // device
+    gnx::sq baseline(N); // host
+    gnx::rand(s.begin(), N, "ACGTacgt", seed_pi);
+    gnx::rand(baseline.begin(), N, "ACGTacgt", seed_pi);
+
+    // Get baseline result
+    auto expected = gnx::count(baseline, 5);
+
+#if defined(__CUDACC__)
+    auto policy = thrust::cuda::par;
+#else
+    auto policy = thrust::hip::par;
+#endif
+
+// -- device k-mer counting ----------------------------------------------------
+
+    SECTION( "count k-mers on device" )
+    {   auto result = gnx::count(policy, s, 5);
+        CHECK(result == expected);
+    }
+
+// -- streams on device --------------------------------------------------------
+
+#if defined(__CUDACC__)
+    SECTION( "CUDA stream with k-mers" )
+    {   cudaStream_t stream; cudaStreamCreate(&stream);
+        auto result = gnx::count(thrust::cuda::par.on(stream), s, 5);
+        CHECK(result == expected);
+        cudaStreamSynchronize(stream); cudaStreamDestroy(stream);
+    }
+#else // __HIPCC__
+    SECTION( "HIP stream with k-mers" )
+    {   hipStream_t stream; hipStreamCreate(&stream);
+        auto result = gnx::count(thrust::hip::par.on(stream), s, 5);
+        CHECK(result == expected);
+        hipStreamSynchronize(stream); hipStreamDestroy(stream);
+    }
+#endif // __CUDACC__
+}
+#endif // __CUDACC__ || __HIPCC__
+
+// =============================================================================
 // gc_content() and at_content() utilities tests
 // =============================================================================
 
