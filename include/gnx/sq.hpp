@@ -353,6 +353,12 @@ public:
     }
 #endif
 
+    // -- internal helpers (exposed for psq2 interop) --------------------------
+    /// @cond INTERNAL
+    bool       _has_td() const noexcept { return static_cast<bool>(_ptr_td); }
+    const Map* _get_td() const noexcept { return _ptr_td.get(); }
+    /// @endcond
+
     // -- comparison operators -----------------------------------------------------
     ///
     /// Equality operator with another sq_gen of possibly different Container/Map.
