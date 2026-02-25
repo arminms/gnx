@@ -338,8 +338,28 @@ TEMPLATE_TEST_CASE( "gnx::sq", "[class]", std::vector<char>)
 // gnx::packed_generic_sequence_2bit (psq2) class tests
 // =============================================================================
 
-TEST_CASE( "gnx::psq2", "[class][psq2]" )
-{   gnx::psq2 s{"ACGT"};
+#if defined(__CUDACC__)
+TEMPLATE_TEST_CASE
+(   "gnx::psq2"
+,   "[class][psq2]"
+,   std::vector<uint8_t>
+,   thrust::universal_vector<uint8_t>
+,   thrust::device_vector<uint8_t>
+)
+#elif defined(__HIPCC__)
+TEMPLATE_TEST_CASE
+(   "gnx::psq2"
+,   "[class][psq2][rocm]"
+,   std::vector<uint8_t>
+,   thrust::universal_vector<uint8_t>
+,   gnx::unified_vector<uint8_t>
+)
+#else
+TEMPLATE_TEST_CASE( "gnx::psq2", "[class][psq2]", std::vector<uint8_t>)
+#endif
+{   typedef TestType T;
+
+    gnx::packed_generic_sequence_2bit<T> s{"ACGT"};
     s["test-int"] = -33;
 
 // -- static helpers -----------------------------------------------------------
@@ -374,10 +394,10 @@ TEST_CASE( "gnx::psq2", "[class][psq2]" )
 // -- comparison operators -----------------------------------------------------
 
     SECTION( "comparison operators" )
-    {   CHECK(  s == gnx::psq2("ACGT"));
-        CHECK(!(s == gnx::psq2("TTTT")));
-        CHECK(  s != gnx::psq2("TTTT"));
-        CHECK(!(s != gnx::psq2("ACGT")));
+    {   CHECK(  s == gnx::packed_generic_sequence_2bit<T>("ACGT"));
+        CHECK(!(s == gnx::packed_generic_sequence_2bit<T>("TTTT")));
+        CHECK(  s != gnx::packed_generic_sequence_2bit<T>("TTTT"));
+        CHECK(!(s != gnx::packed_generic_sequence_2bit<T>("ACGT")));
 
         CHECK(s == "ACGT");
         CHECK("ACGT" == s);
@@ -388,67 +408,67 @@ TEST_CASE( "gnx::psq2", "[class][psq2]" )
 // -- constructors -------------------------------------------------------------
 
     SECTION( "default constructor" )
-    {   gnx::psq2 e;
+    {   gnx::packed_generic_sequence_2bit<T> e;
         CHECK(e.empty());
         CHECK(e.size() == 0);
         CHECK(e.byte_size() == 0);
     }
 
     SECTION( "count constructor (all-A)" )
-    {   gnx::psq2 a4(4);
+    {   gnx::packed_generic_sequence_2bit<T> a4(4);
         CHECK(a4.size() == 4);
         CHECK(a4 == "AAAA");
     }
 
     SECTION( "count + fill constructor" )
-    {   gnx::psq2 a4(4, 'A');
+    {   gnx::packed_generic_sequence_2bit<T> a4(4, 'A');
         CHECK(a4 == "AAAA");
-        gnx::psq2 c4(4, 'C');
+        gnx::packed_generic_sequence_2bit<T> c4(4, 'C');
         CHECK(c4 == "CCCC");
-        gnx::psq2 g4(4, 'G');
+        gnx::packed_generic_sequence_2bit<T> g4(4, 'G');
         CHECK(g4 == "GGGG");
-        gnx::psq2 t4(4, 'T');
+        gnx::packed_generic_sequence_2bit<T> t4(4, 'T');
         CHECK(t4 == "TTTT");
         // non-multiple-of-4 lengths
-        gnx::psq2 c5(5, 'C');
+        gnx::packed_generic_sequence_2bit<T> c5(5, 'C');
         CHECK(c5 == "CCCCC");
-        gnx::psq2 t7(7, 'T');
+        gnx::packed_generic_sequence_2bit<T> t7(7, 'T');
         CHECK(t7 == "TTTTTTT");
     }
 
     SECTION( "string_view constructor" )
-    {   gnx::psq2 c("ACGT");
+    {   gnx::packed_generic_sequence_2bit<T> c("ACGT");
         CHECK(s == c);
     }
 
     SECTION( "iterator constructor" )
     {   std::string acgt{"ACGT"};
-        gnx::psq2 c(std::begin(acgt), std::end(acgt));
+        gnx::packed_generic_sequence_2bit<T> c(std::begin(acgt), std::end(acgt));
         CHECK(s == c);
     }
 
     SECTION( "initializer list constructor" )
-    {   gnx::psq2 c{'A', 'C', 'G', 'T'};
+    {   gnx::packed_generic_sequence_2bit<T> c{'A', 'C', 'G', 'T'};
         CHECK(c == s);
     }
 
     SECTION( "copy constructor" )
-    {   gnx::psq2 c(s);
+    {   gnx::packed_generic_sequence_2bit<T> c(s);
         CHECK(c == s);
         CHECK(-33 == std::any_cast<int>(c["test-int"]));
     }
 
     SECTION( "move constructor" )
-    {   gnx::psq2 m(std::move(s));
+    {   gnx::packed_generic_sequence_2bit<T> m(std::move(s));
         CHECK(s.empty());
-        CHECK(m == gnx::psq2("ACGT"));
+        CHECK(m == gnx::packed_generic_sequence_2bit<T>("ACGT"));
         CHECK(-33 == std::any_cast<int>(m["test-int"]));
     }
 
     SECTION( "construct from sq_gen (with tagged data)" )
     {   gnx::sq src("ACGTACGT"_sq);
         src["_id"] = std::string("read-1");
-        gnx::psq2 p(src);
+        gnx::packed_generic_sequence_2bit<T> p(src);
         CHECK(p == "ACGTACGT");
         CHECK(p.has("_id"));
         CHECK(std::any_cast<std::string>(p["_id"]) == "read-1");
@@ -456,7 +476,7 @@ TEST_CASE( "gnx::psq2", "[class][psq2]" )
 
     SECTION( "construct from sq_gen (no tagged data)" )
     {   gnx::sq src{"TTGCAA"};
-        gnx::psq2 p(src);
+        gnx::packed_generic_sequence_2bit<T> p(src);
         CHECK(p == "TTGCAA");
         CHECK(!p.has("_id"));
     }
@@ -464,24 +484,24 @@ TEST_CASE( "gnx::psq2", "[class][psq2]" )
 // -- assignment operators -----------------------------------------------------
 
     SECTION( "copy assignment operator" )
-    {   gnx::psq2 c = s;
+    {   gnx::packed_generic_sequence_2bit<T> c = s;
         CHECK(c == s);
         CHECK(-33 == std::any_cast<int>(c["test-int"]));
     }
 
     SECTION( "move assignment operator" )
-    {   gnx::psq2 m = gnx::psq2("ACGT");
+    {   gnx::packed_generic_sequence_2bit<T> m = gnx::packed_generic_sequence_2bit<T>("ACGT");
         CHECK(m == s);
     }
 
     SECTION( "string_view assignment" )
-    {   gnx::psq2 c;
+    {   gnx::packed_generic_sequence_2bit<T> c;
         c = std::string_view("ACGT");
         CHECK(c == "ACGT");
     }
 
     SECTION( "initializer list assignment" )
-    {   gnx::psq2 c = {'A', 'C', 'G', 'T'};
+    {   gnx::packed_generic_sequence_2bit<T> c = {'A', 'C', 'G', 'T'};
         CHECK(c == s);
     }
 
@@ -490,7 +510,7 @@ TEST_CASE( "gnx::psq2", "[class][psq2]" )
     SECTION( "to_sq() roundtrip" )
     {   gnx::sq src("ACGTACGT"_sq);
         src["_id"] = std::string("read-1");
-        gnx::psq2 p(src);
+        gnx::packed_generic_sequence_2bit<T> p(src);
         auto back = p.to_sq();
         CHECK(back == "ACGTACGT");
         CHECK(back.has("_id"));
@@ -499,7 +519,7 @@ TEST_CASE( "gnx::psq2", "[class][psq2]" )
 
     SECTION( "to_sq() lossless for all bases" )
     {   const std::string bases = "ACGTACGTACGTACGT";
-        gnx::psq2 p(bases);
+        gnx::packed_generic_sequence_2bit<T> p(bases);
         auto sq = p.to_sq();
         CHECK(sq == bases);
     }
@@ -514,14 +534,14 @@ TEST_CASE( "gnx::psq2", "[class][psq2]" )
     }
 
     SECTION( "begin/end (write via proxy)" )
-    {   gnx::psq2 t("AAAA");
+    {   gnx::packed_generic_sequence_2bit<T> t("AAAA");
         for (auto it = t.begin(); it != t.end(); ++it)
             *it = 'T';
         CHECK(t == "TTTT");
     }
 
     SECTION( "cbegin/cend" )
-    {   const gnx::psq2 t("ACGT");
+    {   const gnx::packed_generic_sequence_2bit<T> t("ACGT");
         std::string collected;
         for (auto it = t.cbegin(); it != t.cend(); ++it)
             collected += char(*it);
@@ -529,7 +549,7 @@ TEST_CASE( "gnx::psq2", "[class][psq2]" )
     }
 
     SECTION( "rbegin/rend" )
-    {   gnx::psq2 t("AAAA");
+    {   gnx::packed_generic_sequence_2bit<T> t("AAAA");
         auto s_it = s.cbegin();
         for
         (   auto t_it = t.rbegin()
@@ -541,8 +561,8 @@ TEST_CASE( "gnx::psq2", "[class][psq2]" )
     }
 
     SECTION( "crbegin/crend" )
-    {   const gnx::psq2 t("ACGT");
-        gnx::psq2 out(4, 'A');
+    {   const gnx::packed_generic_sequence_2bit<T> t("ACGT");
+        gnx::packed_generic_sequence_2bit<T> out(4, 'A');
         auto out_it = out.begin();
         for
         (   auto t_it = t.crbegin()
@@ -554,7 +574,7 @@ TEST_CASE( "gnx::psq2", "[class][psq2]" )
     }
 
     SECTION( "random access iterator arithmetic" )
-    {   gnx::psq2 t("ACGTTTTT");
+    {   gnx::packed_generic_sequence_2bit<T> t("ACGTTTTT");
         auto it = t.begin();
         CHECK(char(*(it + 2)) == 'G');
         it += 3;
@@ -565,7 +585,7 @@ TEST_CASE( "gnx::psq2", "[class][psq2]" )
 // -- capacity -----------------------------------------------------------------
 
     SECTION( "empty()" )
-    {   gnx::psq2 e;
+    {   gnx::packed_generic_sequence_2bit<T> e;
         CHECK(e.empty());
         e["test"] = 1;
         CHECK(!e.empty());
@@ -573,12 +593,12 @@ TEST_CASE( "gnx::psq2", "[class][psq2]" )
     }
 
     SECTION( "size() and byte_size()" )
-    {   gnx::psq2 e;
+    {   gnx::packed_generic_sequence_2bit<T> e;
         CHECK(0 == e.size());
         CHECK(0 == e.byte_size());
         CHECK(4 == s.size());
         CHECK(1 == s.byte_size()); // 4 bases packed in 1 byte
-        gnx::psq2 s9("ACGTACGTA");
+        gnx::packed_generic_sequence_2bit<T> s9("ACGTACGTA");
         CHECK(9 == s9.size());
         CHECK(3 == s9.byte_size()); // ceil(9/4) = 3
     }
@@ -597,7 +617,7 @@ TEST_CASE( "gnx::psq2", "[class][psq2]" )
     }
 
     SECTION( "subscript operator (write)" )
-    {   gnx::psq2 t("ACGT");
+    {   gnx::packed_generic_sequence_2bit<T> t("ACGT");
         t[0] = 'T';
         t[3] = 'A';
         CHECK(t == "TCGA");
@@ -610,7 +630,7 @@ TEST_CASE( "gnx::psq2", "[class][psq2]" )
 
     SECTION( "at() out of range" )
     {   CHECK_THROWS_AS(s.at(10), std::out_of_range);
-        const gnx::psq2 cs("ACGT");
+        const gnx::packed_generic_sequence_2bit<T> cs("ACGT");
         CHECK_THROWS_AS(cs.at(10), std::out_of_range);
     }
 
@@ -622,11 +642,21 @@ TEST_CASE( "gnx::psq2", "[class][psq2]" )
     }
 
     SECTION( "data() pointer" )
-    {   CHECK(s.data() != nullptr);
-        const gnx::psq2 cs("ACGT");
+    {
+#if defined(__CUDACC__) || defined(__HIPCC__)
+        if constexpr (!std::is_same_v<T, thrust::device_vector<uint8_t>>)
+        {   CHECK(s.data() != nullptr);
+            const gnx::packed_generic_sequence_2bit<T> cs("ACGT");
+            CHECK(cs.data() != nullptr);
+            CHECK(cs.data()[0] == 0x1B);
+        }
+#else
+        CHECK(s.data() != nullptr);
+        const gnx::packed_generic_sequence_2bit<T> cs("ACGT");
         CHECK(cs.data() != nullptr);
         // packed byte: A=00, C=01, G=10, T=11 -> 0b00011011 = 0x1B
         CHECK(cs.data()[0] == 0x1B);
+#endif //__CUDACC__
     }
 
 // -- managing tagged data -----------------------------------------------------
@@ -657,7 +687,7 @@ TEST_CASE( "gnx::psq2", "[class][psq2]" )
         CHECK(42 == std::any_cast<int>(s[lvalue_tag]));
 
         // const access to existing tag
-        const gnx::psq2& cs = s;
+        const gnx::packed_generic_sequence_2bit<T>& cs = s;
         CHECK(19 == std::any_cast<int>(cs["int"]));
 
         // const access to missing tag throws
@@ -689,7 +719,7 @@ TEST_CASE( "gnx::psq2", "[class][psq2]" )
 
         std::stringstream ss;
         ss << s;
-        gnx::psq2 t;
+        gnx::packed_generic_sequence_2bit<T> t;
         ss >> t;
 
         CHECK(s == t);
@@ -717,7 +747,7 @@ TEST_CASE( "gnx::psq2", "[class][psq2]" )
     SECTION( "packing correctness for lengths 1-16" )
     {   const std::string src = "ACGTACGTACGTACGT";
         for (std::size_t len = 1; len <= 16; ++len)
-        {   gnx::psq2 p(std::string_view(src).substr(0, len));
+        {   gnx::packed_generic_sequence_2bit<T> p(std::string_view(src).substr(0, len));
             CHECK(p.size() == len);
             for (std::size_t i = 0; i < len; ++i)
                 CHECK(p.get_base(i) == src[i]);
@@ -727,21 +757,21 @@ TEST_CASE( "gnx::psq2", "[class][psq2]" )
     SECTION( "padding bits do not bleed into comparisons" )
     {   // Two sequences of different lengths that share a prefix should not
         // compare as equal even if the packed bytes happen to overlap.
-        gnx::psq2 a5("ACGTA");
-        gnx::psq2 a4("ACGT");
+        gnx::packed_generic_sequence_2bit<T> a5("ACGTA");
+        gnx::packed_generic_sequence_2bit<T> a4("ACGT");
         CHECK(a5 != a4);
     }
 
 // -- proxy reference ----------------------------------------------------------
 
     SECTION( "proxy reference equality" )
-    {   gnx::psq2 t("ACGT");
+    {   gnx::packed_generic_sequence_2bit<T> t("ACGT");
         // const ref == char
-        const gnx::psq2 ct("ACGT");
+        const gnx::packed_generic_sequence_2bit<T> ct("ACGT");
         CHECK(ct[0] == 'A');
         CHECK('A' == ct[0]);
         // mutable ref copy-assign from const ref
-        gnx::psq2 u("AAAA");
+        gnx::packed_generic_sequence_2bit<T> u("AAAA");
         u[0] = t[0]; // A->A (no-op eff.)
         u[1] = t[1]; // write 'C'
         CHECK(char(u[1]) == 'C');
