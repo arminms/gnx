@@ -41,7 +41,7 @@ template
 <   typename Container
 ,   typename Map = std::unordered_map<std::string, std::any>
 >
-class sq_gen
+class generic_sequence
 {   Container                _sq;  // sequence
     std::unique_ptr<Map> _ptr_td;  // pointer to tagged data
 
@@ -63,21 +63,21 @@ public:
 // -- constructors -------------------------------------------------------------
     ///
     /// Default constructor. Constructs an empty sequence.
-    sq_gen() noexcept
+    generic_sequence() noexcept
     :   _sq()
     ,   _ptr_td()
     {}
     ///
     /// @brief Constructs a sequence from a string view.
     /// @param sq The string view representing the sequence.
-    explicit sq_gen(std::string_view sq)
+    explicit generic_sequence(std::string_view sq)
     :   _sq(std::begin(sq), std::end(sq))
     ,   _ptr_td()
     {}
     ///
     /// Constructs a sequence with @a count residues.
     /// @param count The number of residues in the sequence.
-    sq_gen(size_type count)
+    generic_sequence(size_type count)
     :   _sq(count)
     ,   _ptr_td()
     {}
@@ -87,7 +87,7 @@ public:
     /// @param count The number of residues in the sequence.
     /// @param value The residue value to initialize each position with.
 #if defined(__CUDACC__) || defined(__HIPCC__)
-    sq_gen(size_type count, const_reference value)
+    generic_sequence(size_type count, const_reference value)
     requires (!std::is_same_v<Container, thrust::device_vector<value_type>>)
 #if defined(__HIPCC__)
     || (!std::is_same_v<Container, gnx::unified_vector<value_type>>)
@@ -96,7 +96,7 @@ public:
     ,   _ptr_td()
     {}
 #else
-    sq_gen(size_type count, const_reference value)
+    generic_sequence(size_type count, const_reference value)
     :   _sq(count, value)
     ,   _ptr_td()
     {}
@@ -105,13 +105,13 @@ public:
     /// @brief Constructs a sequence from a sequence view.
     /// @param sv The sequence view to construct the sequence from.
 #if defined(__CUDACC__) || defined(__HIPCC__)
-    explicit sq_gen(sq_view_gen<Container> sv)
+    explicit generic_sequence(generic_sequence_view<Container> sv)
     requires (!std::is_same_v<Container, thrust::device_vector<value_type>>)
     :   _sq(std::begin(sv), std::end(sv))
     ,   _ptr_td()
     {}
 #else
-    explicit sq_gen(sq_view_gen<Container> sv)
+    explicit generic_sequence(generic_sequence_view<Container> sv)
     :   _sq(std::begin(sv), std::end(sv))
     ,   _ptr_td()
     {}
@@ -124,26 +124,26 @@ public:
     /// @tparam InputIt The type of the input iterators.
     /// @param first The beginning iterator of the sequence.
     /// @param last The ending iterator of the sequence.
-    sq_gen(InputIt first, InputIt last)
+    generic_sequence(InputIt first, InputIt last)
     :   _sq(first, last)
     ,   _ptr_td()
     {}
     ///
     /// Copy constructor.
-    sq_gen(const sq_gen& other)
+    generic_sequence(const generic_sequence& other)
     :   _sq(other._sq)
     ,   _ptr_td(other._ptr_td ? std::make_unique<Map>(*other._ptr_td) : nullptr)
     {}
     ///
     /// Move constructor.
-    sq_gen(sq_gen&& other) noexcept
+    generic_sequence(generic_sequence&& other) noexcept
     :   _sq(std::move(other._sq))
     ,   _ptr_td(std::move(other._ptr_td))
     {}
     ///
     /// @brief Constructs a sequence from an initializer list.
     /// @param init The initializer list containing the residues.
-    sq_gen(std::initializer_list<value_type> init)
+    generic_sequence(std::initializer_list<value_type> init)
     :   _sq(init)
     ,   _ptr_td()
     {}
@@ -151,21 +151,21 @@ public:
 // -- copy assignment operators ------------------------------------------------
     ///
     /// Copy assignment operator.
-    sq_gen& operator= (const sq_gen& other)
+    generic_sequence& operator= (const generic_sequence& other)
     {   _sq = other._sq;
         _ptr_td = other._ptr_td ? std::make_unique<Map>(*other._ptr_td) : nullptr;
         return *this;
     }
     ///
     /// Move assignment operator.
-    sq_gen& operator= (sq_gen&& other)
+    generic_sequence& operator= (generic_sequence&& other)
     {   _sq = std::move(other._sq);
         _ptr_td = std::move(other._ptr_td);
         return *this;
     }
     ///
     /// Assignment operator from an initializer list.
-    sq_gen& operator= (std::initializer_list<value_type> init)
+    generic_sequence& operator= (std::initializer_list<value_type> init)
     {   _sq = init;
         return *this;
     }
@@ -275,7 +275,7 @@ public:
     /// If @a count is gnx::sq::npos or exceeds the sequence length from
     /// @a pos, the subsequence extends to the end of the sequence.
 #if defined(__CUDACC__) || defined(__HIPCC__)
-    sq_gen<Container> operator()
+    generic_sequence<Container> operator()
     (   size_type pos = 0
     ,   size_type count = npos
     )   const
@@ -285,18 +285,18 @@ public:
     )
     {   if (pos > _sq.size())
             throw std::out_of_range("gnx::sq: pos > this->size()");
-        return sq_gen
+        return generic_sequence
         (   _sq.begin() + pos
         ,   (count > _sq.size() - pos) ? _sq.end() : _sq.begin() + pos + count
         );
     }
 #endif
-    sq_view_gen<Container> operator()
+    generic_sequence_view<Container> operator()
     (   size_type pos = 0
     ,   size_type count = npos
     )   const
-    {   sq_view_gen<Container> sv(*this);
-        return sv.substr(pos, count);
+    {   generic_sequence_view<Container> sv(*this);
+        return sv.subseq(pos, count);
     }
 
 // -- managing tagged data -----------------------------------------------------
@@ -361,9 +361,9 @@ public:
 
     // -- comparison operators -----------------------------------------------------
     ///
-    /// Equality operator with another sq_gen of possibly different Container/Map.
+    /// Equality operator with another generic_sequence of possibly different Container/Map.
     template<typename Container2, typename Map2>
-    bool operator==(const sq_gen<Container2, Map2>& rhs) const
+    bool operator==(const generic_sequence<Container2, Map2>& rhs) const
     {   return _sq == rhs._sq;
     }
     ///
@@ -374,9 +374,9 @@ public:
         return std::equal(_sq.begin(), _sq.end(), sv.begin());
     }
     ///
-    /// Inequality operator with another sq_gen of possibly different Container/Map.
+    /// Inequality operator with another generic_sequence of possibly different Container/Map.
     template<typename Container2, typename Map2>
-    bool operator!=(const sq_gen<Container2, Map2>& rhs) const
+    bool operator!=(const generic_sequence<Container2, Map2>& rhs) const
     {   return _sq != rhs._sq;
     }
 
@@ -387,7 +387,7 @@ public:
     void load
     (   std::string_view filename
     ,   size_type ndx = 0
-    ,   in::fast_aqz<sq_gen> read = in::fast_aqz<sq_gen>()
+    ,   in::fast_aqz<generic_sequence> read = in::fast_aqz<generic_sequence>()
     )
     {   *this = read(filename, ndx);
     }
@@ -397,7 +397,7 @@ public:
     void load
     (   std::string_view filename
     ,   std::string_view id
-    ,   in::fast_aqz<sq_gen> read = in::fast_aqz<sq_gen>()
+    ,   in::fast_aqz<generic_sequence> read = in::fast_aqz<generic_sequence>()
     )
     {   *this = read(filename, id);
     }
@@ -517,59 +517,59 @@ public:
 
 // -- comparison operators (external) -----------------------------------------
     ///
-    /// Symmetric operator for "literal" == sq_gen
+    /// Symmetric operator for "literal" == generic_sequence
     template<typename Container>
-    bool operator==(std::string_view lhs, const sq_gen<Container>& rhs)
+    bool operator==(std::string_view lhs, const generic_sequence<Container>& rhs)
     {   return rhs == lhs; 
     }
     ///
-    /// Compare sq_gen with sq_view_gen
+    /// Compare generic_sequence with generic_sequence_view
     template<typename Container1, typename Map1, typename Container2>
-    bool operator==(const sq_gen<Container1, Map1>& lhs, const sq_view_gen<Container2>& rhs)
+    bool operator==(const generic_sequence<Container1, Map1>& lhs, const generic_sequence_view<Container2>& rhs)
     {   if (lhs.size() != rhs.size()) return false;
         return std::equal(lhs.begin(), lhs.end(), rhs.begin());
     }
     template<typename Container1, typename Map1, typename Container2>
-    bool operator==(const sq_view_gen<Container2>& lhs, const sq_gen<Container1, Map1>& rhs)
+    bool operator==(const generic_sequence_view<Container2>& lhs, const generic_sequence<Container1, Map1>& rhs)
     {   return rhs == lhs;
     }
     template<typename Container1, typename Map1, typename Container2>
-    bool operator!=(const sq_gen<Container1, Map1>& lhs, const sq_view_gen<Container2>& rhs)
+    bool operator!=(const generic_sequence<Container1, Map1>& lhs, const generic_sequence_view<Container2>& rhs)
     {   return ! (lhs == rhs);
     }
     template<typename Container1, typename Map1, typename Container2>
-    bool operator!=(const sq_view_gen<Container2>& lhs, const sq_gen<Container1, Map1>& rhs)
+    bool operator!=(const generic_sequence_view<Container2>& lhs, const generic_sequence<Container1, Map1>& rhs)
     {   return ! (lhs == rhs);
     }
     ///
     /// Specialization for C-string literal comparisons (const char*)
     template<typename Container>
-    bool operator==(const char* lhs, const sq_gen<Container>& rhs)
+    bool operator==(const char* lhs, const generic_sequence<Container>& rhs)
     {   return std::string_view(lhs) == rhs;
     }
     template<typename Container>
-    bool operator==(const sq_gen<Container>& lhs, const char* rhs)
+    bool operator==(const generic_sequence<Container>& lhs, const char* rhs)
     {   return lhs == std::string_view(rhs);
     }
 
 // -- i/o stream operators -----------------------------------------------------
     ///
-    /// Output stream operator for sq_gen.
+    /// Output stream operator for generic_sequence.
     template<typename T>
-    std::ostream& operator<< (std::ostream& os, const sq_gen<T>& s)
+    std::ostream& operator<< (std::ostream& os, const generic_sequence<T>& s)
     {   s.print(os);
         return os;
     }
     ///
-    /// Input stream operator for sq_gen.
+    /// Input stream operator for generic_sequence.
     template<typename T>
-    std::istream& operator>> (std::istream& is, sq_gen<T>& s)
+    std::istream& operator>> (std::istream& is, generic_sequence<T>& s)
     {   s.scan(is);
         return is;
     }
     ///
     /// A sequence of @a char
-    using sq = sq_gen<std::vector<char>>;
+    using sq = generic_sequence<std::vector<char>>;
 
 }   // end gnx namespace
 
@@ -588,8 +588,8 @@ struct fmt::formatter<gnx::sq> : fmt::formatter<std::string>
 };
 
 template <typename Container, typename Map>
-struct fmt::formatter<gnx::sq_gen<Container, Map>> : fmt::formatter<std::string>
-{   auto format(const gnx::sq_gen<Container, Map>& s, format_context& ctx) const
+struct fmt::formatter<gnx::generic_sequence<Container, Map>> : fmt::formatter<std::string>
+{   auto format(const gnx::generic_sequence<Container, Map>& s, format_context& ctx) const
     {   return fmt::formatter<std::string>::format(s.print(), ctx);
     }
 };

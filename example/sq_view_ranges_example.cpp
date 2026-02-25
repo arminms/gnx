@@ -1,4 +1,4 @@
-// Example demonstrating sq_view_gen composability with C++20 ranges
+// Example demonstrating generic_sequence_view composability with C++20 ranges
 #include <fmt/core.h>
 #include <gnx/sq.hpp>
 #include <gnx/views.hpp>

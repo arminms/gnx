@@ -401,9 +401,9 @@ public:
     packed_generic_sequence_2bit(std::initializer_list<char> init)
     :   packed_generic_sequence_2bit(init.begin(), init.end())
     {}
-    /// Constructs a packed sequence from a @a sq_gen (any Container/Map).
+    /// Constructs a packed sequence from a @a generic_sequence (any Container/Map).
     template<typename SqContainer, typename SqMap>
-    explicit packed_generic_sequence_2bit(const sq_gen<SqContainer, SqMap>& sq)
+    explicit packed_generic_sequence_2bit(const generic_sequence<SqContainer, SqMap>& sq)
     :   _bytes(num_bytes(sq.size()), uint8_t{0})
     ,   _size(sq.size())
     ,   _ptr_td()
@@ -460,16 +460,16 @@ public:
     }
 
     // =========================================================================
-    // conversion to sq_gen
+    // conversion to generic_sequence
     // =========================================================================
 
-    /// Converts this packed sequence to a @a sq_gen<SqContainer, SqMap>.
+    /// Converts this packed sequence to a @a generic_sequence<SqContainer, SqMap>.
     template
     <   typename SqContainer = std::vector<char>
     ,   typename SqMap = Map
     >
-    [[nodiscard]] sq_gen<SqContainer, SqMap> to_sq() const
-    {   sq_gen<SqContainer, SqMap> result(_size);
+    [[nodiscard]] generic_sequence<SqContainer, SqMap> to_sq() const
+    {   generic_sequence<SqContainer, SqMap> result(_size);
         for (size_type i = 0; i < _size; ++i)
             result[i] = get_base(i);
         if (_ptr_td)
@@ -620,14 +620,14 @@ public:
     }
 
     template<typename SqContainer, typename SqMap>
-    bool operator== (const sq_gen<SqContainer, SqMap>& rhs) const
+    bool operator== (const generic_sequence<SqContainer, SqMap>& rhs) const
     {   if (_size != rhs.size()) return false;
         for (size_type i = 0; i < _size; ++i)
             if (get_base(i) != rhs[i]) return false;
         return true;
     }
     template<typename SqContainer, typename SqMap>
-    bool operator!= (const sq_gen<SqContainer, SqMap>& rhs) const
+    bool operator!= (const generic_sequence<SqContainer, SqMap>& rhs) const
     {   return !(*this == rhs);
     }
 
@@ -784,7 +784,7 @@ public:
     }
 
     // =========================================================================
-    // internal helpers (exposed for sq_gen interop)
+    // internal helpers (exposed for generic_sequence interop)
     // =========================================================================
 
     /// @cond INTERNAL
@@ -846,7 +846,7 @@ template
 ,   typename PMap
 >
 bool operator==
-(   const sq_gen<SqContainer, SqMap>& lhs
+(   const generic_sequence<SqContainer, SqMap>& lhs
 ,   const packed_generic_sequence_2bit<ByteContainer, PMap>& rhs
 )
 {   return rhs == lhs;

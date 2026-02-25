@@ -28,7 +28,7 @@ const std::string fasta_filename{"perf_data.fa"};
 template <typename T>
 void io_write_fasta(benchmark::State& st)
 {   size_t n = size_t(st.range());
-    auto s = gnx::random::dna<gnx::sq_gen<T>>(n);
+    auto s = gnx::random::dna<gnx::generic_sequence<T>>(n);
 
     for (auto _ : st)
     {   s.save(fasta_filename, gnx::out::fasta());
@@ -74,8 +74,8 @@ BENCHMARK_TEMPLATE(io_write_fasta, gnx::unified_vector<char>)
 template <typename T>
 void io_read_fasta(benchmark::State& st)
 {   size_t n = size_t(st.range());
-    gnx::sq_gen<T> sr;
-    auto sw = gnx::random::dna<gnx::sq_gen<T>>(n);
+    gnx::generic_sequence<T> sr;
+    auto sw = gnx::random::dna<gnx::generic_sequence<T>>(n);
     sw.save(fasta_filename, gnx::out::fasta());
 
     for (auto _ : st)
@@ -123,7 +123,7 @@ BENCHMARK_TEMPLATE(io_read_fasta, gnx::unified_vector<char>)
 template <typename T, typename ExecPolicy>
 void random(benchmark::State& st)
 {   size_t n = size_t(st.range());
-    gnx::sq_gen<T> s(n);
+    gnx::generic_sequence<T> s(n);
     ExecPolicy policy;
 
     for (auto _ : st)
@@ -168,7 +168,7 @@ void random_cuda(benchmark::State& st)
 {   size_t n = size_t(st.range());
     cudaEvent_t start, stop;
     cudaEventCreate(&start); cudaEventCreate(&stop);
-    gnx::sq_gen<T> s(n);
+    gnx::generic_sequence<T> s(n);
 
     for (auto _ : st)
     {   cudaEventRecord(start);
@@ -206,7 +206,7 @@ void random_rocm(benchmark::State& st)
 {   size_t n = size_t(st.range());
     hipEvent_t start, stop;
     hipEventCreate(&start); hipEventCreate(&stop);
-    gnx::sq_gen<T> s(n);
+    gnx::generic_sequence<T> s(n);
 
     for (auto _ : st)
     {   hipEventRecord(start);
@@ -249,7 +249,7 @@ template <typename T, typename ExecPolicy>
 void valid(benchmark::State& st)
 {   size_t n = size_t(st.range());
     ExecPolicy policy;
-    auto s = gnx::random::dna<gnx::sq_gen<T>>(n, seed_pi);
+    auto s = gnx::random::dna<gnx::generic_sequence<T>>(n, seed_pi);
     // std::span<typename T::value_type> v // alternative way in C++20
     // (   s.data()
     // ,   n
@@ -321,7 +321,7 @@ void valid_cuda(benchmark::State& st)
     // cudaStreamCreate(&stream);
     cudaEvent_t start, stop;
     cudaEventCreate(&start); cudaEventCreate(&stop);
-    auto s = gnx::random::dna<gnx::sq_gen<T>>(n, seed_pi);
+    auto s = gnx::random::dna<gnx::generic_sequence<T>>(n, seed_pi);
 
     for (auto _ : st)
     {   cudaEventRecord(start);
@@ -364,7 +364,7 @@ void valid_rocm(benchmark::State& st)
     // hipStreamCreate(&stream);
     hipEvent_t start, stop;
     hipEventCreate(&start); hipEventCreate(&stop);
-    auto s = gnx::random::dna<gnx::sq_gen<T>>(n, seed_pi);
+    auto s = gnx::random::dna<gnx::generic_sequence<T>>(n, seed_pi);
 
     for (auto _ : st)
     {   hipEventRecord(start);
@@ -411,8 +411,8 @@ template <typename T, typename ExecPolicy>
 void compare(benchmark::State& st)
 {   size_t n = size_t(st.range());
     ExecPolicy policy;
-    auto s1 = gnx::random::dna<gnx::sq_gen<T>>(n, seed_pi);
-    auto s2 = gnx::random::dna<gnx::sq_gen<T>>(n, seed_pi); // Same seed = identical sequences
+    auto s1 = gnx::random::dna<gnx::generic_sequence<T>>(n, seed_pi);
+    auto s2 = gnx::random::dna<gnx::generic_sequence<T>>(n, seed_pi); // Same seed = identical sequences
 
     for (auto _ : st)
         benchmark::DoNotOptimize(gnx::compare(policy, s1(), s2()));
@@ -477,8 +477,8 @@ void compare_cuda(benchmark::State& st)
 {   size_t n = size_t(st.range());
     cudaEvent_t start, stop;
     cudaEventCreate(&start); cudaEventCreate(&stop);
-    auto s1 = gnx::random::dna<gnx::sq_gen<T>>(n, seed_pi);
-    auto s2 = gnx::random::dna<gnx::sq_gen<T>>(n, seed_pi);
+    auto s1 = gnx::random::dna<gnx::generic_sequence<T>>(n, seed_pi);
+    auto s2 = gnx::random::dna<gnx::generic_sequence<T>>(n, seed_pi);
 
     for (auto _ : st)
     {   cudaEventRecord(start);
@@ -516,8 +516,8 @@ void compare_rocm(benchmark::State& st)
 {   size_t n = size_t(st.range());
     hipEvent_t start, stop;
     hipEventCreate(&start); hipEventCreate(&stop);
-    auto s1 = gnx::random::dna<gnx::sq_gen<T>>(n, seed_pi);
-    auto s2 = gnx::random::dna<gnx::sq_gen<T>>(n, seed_pi);
+    auto s1 = gnx::random::dna<gnx::generic_sequence<T>>(n, seed_pi);
+    auto s2 = gnx::random::dna<gnx::generic_sequence<T>>(n, seed_pi);
 
     for (auto _ : st)
     {   hipEventRecord(start);
@@ -561,7 +561,7 @@ template <class T, class ExecPolicy>
 void count(benchmark::State& st)
 {   size_t n = size_t(st.range());
     ExecPolicy policy;
-    auto s = gnx::random::dna<gnx::sq_gen<T>>(n, seed_pi);
+    auto s = gnx::random::dna<gnx::generic_sequence<T>>(n, seed_pi);
 
     for (auto _ : st)
         benchmark::DoNotOptimize(gnx::count(policy, s()));
@@ -626,7 +626,7 @@ void count_cuda(benchmark::State& st)
 {   size_t n = size_t(st.range());
     cudaEvent_t start, stop;
     cudaEventCreate(&start); cudaEventCreate(&stop);
-    auto s = gnx::random::dna<gnx::sq_gen<T>>(n, seed_pi);
+    auto s = gnx::random::dna<gnx::generic_sequence<T>>(n, seed_pi);
 
     for (auto _ : st)
     {   cudaEventRecord(start);
@@ -664,7 +664,7 @@ void count_rocm(benchmark::State& st)
 {   size_t n = size_t(st.range());
     hipEvent_t start, stop;
     hipEventCreate(&start); hipEventCreate(&stop);
-    auto s = gnx::random::dna<gnx::sq_gen<T>>(n, seed_pi);
+    auto s = gnx::random::dna<gnx::generic_sequence<T>>(n, seed_pi);
 
     for (auto _ : st)
     {   hipEventRecord(start);
@@ -708,7 +708,7 @@ template <class T, class ExecPolicy>
 void complement(benchmark::State& st)
 {   size_t n = size_t(st.range());
     ExecPolicy policy;
-    auto s = gnx::random::dna<gnx::sq_gen<T>>(n, seed_pi);
+    auto s = gnx::random::dna<gnx::generic_sequence<T>>(n, seed_pi);
 
     for (auto _ : st)
     {   gnx::complement(policy, s);
@@ -775,7 +775,7 @@ void complement_cuda(benchmark::State& st)
 {   size_t n = size_t(st.range());
     cudaEvent_t start, stop;
     cudaEventCreate(&start); cudaEventCreate(&stop);
-    auto s = gnx::random::dna<gnx::sq_gen<T>>(n, seed_pi);
+    auto s = gnx::random::dna<gnx::generic_sequence<T>>(n, seed_pi);
 
     for (auto _ : st)
     {   cudaEventRecord(start);
@@ -813,7 +813,7 @@ void complement_rocm(benchmark::State& st)
 {   size_t n = size_t(st.range());
     hipEvent_t start, stop;
     hipEventCreate(&start); hipEventCreate(&stop);
-    auto s = gnx::random::dna<gnx::sq_gen<T>>(n, seed_pi);
+    auto s = gnx::random::dna<gnx::generic_sequence<T>>(n, seed_pi);
 
     for (auto _ : st)
     {   hipEventRecord(start);
@@ -856,11 +856,11 @@ BENCHMARK_TEMPLATE(complement_rocm, gnx::unified_vector<char>)
 template <typename T>
 void unified_vnp_memory(benchmark::State& st)
 {   size_t n = size_t(st.range());
-    auto sw = gnx::random::dna<gnx::sq_gen<T>>(n);
+    auto sw = gnx::random::dna<gnx::generic_sequence<T>>(n);
     sw.save(fasta_filename, gnx::out::fasta());
 
     for (auto _ : st)
-    {   gnx::sq_gen<T> sr;
+    {   gnx::generic_sequence<T> sr;
         sr.load(fasta_filename);
         benchmark::DoNotOptimize(gnx::valid(gnx::execution::par_unseq, sr));
     }
@@ -884,14 +884,14 @@ void unified_vnp_memory_cuda(benchmark::State& st)
     cudaEvent_t start, stop;
     cudaEventCreate(&start); cudaEventCreate(&stop);
     cudaEventRecord(start);
-    auto sw = gnx::random::dna<gnx::sq_gen<T>>(n);
+    auto sw = gnx::random::dna<gnx::generic_sequence<T>>(n);
     sw.save(fasta_filename, gnx::out::fasta());
     cudaEventRecord(stop);
     cudaEventSynchronize(stop);
 
     for (auto _ : st)
     {   cudaEventRecord(start);
-        gnx::sq_gen<T> sr;
+        gnx::generic_sequence<T> sr;
         sr.load(fasta_filename);
         benchmark::DoNotOptimize(gnx::valid(sr));
         cudaEventRecord(stop);
@@ -935,14 +935,14 @@ void unified_vnp_memory_rocm(benchmark::State& st)
     hipEvent_t start, stop;
     hipEventCreate(&start); hipEventCreate(&stop);
     hipEventRecord(start);
-    auto sw = gnx::random::dna<gnx::sq_gen<T>>(n);
+    auto sw = gnx::random::dna<gnx::generic_sequence<T>>(n);
     sw.save(fasta_filename, gnx::out::fasta());
     hipEventRecord(stop);
     hipEventSynchronize(stop);
 
     for (auto _ : st)
     {   hipEventRecord(start);
-        gnx::sq_gen<T> sr;
+        gnx::generic_sequence<T> sr;
         sr.load(fasta_filename);
         benchmark::DoNotOptimize(gnx::valid(sr));
         hipEventRecord(stop);

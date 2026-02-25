@@ -25,7 +25,7 @@ template<typename T>
 using aligned_vector = std::vector<T, gnx::aligned_allocator<T, gnx::Alignment::AVX512>>;
 
 // =============================================================================
-// gnx::sq_gen class tests
+// gnx::generic_sequence class tests
 // =============================================================================
 
 #if defined(__CUDACC__)
@@ -53,17 +53,17 @@ TEMPLATE_TEST_CASE( "gnx::sq", "[class]", std::vector<char>)
 #endif
 {   typedef TestType T;
 
-    gnx::sq_gen<T> s{"ACGT"};
+    gnx::generic_sequence<T> s{"ACGT"};
     std::string t{"ACGT"}, u{"acgt"}, v{"ACGT "};
     s["test-int"] = -33;
 
 // -- comparison operators -----------------------------------------------------
 
     SECTION( "comparison operators" )
-    {   REQUIRE(  s == gnx::sq_gen<T>("ACGT"));
-        REQUIRE(!(s == gnx::sq_gen<T>("acgt")));
-        REQUIRE(  s != gnx::sq_gen<T>("acgt") );
-        REQUIRE(!(s != gnx::sq_gen<T>("ACGT")));
+    {   REQUIRE(  s == gnx::generic_sequence<T>("ACGT"));
+        REQUIRE(!(s == gnx::generic_sequence<T>("acgt")));
+        REQUIRE(  s != gnx::generic_sequence<T>("acgt") );
+        REQUIRE(!(s != gnx::generic_sequence<T>("ACGT")));
 
         REQUIRE(s == t);
         REQUIRE(t == s);
@@ -92,20 +92,20 @@ TEMPLATE_TEST_CASE( "gnx::sq", "[class]", std::vector<char>)
         &&  !std::is_same_v<T, gnx::unified_vector<char>>
 #endif //__HIPCC__
         )
-        {   gnx::sq_gen<T> a4(4, 'A');
+        {   gnx::generic_sequence<T> a4(4, 'A');
             CHECK(a4 == "AAAA");
-            gnx::sq_gen<T> c4(4, 'C');
+            gnx::generic_sequence<T> c4(4, 'C');
             CHECK(c4 == "CCCC");
         }
 #else
-        gnx::sq_gen<T> a4(4, 'A');
+        gnx::generic_sequence<T> a4(4, 'A');
         CHECK(a4 == "AAAA");
-        gnx::sq_gen<T> c4(4, 'C');
+        gnx::generic_sequence<T> c4(4, 'C');
         CHECK(c4 == "CCCC");
 #endif //__CUDACC__
     }
     SECTION( "string_view constructor" )
-    {   gnx::sq_gen<T> c("ACGT");
+    {   gnx::generic_sequence<T> c("ACGT");
         CHECK(s == c);
     }
     SECTION( "sq_view constructor" )
@@ -114,55 +114,55 @@ TEMPLATE_TEST_CASE( "gnx::sq", "[class]", std::vector<char>)
         if constexpr
         (   !std::is_same_v<T, thrust::device_vector<char>>
         )
-        {   gnx::sq_view_gen<T> sv(s);
+        {   gnx::generic_sequence_view<T> sv(s);
             CHECK(s == sv);
         }
 #else
-        gnx::sq_view_gen<T> sv(s);
+        gnx::generic_sequence_view<T> sv(s);
         CHECK(s == sv);
 #endif //__CUDACC__
     }
     SECTION( "iterator constructor" )
     {   std::string acgt{"ACGT"};
-        gnx::sq_gen<T> c(std::begin(acgt), std::end(acgt));
+        gnx::generic_sequence<T> c(std::begin(acgt), std::end(acgt));
         CHECK(s == c);
     }
     SECTION( "copy constructor" )
-    {   gnx::sq_gen<T> c(s);
+    {   gnx::generic_sequence<T> c(s);
         CHECK(c == s);
         CHECK(-33 == std::any_cast<int>(c["test-int"]));
     }
     SECTION( "move constructor" )
-    {   gnx::sq_gen<T> m(std::move(s));
+    {   gnx::generic_sequence<T> m(std::move(s));
         CHECK(s.empty());
-        CHECK(m == gnx::sq_gen<T>("ACGT"));
+        CHECK(m == gnx::generic_sequence<T>("ACGT"));
         CHECK(-33 == std::any_cast<int>(m["test-int"]));
     }
     SECTION( "initializer list" )
-    {   gnx::sq_gen<T> c{'A', 'C', 'G', 'T'};
+    {   gnx::generic_sequence<T> c{'A', 'C', 'G', 'T'};
         CHECK(c == s);
     }
 
 // -- copy assignment operators ------------------------------------------------
 
     SECTION( "copy assignment operator" )
-    {   gnx::sq_gen<T> c = s;
+    {   gnx::generic_sequence<T> c = s;
         CHECK(c == s);
         CHECK(-33 == std::any_cast<int>(c["test-int"]));
     }
     SECTION( "move constructor" )
-    {   gnx::sq_gen<T> m = gnx::sq_gen<T>("ACGT");
+    {   gnx::generic_sequence<T> m = gnx::generic_sequence<T>("ACGT");
         CHECK(m == s);
     }
     SECTION( "initializer list" )
-    {   gnx::sq_gen<T> c = {'A', 'C', 'G', 'T'};
+    {   gnx::generic_sequence<T> c = {'A', 'C', 'G', 'T'};
         CHECK(c == s);
     }
 
 // -- iterators ----------------------------------------------------------------
 
     SECTION( "begin/end" )
-    {   gnx::sq_gen<T> t("AAAA");
+    {   gnx::generic_sequence<T> t("AAAA");
         for (auto a : t)
             CHECK(a == 'A');
 #if defined(__CUDACC__) || defined(__HIPCC__) // not supported for thrust::device_vector
@@ -174,12 +174,12 @@ TEMPLATE_TEST_CASE( "gnx::sq", "[class]", std::vector<char>)
         )
         {   for (auto& a : t)
                 a = 'T';
-            CHECK(t == gnx::sq_gen<T>("TTTT"));
+            CHECK(t == gnx::generic_sequence<T>("TTTT"));
         }
 #else
         for (auto& a : t)
             a = 'T';
-        CHECK(t == gnx::sq_gen<T>("TTTT"));
+        CHECK(t == gnx::generic_sequence<T>("TTTT"));
 #endif //__CUDACC__
         auto s_it = s.cbegin();
         for
@@ -191,7 +191,7 @@ TEMPLATE_TEST_CASE( "gnx::sq", "[class]", std::vector<char>)
         CHECK(t == "ACGT");
     }
     SECTION( "cbegin/cend" )
-    {   const gnx::sq_gen<T> t("AAAA");
+    {   const gnx::generic_sequence<T> t("AAAA");
         auto s_it = s.begin();
         for
         (   auto t_it = t.cbegin()
@@ -202,7 +202,7 @@ TEMPLATE_TEST_CASE( "gnx::sq", "[class]", std::vector<char>)
         CHECK(s == "AAAA");
     }
     SECTION( "rbegin/rend" )
-    {   gnx::sq_gen<T> t("AAAA");
+    {   gnx::generic_sequence<T> t("AAAA");
         auto s_it = s.cbegin();
         for
         (   auto t_it = t.rbegin()
@@ -213,7 +213,7 @@ TEMPLATE_TEST_CASE( "gnx::sq", "[class]", std::vector<char>)
         CHECK(t == "TGCA");
     }
     SECTION( "crbegin/crend" )
-    {   const gnx::sq_gen<T> t("ACGT");
+    {   const gnx::generic_sequence<T> t("ACGT");
         auto s_it = s.begin();
         for
         (   auto t_it = t.crbegin()
@@ -227,14 +227,14 @@ TEMPLATE_TEST_CASE( "gnx::sq", "[class]", std::vector<char>)
 // -- capacity -----------------------------------------------------------------
 
     SECTION( "empty()" )
-    {   gnx::sq_gen<T> e;
+    {   gnx::generic_sequence<T> e;
         CHECK(e.empty());
         e["test"] = 1;
         CHECK(!e.empty());
         CHECK(!s.empty());
     }
     SECTION( "size()" )
-    {   gnx::sq_gen<T> e;
+    {   gnx::generic_sequence<T> e;
         CHECK(0 == e.size());
         CHECK(4 == s.size());
     }
@@ -253,14 +253,14 @@ TEMPLATE_TEST_CASE( "gnx::sq", "[class]", std::vector<char>)
 // -- subseq operator ----------------------------------------------------------
 
     SECTION( "subseq operator" )
-    {   gnx::sq_gen<T> org{"CCATACGTGAC"};
+    {   gnx::generic_sequence<T> org{"CCATACGTGAC"};
         CHECK(org(4, 4) == s);
         CHECK(org(0) == org);
         CHECK(org(4) == "ACGTGAC");
         CHECK_THROWS_AS(org(20) == "ACGTGAC", std::out_of_range);
 
-        // casting sq_view to sq_gen
-        gnx::sq_gen<T> sub = gnx::sq_gen<T>(org(4, 10));
+        // casting sq_view to generic_sequence
+        gnx::generic_sequence<T> sub = gnx::generic_sequence<T>(org(4, 10));
         CHECK(sub == "ACGTGAC");
     }
 
@@ -310,7 +310,7 @@ TEMPLATE_TEST_CASE( "gnx::sq", "[class]", std::vector<char>)
 
         std::stringstream ss;
         ss << s;
-        gnx::sq_gen<T> t;
+        gnx::generic_sequence<T> t;
         ss >> t;
 
         CHECK(s == t);
@@ -465,7 +465,7 @@ TEMPLATE_TEST_CASE( "gnx::psq2", "[class][psq2]", std::vector<uint8_t>)
         CHECK(-33 == std::any_cast<int>(m["test-int"]));
     }
 
-    SECTION( "construct from sq_gen (with tagged data)" )
+    SECTION( "construct from generic_sequence (with tagged data)" )
     {   gnx::sq src("ACGTACGT"_sq);
         src["_id"] = std::string("read-1");
         gnx::packed_generic_sequence_2bit<T> p(src);
@@ -474,7 +474,7 @@ TEMPLATE_TEST_CASE( "gnx::psq2", "[class][psq2]", std::vector<uint8_t>)
         CHECK(std::any_cast<std::string>(p["_id"]) == "read-1");
     }
 
-    SECTION( "construct from sq_gen (no tagged data)" )
+    SECTION( "construct from generic_sequence (no tagged data)" )
     {   gnx::sq src{"TTGCAA"};
         gnx::packed_generic_sequence_2bit<T> p(src);
         CHECK(p == "TTGCAA");
@@ -505,7 +505,7 @@ TEMPLATE_TEST_CASE( "gnx::psq2", "[class][psq2]", std::vector<uint8_t>)
         CHECK(c == s);
     }
 
-// -- conversion to sq_gen -----------------------------------------------------
+// -- conversion to generic_sequence -----------------------------------------------------
 
     SECTION( "to_sq() roundtrip" )
     {   gnx::sq src("ACGTACGT"_sq);
@@ -694,9 +694,9 @@ TEMPLATE_TEST_CASE( "gnx::psq2", "[class][psq2]", std::vector<uint8_t>)
         CHECK_THROWS_AS(cs["no_such_tag"], std::out_of_range);
     }
 
-// -- cross-type comparison with sq_gen ----------------------------------------
+// -- cross-type comparison with generic_sequence ----------------------------------------
 
-    SECTION( "equality with sq_gen" )
+    SECTION( "equality with generic_sequence" )
     {   gnx::sq sq_src("ACGT");
         CHECK(s == sq_src);
         CHECK(sq_src == s);
@@ -779,7 +779,7 @@ TEMPLATE_TEST_CASE( "gnx::psq2", "[class][psq2]", std::vector<uint8_t>)
 }
 
 // =============================================================================
-// sq_view_gen class tests
+// generic_sequence_view class tests
 // =============================================================================
 
 #if defined(__CUDACC__)
@@ -804,12 +804,12 @@ TEMPLATE_TEST_CASE( "gnx::sq_view", "[view]", std::vector<char>)
 #endif //__CUDACC__
 {   typedef TestType T;
 
-    gnx::sq_gen<T> s{"ACGT"};
+    gnx::generic_sequence<T> s{"ACGT"};
 
 // -- constructors -------------------------------------------------------------
 
-    SECTION( "construct from sq_gen" )
-    {   gnx::sq_view_gen<T> v{s};
+    SECTION( "construct from generic_sequence" )
+    {   gnx::generic_sequence_view<T> v{s};
         CHECK(v.size() == s.size());
         CHECK_FALSE(v.empty());
         CHECK(v == s);
@@ -818,7 +818,7 @@ TEMPLATE_TEST_CASE( "gnx::sq_view", "[view]", std::vector<char>)
 
     SECTION( "construct from pointer+length" )
     {   const char* p = "ACGT";
-        gnx::sq_view_gen<T> v{p, 4};
+        gnx::generic_sequence_view<T> v{p, 4};
         CHECK(v.size() == 4);
         CHECK(v[0] == 'A');
         CHECK(v.at(3) == 'T');
@@ -829,7 +829,7 @@ TEMPLATE_TEST_CASE( "gnx::sq_view", "[view]", std::vector<char>)
 // -- iterators ----------------------------------------------------------------
 
     SECTION( "iterate over view" )
-    {   gnx::sq_view_gen<T> v{s};
+    {   gnx::generic_sequence_view<T> v{s};
         std::string collected;
         for (auto it = v.begin(); it != v.end(); ++it)
             collected.push_back(*it);
@@ -844,7 +844,7 @@ TEMPLATE_TEST_CASE( "gnx::sq_view", "[view]", std::vector<char>)
 // -- modifiers ----------------------------------------------------------------
 
     SECTION( "remove_prefix/suffix" )
-    {   gnx::sq_view_gen<T> v{s};
+    {   gnx::generic_sequence_view<T> v{s};
         v.remove_prefix(1); // drop 'A'
         CHECK(v == "CGT");
         v.remove_suffix(1); // drop trailing 'T'
@@ -854,26 +854,26 @@ TEMPLATE_TEST_CASE( "gnx::sq_view", "[view]", std::vector<char>)
     }
 
     SECTION( "remove_prefix/suffix bounds" )
-    {   gnx::sq_view_gen<T> v{s};
+    {   gnx::generic_sequence_view<T> v{s};
         REQUIRE_THROWS_AS(v.remove_prefix(5), std::out_of_range);
         REQUIRE_THROWS_AS(v.remove_suffix(5), std::out_of_range);
     }
 
 // -- operations ---------------------------------------------------------------
 
-    SECTION( "substr" )
-    {   gnx::sq_view_gen<T> v{s};
-        auto sub = v.substr(1, 2);
+    SECTION( "subseq" )
+    {   gnx::generic_sequence_view<T> v{s};
+        auto sub = v.subseq(1, 2);
         CHECK(sub == "CG");
-        auto to_end = v.substr(2);
+        auto to_end = v.subseq(2);
         CHECK(to_end == "GT");
-        REQUIRE_THROWS_AS(v.substr(10), std::out_of_range);
+        REQUIRE_THROWS_AS(v.subseq(10), std::out_of_range);
     }
 
 // -- comparisons --------------------------------------------------------------
 
-    SECTION( "compare to sq_gen and C-string" )
-    {   gnx::sq_view_gen<T> v{s};
+    SECTION( "compare to generic_sequence and C-string" )
+    {   gnx::generic_sequence_view<T> v{s};
         CHECK(v == s);
         CHECK(s == v);
         CHECK(v == "ACGT");
@@ -885,10 +885,10 @@ TEMPLATE_TEST_CASE( "gnx::sq_view", "[view]", std::vector<char>)
 // -- ranges concept support --------------------------------------------------
 
     SECTION( "std::ranges::view concept" )
-    {   gnx::sq_view_gen<T> v{s};
-        // Verify that sq_view_gen satisfies the view concept
-        static_assert(std::ranges::view<gnx::sq_view_gen<T>>);
-        static_assert(std::ranges::range<gnx::sq_view_gen<T>>);
+    {   gnx::generic_sequence_view<T> v{s};
+        // Verify that generic_sequence_view satisfies the view concept
+        static_assert(std::ranges::view<gnx::generic_sequence_view<T>>);
+        static_assert(std::ranges::range<gnx::generic_sequence_view<T>>);
 
         // Test composability with range adaptors
         auto transformed = v | std::views::transform
@@ -901,7 +901,7 @@ TEMPLATE_TEST_CASE( "gnx::sq_view", "[view]", std::vector<char>)
     }
 
     SECTION( "composable with multiple adaptors" )
-    {   gnx::sq_view_gen<T> v{s};
+    {   gnx::generic_sequence_view<T> v{s};
         // Chain multiple views
         auto result = v 
             | std::views::reverse 
@@ -940,16 +940,16 @@ TEMPLATE_TEST_CASE( "gnx::io::fastaqz", "[io][in][out]", std::vector<char>)
 #endif
 {   typedef TestType T;
     std::string desc("Chlamydia psittaci 6BC plasmid pCps6BC, complete sequence");
-    gnx::sq_gen<T> s, t;
+    gnx::generic_sequence<T> s, t;
     CHECK_THROWS_AS
     (   s.load("wrong.fa")
     ,   std::runtime_error
     );
 
-    gnx::sq_gen<T> wrong_ndx;
+    gnx::generic_sequence<T> wrong_ndx;
     wrong_ndx.load(SAMPLE_GENOME, 3);
     CHECK(wrong_ndx.empty());
-    gnx::sq_gen<T> bad_id;
+    gnx::generic_sequence<T> bad_id;
     bad_id.load(SAMPLE_GENOME, "bad_id");
     CHECK(bad_id.empty());
 
@@ -1050,110 +1050,110 @@ TEMPLATE_TEST_CASE( "gnx::valid", "[algorithm][valid]", std::vector<char>)
 // -- nucleotide validation ----------------------------------------------------
 
     SECTION( "valid nucleotide sequences" )
-    {   gnx::sq_gen<T> s1{"ACGT"};
+    {   gnx::generic_sequence<T> s1{"ACGT"};
         CHECK(gnx::valid(s1, true));
         CHECK(gnx::valid_nucleotide(s1));
-        gnx::sq_gen<T> s2{"ACGTACGTNNN"};
+        gnx::generic_sequence<T> s2{"ACGTACGTNNN"};
         CHECK(gnx::valid_nucleotide(s2));
         // lowercase
-        gnx::sq_gen<T> s3{"acgtacgt"};
+        gnx::generic_sequence<T> s3{"acgtacgt"};
         CHECK(gnx::valid_nucleotide(s3));
         // mixed case
-        gnx::sq_gen<T> s4{"AcGtNn"};
+        gnx::generic_sequence<T> s4{"AcGtNn"};
         CHECK(gnx::valid_nucleotide(s4));
         // with RNA base U
-        gnx::sq_gen<T> s5{"ACGU"};
+        gnx::generic_sequence<T> s5{"ACGU"};
         CHECK(gnx::valid_nucleotide(s5));
         // with IupAC ambiguity codes
-        gnx::sq_gen<T> s6{"ACGTRYMKSWBDHVN"};
+        gnx::generic_sequence<T> s6{"ACGTRYMKSWBDHVN"};
         CHECK(gnx::valid_nucleotide(s6));
-        gnx::sq_gen<T> s7{"acgtrymkswbdhvn"};
+        gnx::generic_sequence<T> s7{"acgtrymkswbdhvn"};
         CHECK(gnx::valid_nucleotide(s7));
     }
 
     SECTION( "invalid nucleotide sequences" )
     {   // with invalid character
-        gnx::sq_gen<T> s1{"ACGT123"};
+        gnx::generic_sequence<T> s1{"ACGT123"};
         CHECK_FALSE(gnx::valid_nucleotide(s1));
-        gnx::sq_gen<T> s2{"ACGT X"};
+        gnx::generic_sequence<T> s2{"ACGT X"};
         CHECK_FALSE(gnx::valid_nucleotide(s2));
         // with space
-        gnx::sq_gen<T> s3{"ACG T"};
+        gnx::generic_sequence<T> s3{"ACG T"};
         CHECK_FALSE(gnx::valid_nucleotide(s3));
         // with newline
-        gnx::sq_gen<T> s4{"ACGT\n"};
+        gnx::generic_sequence<T> s4{"ACGT\n"};
         CHECK_FALSE(gnx::valid_nucleotide(s4));
         // peptide sequence
-        gnx::sq_gen<T> s5{"MVHLTPEEK"};
+        gnx::generic_sequence<T> s5{"MVHLTPEEK"};
         CHECK_FALSE(gnx::valid_nucleotide(s5));
     }
 
     SECTION( "empty nucleotide sequence" )
-    {   gnx::sq_gen<T> s{""};
+    {   gnx::generic_sequence<T> s{""};
         CHECK(gnx::valid_nucleotide(s));
     }
 
 // -- peptide validation -------------------------------------------------------
 
     SECTION( "valid peptide sequences" )
-    {   gnx::sq_gen<T> s1{"ACDEFGHIKLMNPQRSTVWY"};
+    {   gnx::generic_sequence<T> s1{"ACDEFGHIKLMNPQRSTVWY"};
         CHECK(gnx::valid(s1));
         CHECK(gnx::valid(s1, false));
         CHECK(gnx::valid_peptide(s1));
         CHECK_FALSE(gnx::valid_nucleotide(s1));
         // lowercase
-        gnx::sq_gen<T> s2{"acdefghiklmnpqrstvwy"};
+        gnx::generic_sequence<T> s2{"acdefghiklmnpqrstvwy"};
         CHECK(gnx::valid_peptide(s2));
         // mixed case
-        gnx::sq_gen<T> s3{"MvHlTpEeK"};
+        gnx::generic_sequence<T> s3{"MvHlTpEeK"};
         CHECK(gnx::valid_peptide(s3));
         // with ambiguous codes
-        gnx::sq_gen<T> s4{"ACBZX"};
+        gnx::generic_sequence<T> s4{"ACBZX"};
         CHECK(gnx::valid_peptide(s4));
         // with special amino acids
-        gnx::sq_gen<T> s5{"ACUO"};
+        gnx::generic_sequence<T> s5{"ACUO"};
         CHECK(gnx::valid_peptide(s5));
         // with stop codon
-        gnx::sq_gen<T> s6{"MVHLT*"};
+        gnx::generic_sequence<T> s6{"MVHLT*"};
         CHECK(gnx::valid_peptide(s6));
     }
 
     SECTION( "invalid peptide sequences" )
     {   // with number
-        gnx::sq_gen<T> s1{"ACDE123"};
+        gnx::generic_sequence<T> s1{"ACDE123"};
         CHECK_FALSE(gnx::valid_peptide(s1));
         // with space
-        gnx::sq_gen<T> s2{"ACDE F"};
+        gnx::generic_sequence<T> s2{"ACDE F"};
         CHECK_FALSE(gnx::valid_peptide(s2));
         // with newline
-        gnx::sq_gen<T> s3{"ACDEF\n"};
+        gnx::generic_sequence<T> s3{"ACDEF\n"};
         CHECK_FALSE(gnx::valid_peptide(s3));
         // with invalid special character
-        gnx::sq_gen<T> s4{"ACDE-F"};
+        gnx::generic_sequence<T> s4{"ACDE-F"};
         CHECK_FALSE(gnx::valid_peptide(s4));
     }
 
     SECTION( "empty sequence" )
-    {   gnx::sq_gen<T> s{""};
+    {   gnx::generic_sequence<T> s{""};
         CHECK(gnx::valid(s));
     }
 
 // -- iterator-based validation ------------------------------------------------
 
     SECTION( "validation with iterators" )
-    {   gnx::sq_gen<T> s{"ACGTACGT"};
+    {   gnx::generic_sequence<T> s{"ACGTACGT"};
         // full range
         CHECK(gnx::valid(s.begin(), s.end(), true));
         CHECK(gnx::valid_nucleotide(s.begin(), s.end()));
         // partial range
         CHECK(gnx::valid_nucleotide(s.begin(), s.begin() + 4));
-        // substring
+        // subsequence view
         auto sub = s(0, 4);
         CHECK(gnx::valid_nucleotide(sub));
     }
 
     SECTION( "validation with execution policy" )
-    {   gnx::sq_gen<T> s;
+    {   gnx::generic_sequence<T> s;
         s.load(SAMPLE_GENOME, 0);
         CHECK(s.size() > 0);
         CHECK(gnx::valid_nucleotide(s));
@@ -1174,8 +1174,8 @@ TEMPLATE_TEST_CASE( "gnx::valid", "[algorithm][valid]", std::vector<char>)
     }
 
     SECTION( "validation with sq_view" )
-    {   gnx::sq_gen<T> s{"ACGTACGT"};
-        gnx::sq_view_gen<T> view{s};
+    {   gnx::generic_sequence<T> s{"ACGTACGT"};
+        gnx::generic_sequence_view<T> view{s};
         CHECK(gnx::valid_nucleotide(view));
         CHECK(gnx::valid_nucleotide(view.begin(), view.end()));
     }
@@ -1193,12 +1193,12 @@ TEMPLATE_TEST_CASE( "gnx::valid", "[algorithm][valid]", std::vector<char>)
 
     SECTION( "sequences valid for one type but not another" )
     {   // Some characters valid for peptides but not nucleotides
-        gnx::sq_gen<T> s1{"EFIKLPQVWY"};
+        gnx::generic_sequence<T> s1{"EFIKLPQVWY"};
         CHECK(gnx::valid_peptide(s1));
         CHECK_FALSE(gnx::valid_nucleotide(s1));
 
         // All nucleotides are also valid peptides (overlap in alphabet)
-        gnx::sq_gen<T> s2{"ACGT"};
+        gnx::generic_sequence<T> s2{"ACGT"};
         CHECK(gnx::valid_nucleotide(s2));
         CHECK(gnx::valid_peptide(s2)); // A, C, G, T are also amino acids
     }
@@ -1206,9 +1206,9 @@ TEMPLATE_TEST_CASE( "gnx::valid", "[algorithm][valid]", std::vector<char>)
 // -- range compatibility tests ------------------------------------------------
 
     SECTION( "view ranges compatibility" )
-    {   gnx::sq_gen<T> s{"ACGTACGTKQ"};
+    {   gnx::generic_sequence<T> s{"ACGTACGTKQ"};
         CHECK(gnx::valid_nucleotide(s | std::views::take(8)));
-        gnx::sq_view_gen<T> v{s};
+        gnx::generic_sequence_view<T> v{s};
         v.remove_suffix(2); // drop 'KQ'
         CHECK(gnx::valid_nucleotide(v));
         CHECK(gnx::valid_nucleotide(v.begin(), v.end()));
@@ -1233,7 +1233,7 @@ TEMPLATE_TEST_CASE
 )
 {   typedef TestType T;
 
-    gnx::sq_gen<T> s;
+    gnx::generic_sequence<T> s;
     s.load(SAMPLE_GENOME, 0);
     CHECK(s.size() > 0);
 
@@ -1266,7 +1266,7 @@ TEMPLATE_TEST_CASE
 )
 {   typedef TestType T;
 
-    gnx::sq_gen<T> s;
+    gnx::generic_sequence<T> s;
     s.load(SAMPLE_GENOME, 0);
     CHECK(s.size() > 0);
 
@@ -1311,7 +1311,7 @@ TEMPLATE_TEST_CASE
 TEMPLATE_TEST_CASE( "gnx::random", "[algorithm][random]", std::vector<char>)
 #endif //__CUDACC__ || __HIPCC__
 {   typedef TestType T;
-    gnx::sq_gen<T> s(20);
+    gnx::generic_sequence<T> s(20);
     const auto N{10'000};
 
     SECTION( "random nucleotide sequence" )
@@ -1323,7 +1323,7 @@ TEMPLATE_TEST_CASE( "gnx::random", "[algorithm][random]", std::vector<char>)
     }
 
     SECTION( "random sequence with execution policy" )
-    {   gnx::sq_gen<T> r(N);
+    {   gnx::generic_sequence<T> r(N);
         auto t = gnx::random::dna<decltype(s)>(N, seed_pi);
         CHECK(N == t.size());
         gnx::rand(gnx::execution::seq, r.begin(), N, "ACGT", seed_pi);
@@ -1374,7 +1374,7 @@ TEMPLATE_TEST_CASE
 ,   thrust::universal_vector<char>
 )
 {   typedef TestType T;
-    gnx::sq_gen<T> s(20);
+    gnx::generic_sequence<T> s(20);
     const auto N{10'000};
 
     SECTION( "device vector" )
@@ -1387,7 +1387,7 @@ TEMPLATE_TEST_CASE
 
     SECTION( "cuda stream" )
     {   auto r = gnx::random::dna<decltype(s)>(N, seed_pi);
-        gnx::sq_gen<T> t(N);
+        gnx::generic_sequence<T> t(N);
         cudaStream_t stream;
         cudaStreamCreate(&stream);
         gnx::rand(thrust::cuda::par.on(stream), t.begin(), N, "ACGT", seed_pi);
@@ -1408,7 +1408,7 @@ TEMPLATE_TEST_CASE
 ,   gnx::unified_vector<char>
 )
 {   typedef TestType T;
-    gnx::sq_gen<T> s(20);
+    gnx::generic_sequence<T> s(20);
     const auto N{10'000};
 
     SECTION( "device vector" )
@@ -1421,7 +1421,7 @@ TEMPLATE_TEST_CASE
 
     SECTION( "hip stream" )
     {   auto r = gnx::random::dna<decltype(s)>(N, seed_pi);
-        gnx::sq_gen<T> t(N);
+        gnx::generic_sequence<T> t(N);
         hipStream_t stream;
         hipStreamCreate(&stream);
         gnx::rand(thrust::hip::par.on(stream), t.begin(), N, "ACGT", seed_pi);
@@ -1462,10 +1462,10 @@ TEMPLATE_TEST_CASE( "gnx::compare", "[algorithm][compare]", std::vector<char>)
 {   typedef TestType T;
 
     // Test data
-    gnx::sq_gen<T> s1("ACGTacgt");
-    gnx::sq_gen<T> s2("acgtACGT"); // Case difference
-    gnx::sq_gen<T> s3("ACGTacgZ"); // Mismatch at end
-    gnx::sq_gen<T> s4("ACGT");     // Different length
+    gnx::generic_sequence<T> s1("ACGTacgt");
+    gnx::generic_sequence<T> s2("acgtACGT"); // Case difference
+    gnx::generic_sequence<T> s3("ACGTacgZ"); // Mismatch at end
+    gnx::generic_sequence<T> s4("ACGT");     // Different length
 
 // -- basic comparison ---------------------------------------------------------
 
@@ -1534,7 +1534,7 @@ TEMPLATE_TEST_CASE
 
     const auto N{10'000};
 
-    gnx::sq_gen<T> s1(N), s2(N), s3(N);
+    gnx::generic_sequence<T> s1(N), s2(N), s3(N);
     gnx::rand(s1.begin(), N, "ACGTacgt", seed_pi);
     gnx::rand(s2.begin(), N, "ACGTacgt", seed_pi); // same seed (same as s1)
     gnx::rand(s3.begin(), N, "ACGTacgt");          // random seed (different)
@@ -1583,7 +1583,7 @@ TEMPLATE_TEST_CASE
 
     const auto N{10'000};
 
-    gnx::sq_gen<T> s1(N), s2(N), s3(N);
+    gnx::generic_sequence<T> s1(N), s2(N), s3(N);
     gnx::rand(s1.begin(), N, "ACGTacgt", seed_pi);
     gnx::rand(s2.begin(), N, "ACGTacgt", seed_pi); // same seed (same as s1)
     gnx::rand(s3.begin(), N, "ACGTacgt");          // random seed (different)
@@ -1635,8 +1635,8 @@ TEMPLATE_TEST_CASE
 // -- basic alignment ----------------------------------------------------------
 
     SECTION( "identical sequences" )
-    {   gnx::sq_gen<T> s1{"ACGT"};
-        gnx::sq_gen<T> s2{"ACGT"};
+    {   gnx::generic_sequence<T> s1{"ACGT"};
+        gnx::generic_sequence<T> s2{"ACGT"};
         auto result = gnx::local_align_n(s1, s2);
 
         CHECK(result.score == 8);  // 4 matches * 2
@@ -1648,8 +1648,8 @@ TEMPLATE_TEST_CASE
     }
 
     SECTION( "single mismatch" )
-    {   gnx::sq_gen<T> s1{"ACGT"};
-        gnx::sq_gen<T> s2{"ACAT"};
+    {   gnx::generic_sequence<T> s1{"ACGT"};
+        gnx::generic_sequence<T> s2{"ACAT"};
         auto result = gnx::local_align_n(s1, s2);
 
         // Best local alignment should still find matching regions
@@ -1658,8 +1658,8 @@ TEMPLATE_TEST_CASE
     }
 
     SECTION( "no alignment (completely different)" )
-    {   gnx::sq_gen<T> s1{"AAAA"};
-        gnx::sq_gen<T> s2{"TTTT"};
+    {   gnx::generic_sequence<T> s1{"AAAA"};
+        gnx::generic_sequence<T> s2{"TTTT"};
         auto result = gnx::local_align_n(s1, s2, 2, -3, -1);
 
         // With strong mismatch penalty, may have low or zero score
@@ -1669,8 +1669,8 @@ TEMPLATE_TEST_CASE
 // -- subsequence alignment ----------------------------------------------------
 
     SECTION( "subsequence in larger sequence" )
-    {   gnx::sq_gen<T> s1{"ACGTACGT"};
-        gnx::sq_gen<T> s2{"ACGT"};
+    {   gnx::generic_sequence<T> s1{"ACGTACGT"};
+        gnx::generic_sequence<T> s2{"ACGT"};
         auto result = gnx::local_align_n(s1, s2);
 
         CHECK(result.score == 8);  // Perfect match of ACGT
@@ -1679,8 +1679,8 @@ TEMPLATE_TEST_CASE
     }
 
     SECTION( "overlapping sequences" )
-    {   gnx::sq_gen<T> s1{"ACGTACGT"};
-        gnx::sq_gen<T> s2{"TACGTACG"};
+    {   gnx::generic_sequence<T> s1{"ACGTACGT"};
+        gnx::generic_sequence<T> s2{"TACGTACG"};
         auto result = gnx::local_align_n(s1, s2);
 
         // Should find significant alignment
@@ -1691,8 +1691,8 @@ TEMPLATE_TEST_CASE
 // -- gap handling -------------------------------------------------------------
 
     SECTION( "alignment with gap in first sequence" )
-    {   gnx::sq_gen<T> s1{"ACGT"};
-        gnx::sq_gen<T> s2{"ACGGT"};
+    {   gnx::generic_sequence<T> s1{"ACGT"};
+        gnx::generic_sequence<T> s2{"ACGGT"};
         auto result = gnx::local_align_n(s1, s2, 2, -1, -1);
 
         CHECK(result.score >= 4);  // At least some matches
@@ -1700,8 +1700,8 @@ TEMPLATE_TEST_CASE
     }
 
     SECTION( "alignment with gap in second sequence" )
-    {   gnx::sq_gen<T> s1{"ACGGT"};
-        gnx::sq_gen<T> s2{"ACGT"};
+    {   gnx::generic_sequence<T> s1{"ACGGT"};
+        gnx::generic_sequence<T> s2{"ACGT"};
         auto result = gnx::local_align_n(s1, s2, 2, -1, -1);
 
         CHECK(result.score >= 4);
@@ -1710,16 +1710,16 @@ TEMPLATE_TEST_CASE
 // -- custom scoring -----------------------------------------------------------
 
     SECTION( "custom match score" )
-    {   gnx::sq_gen<T> s1{"ACGT"};
-        gnx::sq_gen<T> s2{"ACGT"};
+    {   gnx::generic_sequence<T> s1{"ACGT"};
+        gnx::generic_sequence<T> s2{"ACGT"};
         auto result = gnx::local_align_n(s1, s2, 5, -1, -1);
 
         CHECK(result.score == 20);  // 4 matches * 5
     }
 
     SECTION( "custom mismatch penalty" )
-    {   gnx::sq_gen<T> s1{"ACGT"};
-        gnx::sq_gen<T> s2{"TTTT"};
+    {   gnx::generic_sequence<T> s1{"ACGT"};
+        gnx::generic_sequence<T> s2{"TTTT"};
         auto result = gnx::local_align_n(s1, s2, 2, -10, -1);
 
         // Strong mismatch penalty should result in low score
@@ -1727,8 +1727,8 @@ TEMPLATE_TEST_CASE
     }
 
     SECTION( "custom gap penalty" )
-    {   gnx::sq_gen<T> s1{"ACGT"};
-        gnx::sq_gen<T> s2{"ACGGT"};
+    {   gnx::generic_sequence<T> s1{"ACGT"};
+        gnx::generic_sequence<T> s2{"ACGGT"};
         auto result = gnx::local_align_n(s1, s2, 2, -1, -5);
 
         // Strong gap penalty should discourage gaps
@@ -1738,8 +1738,8 @@ TEMPLATE_TEST_CASE
 // -- edge cases ---------------------------------------------------------------
 
     SECTION( "empty first sequence" )
-    {   gnx::sq_gen<T> s1;
-        gnx::sq_gen<T> s2{"ACGT"};
+    {   gnx::generic_sequence<T> s1;
+        gnx::generic_sequence<T> s2{"ACGT"};
         auto result = gnx::local_align_n(s1, s2);
 
         CHECK(result.score == 0);
@@ -1748,8 +1748,8 @@ TEMPLATE_TEST_CASE
     }
 
     SECTION( "empty second sequence" )
-    {   gnx::sq_gen<T> s1{"ACGT"};
-        gnx::sq_gen<T> s2;
+    {   gnx::generic_sequence<T> s1{"ACGT"};
+        gnx::generic_sequence<T> s2;
         auto result = gnx::local_align_n(s1, s2);
 
         CHECK(result.score == 0);
@@ -1758,8 +1758,8 @@ TEMPLATE_TEST_CASE
     }
 
     SECTION( "both sequences empty" )
-    {   gnx::sq_gen<T> s1;
-        gnx::sq_gen<T> s2;
+    {   gnx::generic_sequence<T> s1;
+        gnx::generic_sequence<T> s2;
         auto result = gnx::local_align_n(s1, s2);
 
         CHECK(result.score == 0);
@@ -1768,8 +1768,8 @@ TEMPLATE_TEST_CASE
     }
 
     SECTION( "single character sequences" )
-    {   gnx::sq_gen<T> s1{"A"};
-        gnx::sq_gen<T> s2{"A"};
+    {   gnx::generic_sequence<T> s1{"A"};
+        gnx::generic_sequence<T> s2{"A"};
         auto result = gnx::local_align_n(s1, s2);
 
         CHECK(result.score == 2);  // Default match score
@@ -1778,8 +1778,8 @@ TEMPLATE_TEST_CASE
     }
 
     SECTION( "single character mismatch" )
-    {   gnx::sq_gen<T> s1{"A"};
-        gnx::sq_gen<T> s2{"T"};
+    {   gnx::generic_sequence<T> s1{"A"};
+        gnx::generic_sequence<T> s2{"T"};
         auto result = gnx::local_align_n(s1, s2);
 
         CHECK(result.score == 0);  // SW doesn't allow negative scores
@@ -1788,8 +1788,8 @@ TEMPLATE_TEST_CASE
 // -- case insensitivity -------------------------------------------------------
 
     SECTION( "lowercase sequences" )
-    {   gnx::sq_gen<T> s1{"acgt"};
-        gnx::sq_gen<T> s2{"acgt"};
+    {   gnx::generic_sequence<T> s1{"acgt"};
+        gnx::generic_sequence<T> s2{"acgt"};
         auto result = gnx::local_align_n(s1, s2);
 
         CHECK(result.score == 8);
@@ -1798,14 +1798,14 @@ TEMPLATE_TEST_CASE
     }
 
     SECTION( "mixed case sequences" )
-    {   gnx::sq_gen<T> s1{"AcGt"};
-        gnx::sq_gen<T> s2{"aCgT"};
+    {   gnx::generic_sequence<T> s1{"AcGt"};
+        gnx::generic_sequence<T> s2{"aCgT"};
         auto result = gnx::local_align_n(s1, s2);
 
         CHECK(result.score == 8);  // Should match regardless of case
     }
 
-// -- gnx::sq_gen tests --------------------------------------------------------
+// -- gnx::generic_sequence tests --------------------------------------------------------
 
     SECTION( "gnx::sq alignment" )
     {   auto s1 = "ACGTACGT"_sq;
@@ -1821,8 +1821,8 @@ TEMPLATE_TEST_CASE
 
     SECTION( "realistic DNA sequences with SNP" )
     {   // Two sequences with single nucleotide polymorphism
-        gnx::sq_gen<T> s1{"ATCGATCGATCG"};
-        gnx::sq_gen<T> s2{"ATCGCTCGATCG"};  // C instead of A at position 5
+        gnx::generic_sequence<T> s1{"ATCGATCGATCG"};
+        gnx::generic_sequence<T> s2{"ATCGCTCGATCG"};  // C instead of A at position 5
         auto result = gnx::local_align_n(s1, s2);
 
         CHECK(result.score >= 16);  // Most bases should match
@@ -1831,8 +1831,8 @@ TEMPLATE_TEST_CASE
 
     SECTION( "realistic DNA with indel" )
     {   // Sequence with insertion/deletion
-        gnx::sq_gen<T> s1{"ATCGATCGATCG"};
-        gnx::sq_gen<T> s2{"ATCGTCGATCG"};  // Missing 'A' at position 5
+        gnx::generic_sequence<T> s1{"ATCGATCGATCG"};
+        gnx::generic_sequence<T> s2{"ATCGTCGATCG"};  // Missing 'A' at position 5
         auto result = gnx::local_align_n(s1, s2);
 
         CHECK(result.score > 0);
@@ -1842,8 +1842,8 @@ TEMPLATE_TEST_CASE
 // -- longer sequences ---------------------------------------------------------
 
     SECTION( "longer sequences" )
-    {   gnx::sq_gen<T> s1{"ACGTACGTACGTACGTACGTACGTACGTACGT"};
-        gnx::sq_gen<T> s2{"ACGTACGTACGTACGTACGTACGTACGTACGT"};
+    {   gnx::generic_sequence<T> s1{"ACGTACGTACGTACGTACGTACGTACGTACGT"};
+        gnx::generic_sequence<T> s2{"ACGTACGTACGTACGTACGTACGTACGTACGT"};
         auto result = gnx::local_align_n(s1, s2);
 
         CHECK(result.score == 64);  // 32 matches * 2
@@ -1852,8 +1852,8 @@ TEMPLATE_TEST_CASE
     }
 
     SECTION( "partially matching longer sequences" )
-    {   gnx::sq_gen<T> s1{"AAAAAAACGTACGTACGTTTTTTT"};
-        gnx::sq_gen<T> s2{"ACGTACGTACGT"};
+    {   gnx::generic_sequence<T> s1{"AAAAAAACGTACGTACGTTTTTTT"};
+        gnx::generic_sequence<T> s2{"ACGTACGTACGT"};
         auto result = gnx::local_align_n(s1, s2);
 
         // Should find the matching middle part
@@ -1877,8 +1877,8 @@ TEMPLATE_TEST_CASE
 // -- BLOSUM62 tests -----------------------------------------------------------
 
     SECTION( "BLOSUM62 - identical peptide sequences" )
-    {   gnx::sq_gen<T> s1{"ARNDCQEGHILKMFPSTWYV"};
-        gnx::sq_gen<T> s2{"ARNDCQEGHILKMFPSTWYV"};
+    {   gnx::generic_sequence<T> s1{"ARNDCQEGHILKMFPSTWYV"};
+        gnx::generic_sequence<T> s2{"ARNDCQEGHILKMFPSTWYV"};
         auto result = gnx::local_align_p(s1, s2, gnx::lut::blosum62);
 
         // Score should be sum of diagonal elements for each amino acid
@@ -1888,8 +1888,8 @@ TEMPLATE_TEST_CASE
     }
 
     SECTION( "BLOSUM62 - single amino acid difference" )
-    {   gnx::sq_gen<T> s1{"ARNDCQEG"};
-        gnx::sq_gen<T> s2{"ARNDCQKG"};  // E->K substitution
+    {   gnx::generic_sequence<T> s1{"ARNDCQEG"};
+        gnx::generic_sequence<T> s2{"ARNDCQKG"};  // E->K substitution
         auto result = gnx::local_align_p(s1, s2, gnx::lut::blosum62);
 
         // Should align well with one mismatch
@@ -1899,8 +1899,8 @@ TEMPLATE_TEST_CASE
 
     SECTION( "BLOSUM62 - conservative substitution" )
     {   // Leucine (L) and Isoleucine (I) are similar hydrophobic amino acids
-        gnx::sq_gen<T> s1{"ACDEFGHIKLMNPQRSTVWY"};
-        gnx::sq_gen<T> s2{"ACDEFGHIKLMNPQRSTVWY"};
+        gnx::generic_sequence<T> s1{"ACDEFGHIKLMNPQRSTVWY"};
+        gnx::generic_sequence<T> s2{"ACDEFGHIKLMNPQRSTVWY"};
         auto result = gnx::local_align_p(s1, s2, gnx::lut::blosum62);
 
         CHECK(result.score > 50);
@@ -1908,8 +1908,8 @@ TEMPLATE_TEST_CASE
     }
 
     SECTION( "BLOSUM62 - peptide with gaps" )
-    {   gnx::sq_gen<T> s1{"ARNDCQEG"};
-        gnx::sq_gen<T> s2{"ARNDQEG"};  // C removed
+    {   gnx::generic_sequence<T> s1{"ARNDCQEG"};
+        gnx::generic_sequence<T> s2{"ARNDQEG"};  // C removed
         auto result = gnx::local_align_p(s1, s2, gnx::lut::blosum62, -8);
 
         CHECK(result.score > 0);
@@ -1917,8 +1917,8 @@ TEMPLATE_TEST_CASE
     }
 
     SECTION( "BLOSUM62 - different gap penalty" )
-    {   gnx::sq_gen<T> s1{"ACDEFG"};
-        gnx::sq_gen<T> s2{"ACDEFG"};
+    {   gnx::generic_sequence<T> s1{"ACDEFG"};
+        gnx::generic_sequence<T> s2{"ACDEFG"};
         auto result1 = gnx::local_align_p(s1, s2, gnx::lut::blosum62, -8);
         auto result2 = gnx::local_align_p(s1, s2, gnx::lut::blosum62, -2);
 
@@ -1927,8 +1927,8 @@ TEMPLATE_TEST_CASE
     }
 
     SECTION( "BLOSUM62 - case insensitive" )
-    {   gnx::sq_gen<T> s1{"ARNDCQEG"};
-        gnx::sq_gen<T> s2{"arndcqeg"};
+    {   gnx::generic_sequence<T> s1{"ARNDCQEG"};
+        gnx::generic_sequence<T> s2{"arndcqeg"};
         auto result = gnx::local_align_p(s1, s2, gnx::lut::blosum62);
 
         // Should match regardless of case
@@ -1939,8 +1939,8 @@ TEMPLATE_TEST_CASE
 // -- BLOSUM80 tests -----------------------------------------------------------
 
     SECTION( "BLOSUM80 - identical sequences" )
-    {   gnx::sq_gen<T> s1{"MVHLTPEEK"};
-        gnx::sq_gen<T> s2{"MVHLTPEEK"};
+    {   gnx::generic_sequence<T> s1{"MVHLTPEEK"};
+        gnx::generic_sequence<T> s2{"MVHLTPEEK"};
         auto result = gnx::local_align_p(s1, s2, gnx::lut::blosum80);
 
         CHECK(result.score > 0);
@@ -1950,8 +1950,8 @@ TEMPLATE_TEST_CASE
 
     SECTION( "BLOSUM80 vs BLOSUM62 comparison" )
     {   // BLOSUM80 is more stringent for closely related sequences
-        gnx::sq_gen<T> s1{"ACDEFG"};
-        gnx::sq_gen<T> s2{"ACDEFG"};
+        gnx::generic_sequence<T> s1{"ACDEFG"};
+        gnx::generic_sequence<T> s2{"ACDEFG"};
         auto result62 = gnx::local_align_p(s1, s2, gnx::lut::blosum62);
         auto result80 = gnx::local_align_p(s1, s2, gnx::lut::blosum80);
 
@@ -1962,8 +1962,8 @@ TEMPLATE_TEST_CASE
 // -- BLOSUM45 tests -----------------------------------------------------------
 
     SECTION( "BLOSUM45 - distantly related sequences" )
-    {   gnx::sq_gen<T> s1{"ARNDCQEG"};
-        gnx::sq_gen<T> s2{"ARNDCQEG"};
+    {   gnx::generic_sequence<T> s1{"ARNDCQEG"};
+        gnx::generic_sequence<T> s2{"ARNDCQEG"};
         auto result = gnx::local_align_p(s1, s2, gnx::lut::blosum45);
 
         CHECK(result.score > 0);
@@ -1974,8 +1974,8 @@ TEMPLATE_TEST_CASE
 // -- PAM250 tests -------------------------------------------------------------
 
     SECTION( "PAM250 - identical sequences" )
-    {   gnx::sq_gen<T> s1{"MVHLTPEEK"};
-        gnx::sq_gen<T> s2{"MVHLTPEEK"};
+    {   gnx::generic_sequence<T> s1{"MVHLTPEEK"};
+        gnx::generic_sequence<T> s2{"MVHLTPEEK"};
         auto result = gnx::local_align_p(s1, s2, gnx::lut::pam250);
 
         CHECK(result.score > 0);
@@ -1984,8 +1984,8 @@ TEMPLATE_TEST_CASE
     }
 
     SECTION( "PAM250 - with mismatches" )
-    {   gnx::sq_gen<T> s1{"ARNDCQEG"};
-        gnx::sq_gen<T> s2{"ARNDCQKG"};  // E->K substitution
+    {   gnx::generic_sequence<T> s1{"ARNDCQEG"};
+        gnx::generic_sequence<T> s2{"ARNDCQKG"};  // E->K substitution
         auto result = gnx::local_align_p(s1, s2, gnx::lut::pam250);
 
         CHECK(result.score > 0);
@@ -1995,8 +1995,8 @@ TEMPLATE_TEST_CASE
 // -- PAM120 tests -------------------------------------------------------------
 
     SECTION( "PAM120 - closely related sequences" )
-    {   gnx::sq_gen<T> s1{"ACDEFGHIKL"};
-        gnx::sq_gen<T> s2{"ACDEFGHIKL"};
+    {   gnx::generic_sequence<T> s1{"ACDEFGHIKL"};
+        gnx::generic_sequence<T> s2{"ACDEFGHIKL"};
         auto result = gnx::local_align_p(s1, s2, gnx::lut::pam120);
 
         CHECK(result.score > 0);
@@ -2006,8 +2006,8 @@ TEMPLATE_TEST_CASE
 
     SECTION( "PAM120 vs PAM250 comparison" )
     {   // Different PAM matrices for different evolutionary distances
-        gnx::sq_gen<T> s1{"ACDEFG"};
-        gnx::sq_gen<T> s2{"ACDEFG"};
+        gnx::generic_sequence<T> s1{"ACDEFG"};
+        gnx::generic_sequence<T> s2{"ACDEFG"};
         auto result120 = gnx::local_align_p(s1, s2, gnx::lut::pam120);
         auto result250 = gnx::local_align_p(s1, s2, gnx::lut::pam250);
 
@@ -2019,8 +2019,8 @@ TEMPLATE_TEST_CASE
 // -- PAM30 tests --------------------------------------------------------------
 
     SECTION( "PAM30 - very closely related sequences" )
-    {   gnx::sq_gen<T> s1{"MVHLTPEEK"};
-        gnx::sq_gen<T> s2{"MVHLTPEEK"};
+    {   gnx::generic_sequence<T> s1{"MVHLTPEEK"};
+        gnx::generic_sequence<T> s2{"MVHLTPEEK"};
         auto result = gnx::local_align_p(s1, s2, gnx::lut::pam30);
 
         CHECK(result.score > 0);
@@ -2032,8 +2032,8 @@ TEMPLATE_TEST_CASE
 
     SECTION( "realistic - human vs mouse hemoglobin fragment" )
     {   // Simplified example of conserved protein region
-        gnx::sq_gen<T> human{"VLSPADKTNVKAAW"};
-        gnx::sq_gen<T> mouse{"VLSAADKTNVKAAW"};  // P->A substitution
+        gnx::generic_sequence<T> human{"VLSPADKTNVKAAW"};
+        gnx::generic_sequence<T> mouse{"VLSAADKTNVKAAW"};  // P->A substitution
         auto result = gnx::local_align_p(human, mouse, gnx::lut::blosum62);
 
         // Should find good alignment despite one difference
@@ -2043,8 +2043,8 @@ TEMPLATE_TEST_CASE
 
     SECTION( "realistic - enzyme active site comparison" )
     {   // Catalytic triad-like sequence
-        gnx::sq_gen<T> enzyme1{"HDSGICN"};
-        gnx::sq_gen<T> enzyme2{"HDSGVCN"};  // I->V conservative substitution
+        gnx::generic_sequence<T> enzyme1{"HDSGICN"};
+        gnx::generic_sequence<T> enzyme2{"HDSGVCN"};  // I->V conservative substitution
         auto result = gnx::local_align_p(enzyme1, enzyme2, gnx::lut::blosum62);
 
         // Conservative substitution should still score well
@@ -2052,8 +2052,8 @@ TEMPLATE_TEST_CASE
     }
 
     SECTION( "realistic - signal peptide vs mature protein" )
-    {   gnx::sq_gen<T> full_seq{"MKTIIALSYIFCLVFAACDEFGHIKL"};
-        gnx::sq_gen<T> mature{"ACDEFGHIKL"};  // After signal peptide cleavage
+    {   gnx::generic_sequence<T> full_seq{"MKTIIALSYIFCLVFAACDEFGHIKL"};
+        gnx::generic_sequence<T> mature{"ACDEFGHIKL"};  // After signal peptide cleavage
         auto result = gnx::local_align_p(full_seq, mature, gnx::lut::blosum62);
 
         // Should find the mature protein region
@@ -2064,8 +2064,8 @@ TEMPLATE_TEST_CASE
 // -- ambiguous amino acids ----------------------------------------------------
 
     SECTION( "ambiguous amino acids - B (D or N)" )
-    {   gnx::sq_gen<T> s1{"ACDEFG"};
-        gnx::sq_gen<T> s2{"ACBEFG"};  // D->B
+    {   gnx::generic_sequence<T> s1{"ACDEFG"};
+        gnx::generic_sequence<T> s2{"ACBEFG"};  // D->B
         auto result = gnx::local_align_p(s1, s2, gnx::lut::blosum62);
 
         // B should have reasonable score with D
@@ -2073,16 +2073,16 @@ TEMPLATE_TEST_CASE
     }
 
     SECTION( "ambiguous amino acids - Z (E or Q)" )
-    {   gnx::sq_gen<T> s1{"ACDEFG"};
-        gnx::sq_gen<T> s2{"ACDQFG"};  // E->Q
+    {   gnx::generic_sequence<T> s1{"ACDEFG"};
+        gnx::generic_sequence<T> s2{"ACDQFG"};  // E->Q
         auto result = gnx::local_align_p(s1, s2, gnx::lut::blosum62);
 
         CHECK(result.score > 0);
     }
 
     SECTION( "ambiguous amino acids - X (any)" )
-    {   gnx::sq_gen<T> s1{"ACDEFG"};
-        gnx::sq_gen<T> s2{"ACXEFG"};  // D->X
+    {   gnx::generic_sequence<T> s1{"ACDEFG"};
+        gnx::generic_sequence<T> s2{"ACXEFG"};  // D->X
         auto result = gnx::local_align_p(s1, s2, gnx::lut::blosum62);
 
         // X should have neutral or small penalty
@@ -2092,8 +2092,8 @@ TEMPLATE_TEST_CASE
 // -- stop codon handling ------------------------------------------------------
 
     SECTION( "stop codon in sequence" )
-    {   gnx::sq_gen<T> s1{"ACDEFG*"};  // * represents stop codon
-        gnx::sq_gen<T> s2{"ACDEFG*"};
+    {   gnx::generic_sequence<T> s1{"ACDEFG*"};  // * represents stop codon
+        gnx::generic_sequence<T> s2{"ACDEFG*"};
         auto result = gnx::local_align_p(s1, s2, gnx::lut::blosum62);
 
         // Should handle stop codon
@@ -2103,8 +2103,8 @@ TEMPLATE_TEST_CASE
 // -- edge cases with matrices -------------------------------------------------
 
     SECTION( "empty sequences with matrix" )
-    {   gnx::sq_gen<T> s1;
-        gnx::sq_gen<T> s2{"ACDEFG"};
+    {   gnx::generic_sequence<T> s1;
+        gnx::generic_sequence<T> s2{"ACDEFG"};
         auto result = gnx::local_align_p(s1, s2, gnx::lut::blosum62);
 
         CHECK(result.score == 0);
@@ -2113,8 +2113,8 @@ TEMPLATE_TEST_CASE
     }
 
     SECTION( "single amino acid with matrix" )
-    {   gnx::sq_gen<T> s1{"A"};
-        gnx::sq_gen<T> s2{"A"};
+    {   gnx::generic_sequence<T> s1{"A"};
+        gnx::generic_sequence<T> s2{"A"};
         auto result = gnx::local_align_p(s1, s2, gnx::lut::blosum62);
 
         // BLOSUM62[A][A] = 4
@@ -2147,8 +2147,8 @@ TEMPLATE_TEST_CASE
 // -- performance test with longer sequences -----------------------------------
 
     SECTION( "longer peptide sequences with BLOSUM62" )
-    {   gnx::sq_gen<T> s1{"MVHLTPEEKSAVTALWGKVNVDEVGGEALGRLLVVYPWTQRFFESFGDLSTPDAVMGNPKVKAHGKKVLGAFSDGLAHLDNLKGTFATLSELHCDKLHVDPENFRLLGNVLVCVLAHHFGKEFTPPVQAAYQKVVAGVANALAHKYH"};
-        gnx::sq_gen<T> s2{"MVHLTPEEKSAVTALWGKVNVDEVGGEALGRLLVVYPWTQRFFESFGDLSTPDAVMGNPKVKAHGKKVLGAFSDGLAHLDNLKGTFATLSELHCDKLHVDPENFRLLGNVLVCVLAHHFGKEFTPPVQAAYQKVVAGVANALAHKYH"};
+    {   gnx::generic_sequence<T> s1{"MVHLTPEEKSAVTALWGKVNVDEVGGEALGRLLVVYPWTQRFFESFGDLSTPDAVMGNPKVKAHGKKVLGAFSDGLAHLDNLKGTFATLSELHCDKLHVDPENFRLLGNVLVCVLAHHFGKEFTPPVQAAYQKVVAGVANALAHKYH"};
+        gnx::generic_sequence<T> s2{"MVHLTPEEKSAVTALWGKVNVDEVGGEALGRLLVVYPWTQRFFESFGDLSTPDAVMGNPKVKAHGKKVLGAFSDGLAHLDNLKGTFATLSELHCDKLHVDPENFRLLGNVLVCVLAHHFGKEFTPPVQAAYQKVVAGVANALAHKYH"};
         auto result = gnx::local_align_p(s1, s2, gnx::lut::blosum62);
 
         // Human beta-globin, should align perfectly with itself
@@ -2185,32 +2185,32 @@ TEMPLATE_TEST_CASE( "gnx::complement", "[algorithm][complement]", std::vector<ch
 {   typedef TestType T;
 
     // Test data
-    gnx::sq_gen<T> s1("ACGT");
-    gnx::sq_gen<T> s2("acgt");
-    gnx::sq_gen<T> s3("ACGTACGT");
+    gnx::generic_sequence<T> s1("ACGT");
+    gnx::generic_sequence<T> s2("acgt");
+    gnx::generic_sequence<T> s3("ACGTACGT");
 
 // -- basic Watson-Crick complementation ---------------------------------------
 
     SECTION( "complement of DNA bases uppercase" )
-    {   gnx::sq_gen<T> s("ACGT");
+    {   gnx::generic_sequence<T> s("ACGT");
         gnx::complement(s);
         CHECK(s == "TGCA");
     }
 
     SECTION( "complement of DNA bases lowercase" )
-    {   gnx::sq_gen<T> s("acgt");
+    {   gnx::generic_sequence<T> s("acgt");
         gnx::complement(s);
         CHECK(s == "tgca");
     }
 
     SECTION( "complement preserves case" )
-    {   gnx::sq_gen<T> mixed("AcGt");
+    {   gnx::generic_sequence<T> mixed("AcGt");
         gnx::complement(mixed);
         CHECK(mixed == "TgCa");
     }
 
     SECTION( "complement is involutory (double complement = identity)" )
-    {   gnx::sq_gen<T> s("ACGTACGT");
+    {   gnx::generic_sequence<T> s("ACGTACGT");
         auto original = s;
         gnx::complement(s);
         gnx::complement(s);
@@ -2220,13 +2220,13 @@ TEMPLATE_TEST_CASE( "gnx::complement", "[algorithm][complement]", std::vector<ch
 // -- RNA complementation ------------------------------------------------------
 
     SECTION( "complement of RNA sequence" )
-    {   gnx::sq_gen<T> rna("ACGU");
+    {   gnx::generic_sequence<T> rna("ACGU");
         gnx::complement(rna);
         CHECK(rna == "TGCA");  // U -> A
     }
 
     SECTION( "complement of lowercase RNA" )
-    {   gnx::sq_gen<T> rna("acgu");
+    {   gnx::generic_sequence<T> rna("acgu");
         gnx::complement(rna);
         CHECK(rna == "tgca");
     }
@@ -2235,36 +2235,36 @@ TEMPLATE_TEST_CASE( "gnx::complement", "[algorithm][complement]", std::vector<ch
 
     SECTION( "complement of IUPAC ambiguity codes" )
     {   // Let's verify specific transformations
-        gnx::sq_gen<T> r("R"); gnx::complement(r); CHECK(r == "Y");
-        gnx::sq_gen<T> y("Y"); gnx::complement(y); CHECK(y == "R");
-        gnx::sq_gen<T> m("M"); gnx::complement(m); CHECK(m == "K");
-        gnx::sq_gen<T> k("K"); gnx::complement(k); CHECK(k == "M");
-        gnx::sq_gen<T> s("S"); gnx::complement(s); CHECK(s == "S");
-        gnx::sq_gen<T> w("W"); gnx::complement(w); CHECK(w == "W");
-        gnx::sq_gen<T> b("B"); gnx::complement(b); CHECK(b == "V");
-        gnx::sq_gen<T> d("D"); gnx::complement(d); CHECK(d == "H");
-        gnx::sq_gen<T> h("H"); gnx::complement(h); CHECK(h == "D");
-        gnx::sq_gen<T> v("V"); gnx::complement(v); CHECK(v == "B");
-        gnx::sq_gen<T> n("N"); gnx::complement(n); CHECK(n == "N");
+        gnx::generic_sequence<T> r("R"); gnx::complement(r); CHECK(r == "Y");
+        gnx::generic_sequence<T> y("Y"); gnx::complement(y); CHECK(y == "R");
+        gnx::generic_sequence<T> m("M"); gnx::complement(m); CHECK(m == "K");
+        gnx::generic_sequence<T> k("K"); gnx::complement(k); CHECK(k == "M");
+        gnx::generic_sequence<T> s("S"); gnx::complement(s); CHECK(s == "S");
+        gnx::generic_sequence<T> w("W"); gnx::complement(w); CHECK(w == "W");
+        gnx::generic_sequence<T> b("B"); gnx::complement(b); CHECK(b == "V");
+        gnx::generic_sequence<T> d("D"); gnx::complement(d); CHECK(d == "H");
+        gnx::generic_sequence<T> h("H"); gnx::complement(h); CHECK(h == "D");
+        gnx::generic_sequence<T> v("V"); gnx::complement(v); CHECK(v == "B");
+        gnx::generic_sequence<T> n("N"); gnx::complement(n); CHECK(n == "N");
     }
 
     SECTION( "complement of lowercase IUPAC codes" )
-    {   gnx::sq_gen<T> r("r"); gnx::complement(r); CHECK(r == "y");
-        gnx::sq_gen<T> y("y"); gnx::complement(y); CHECK(y == "r");
-        gnx::sq_gen<T> m("m"); gnx::complement(m); CHECK(m == "k");
-        gnx::sq_gen<T> k("k"); gnx::complement(k); CHECK(k == "m");
+    {   gnx::generic_sequence<T> r("r"); gnx::complement(r); CHECK(r == "y");
+        gnx::generic_sequence<T> y("y"); gnx::complement(y); CHECK(y == "r");
+        gnx::generic_sequence<T> m("m"); gnx::complement(m); CHECK(m == "k");
+        gnx::generic_sequence<T> k("k"); gnx::complement(k); CHECK(k == "m");
     }
 
 // -- iterator-based complementation -------------------------------------------
 
     SECTION( "complement with iterators" )
-    {   gnx::sq_gen<T> s("ACGTACGT");
+    {   gnx::generic_sequence<T> s("ACGTACGT");
         gnx::complement(s.begin(), s.end());
         CHECK(s == "TGCATGCA");
     }
 
     SECTION( "complement partial range" )
-    {   gnx::sq_gen<T> s("ACGTACGT");
+    {   gnx::generic_sequence<T> s("ACGTACGT");
         gnx::complement(s.begin(), s.begin() + 4);
         CHECK(s == "TGCAACGT");
     }
@@ -2278,11 +2278,11 @@ TEMPLATE_TEST_CASE( "gnx::complement", "[algorithm][complement]", std::vector<ch
     }
 
     SECTION( "complement of single base" )
-    {   gnx::sq_gen<T> a("A");
+    {   gnx::generic_sequence<T> a("A");
         gnx::complement(a);
         CHECK(a == "T");
         
-        gnx::sq_gen<T> c("C");
+        gnx::generic_sequence<T> c("C");
         gnx::complement(c);
         CHECK(c == "G");
     }
@@ -2290,7 +2290,7 @@ TEMPLATE_TEST_CASE( "gnx::complement", "[algorithm][complement]", std::vector<ch
 // -- non-nucleotide characters ------------------------------------------------
 
     SECTION( "complement leaves non-nucleotide characters unchanged" )
-    {   gnx::sq_gen<T> s("ACGTXacgtx123");
+    {   gnx::generic_sequence<T> s("ACGTXacgtx123");
         gnx::complement(s);
         // A->T, C->G, G->C, T->A, X->X (unchanged), etc.
         CHECK(s[0] == 'T');
@@ -2327,13 +2327,13 @@ TEMPLATE_TEST_CASE
 
     const auto N{10'000};
 
-    gnx::sq_gen<T> original(N);
+    gnx::generic_sequence<T> original(N);
     gnx::rand(original.begin(), N, "ACGT", seed_pi);
 
 // -- sequential policy --------------------------------------------------------
 
     SECTION( "complement with seq policy" )
-    {   gnx::sq_gen<T> s(original);
+    {   gnx::generic_sequence<T> s(original);
         gnx::complement(seq, s);
         // Verify all bases were complemented correctly
         for (std::size_t i = 0; i < N; ++i)
@@ -2349,7 +2349,7 @@ TEMPLATE_TEST_CASE
 // -- unsequenced policy -------------------------------------------------------
 
     SECTION( "complement with unseq policy" )
-    {   gnx::sq_gen<T> s(original);
+    {   gnx::generic_sequence<T> s(original);
         gnx::complement(unseq, s);
         // Double complement should restore original
         gnx::complement(unseq, s);
@@ -2359,7 +2359,7 @@ TEMPLATE_TEST_CASE
 // -- parallel policy ----------------------------------------------------------
 
     SECTION( "complement with par policy" )
-    {   gnx::sq_gen<T> s(original);
+    {   gnx::generic_sequence<T> s(original);
         gnx::complement(par, s);
         // Double complement should restore original
         gnx::complement(par, s);
@@ -2369,7 +2369,7 @@ TEMPLATE_TEST_CASE
 // -- parallel unsequenced policy ----------------------------------------------
 
     SECTION( "complement with par_unseq policy" )
-    {   gnx::sq_gen<T> s(original);
+    {   gnx::generic_sequence<T> s(original);
         gnx::complement(par_unseq, s);
         // Double complement should restore original
         gnx::complement(par_unseq, s);
@@ -2379,10 +2379,10 @@ TEMPLATE_TEST_CASE
 // -- consistency across policies ----------------------------------------------
 
     SECTION( "all policies produce same result" )
-    {   gnx::sq_gen<T> s_seq(original);
-        gnx::sq_gen<T> s_unseq(original);
-        gnx::sq_gen<T> s_par(original);
-        gnx::sq_gen<T> s_par_unseq(original);
+    {   gnx::generic_sequence<T> s_seq(original);
+        gnx::generic_sequence<T> s_unseq(original);
+        gnx::generic_sequence<T> s_par(original);
+        gnx::generic_sequence<T> s_par_unseq(original);
 
         gnx::complement(seq, s_seq);
         gnx::complement(unseq, s_unseq);
@@ -2398,7 +2398,7 @@ TEMPLATE_TEST_CASE
 
     SECTION( "complement large sequence with policies" )
     {   const auto large_N{100'000};
-        gnx::sq_gen<T> large_seq(large_N);
+        gnx::generic_sequence<T> large_seq(large_N);
         gnx::rand(large_seq.begin(), large_N, "ACGT", seed_pi);
 
         auto original_copy = large_seq;
@@ -2429,7 +2429,7 @@ TEMPLATE_TEST_CASE
 
     const auto N{10'000};
 
-    gnx::sq_gen<T> s(N);
+    gnx::generic_sequence<T> s(N);
     gnx::rand(s.begin(), N, "ACGT", seed_pi);
 
     SECTION( "device vector complement" )
@@ -2468,7 +2468,7 @@ TEMPLATE_TEST_CASE
 
     const auto N{10'000};
 
-    gnx::sq_gen<T> s(N);
+    gnx::generic_sequence<T> s(N);
     gnx::rand(s.begin(), N, "ACGT", seed_pi);
 
     SECTION( "device vector complement" )
@@ -2524,9 +2524,9 @@ TEMPLATE_TEST_CASE( "gnx::count", "[algorithm][count]", std::vector<char>)
 {   typedef TestType T;
 
     // Test data
-    gnx::sq_gen<T> s1("ACGTacgt");
-    gnx::sq_gen<T> s2("AAAACCCCGGGGTTTT");
-    gnx::sq_gen<T> s3("AaCcGgTtNn");
+    gnx::generic_sequence<T> s1("ACGTacgt");
+    gnx::generic_sequence<T> s2("AAAACCCCGGGGTTTT");
+    gnx::generic_sequence<T> s3("AaCcGgTtNn");
 
 // -- basic counting -----------------------------------------------------------
 
@@ -2561,8 +2561,8 @@ TEMPLATE_TEST_CASE( "gnx::count", "[algorithm][count]", std::vector<char>)
 // -- case-insensitive counting ------------------------------------------------
 
     SECTION( "verify case-insensitive counting" )
-    {   gnx::sq_gen<T> lower("acgt");
-        gnx::sq_gen<T> upper("ACGT");
+    {   gnx::generic_sequence<T> lower("acgt");
+        gnx::generic_sequence<T> upper("ACGT");
         
         auto result_lower = gnx::count(lower);
         auto result_upper = gnx::count(upper);
@@ -2593,8 +2593,8 @@ TEMPLATE_TEST_CASE( "gnx::count", "[algorithm][count]", std::vector<char>)
 // -- single character sequences -----------------------------------------------
 
     SECTION( "count single character" )
-    {   gnx::sq_gen<T> single_a("A");
-        gnx::sq_gen<T> single_lower("a");
+    {   gnx::generic_sequence<T> single_a("A");
+        gnx::generic_sequence<T> single_lower("a");
         
         auto result1 = gnx::count(single_a);
         auto result2 = gnx::count(single_lower);
@@ -2607,7 +2607,7 @@ TEMPLATE_TEST_CASE( "gnx::count", "[algorithm][count]", std::vector<char>)
 // -- amino acid sequences -----------------------------------------------------
 
     SECTION( "count amino acids" )
-    {   gnx::sq_gen<T> peptide("ARNDCQEGHILKMFPSTWYVarnDcqeghilkmfpstwyv");
+    {   gnx::generic_sequence<T> peptide("ARNDCQEGHILKMFPSTWYVarnDcqeghilkmfpstwyv");
         auto result = gnx::count(peptide);
         
         // Each standard amino acid should appear twice (upper and lower)
@@ -2637,7 +2637,7 @@ TEMPLATE_TEST_CASE
 
     const auto N{10'000};
 
-    gnx::sq_gen<T> s1(N);
+    gnx::generic_sequence<T> s1(N);
     gnx::rand(s1.begin(), N, "ACGTacgt", seed_pi);
 
     // Get baseline result
@@ -2699,7 +2699,7 @@ TEMPLATE_TEST_CASE
 {   typedef TestType T;
     const auto N{10'000};
 
-    gnx::sq_gen<T> s(N); // device
+    gnx::generic_sequence<T> s(N); // device
     gnx::sq baseline(N); // host
     gnx::rand(s.begin(), N, "ACGTacgt", seed_pi);
     gnx::rand(baseline.begin(), N, "ACGTacgt", seed_pi);
@@ -2754,7 +2754,7 @@ TEMPLATE_TEST_CASE
 // -- basic k-mer counting -----------------------------------------------------
 
     SECTION( "count 2-mers (dinucleotides)" )
-    {   gnx::sq_gen<T> s("ACGTACGT");
+    {   gnx::generic_sequence<T> s("ACGTACGT");
         auto result = gnx::count(s, 2);
 
         CHECK(result["AC"] == 2);
@@ -2765,7 +2765,7 @@ TEMPLATE_TEST_CASE
     }
 
     SECTION( "count 3-mers (trinucleotides)" )
-    {   gnx::sq_gen<T> s("ACGTACGTACGT");
+    {   gnx::generic_sequence<T> s("ACGTACGTACGT");
         auto result = gnx::count(s, 3);
 
         CHECK(result["ACG"] == 3);
@@ -2776,7 +2776,7 @@ TEMPLATE_TEST_CASE
     }
 
     SECTION( "count 4-mers (tetranucleotides)" )
-    {   gnx::sq_gen<T> s("ACGTACGTACGT");
+    {   gnx::generic_sequence<T> s("ACGTACGTACGT");
         auto result = gnx::count(s, 4);
 
         CHECK(result["ACGT"] == 3);
@@ -2789,9 +2789,9 @@ TEMPLATE_TEST_CASE
 // -- case-insensitive k-mer counting ------------------------------------------
 
     SECTION( "k-mer counting is case-insensitive" )
-    {   gnx::sq_gen<T> lower("acgtacgt");
-        gnx::sq_gen<T> upper("ACGTACGT");
-        gnx::sq_gen<T> mixed("AcGtAcGt");
+    {   gnx::generic_sequence<T> lower("acgtacgt");
+        gnx::generic_sequence<T> upper("ACGTACGT");
+        gnx::generic_sequence<T> mixed("AcGtAcGt");
 
         auto result_lower = gnx::count(lower, 2);
         auto result_upper = gnx::count(upper, 2);
@@ -2812,20 +2812,20 @@ TEMPLATE_TEST_CASE
     }
 
     SECTION( "sequence shorter than word_length" )
-    {   gnx::sq_gen<T> short_seq("ACG");
+    {   gnx::generic_sequence<T> short_seq("ACG");
         auto result = gnx::count(short_seq, 5);
         CHECK(result.empty());
     }
 
     SECTION( "sequence equal to word_length" )
-    {   gnx::sq_gen<T> exact("ACGT");
+    {   gnx::generic_sequence<T> exact("ACGT");
         auto result = gnx::count(exact, 4);
         CHECK(result["ACGT"] == 1);
         CHECK(result.size() == 1);
     }
 
     SECTION( "single k-mer" )
-    {   gnx::sq_gen<T> single("AAA");
+    {   gnx::generic_sequence<T> single("AAA");
         auto result = gnx::count(single, 2);
         CHECK(result["AA"] == 2);
         CHECK(result.size() == 1);
@@ -2834,7 +2834,7 @@ TEMPLATE_TEST_CASE
 // -- iterator k-mer counting --------------------------------------------------
 
     SECTION( "count k-mers with iterators" )
-    {   gnx::sq_gen<T> s("ACGTACGT");
+    {   gnx::generic_sequence<T> s("ACGTACGT");
         auto result = gnx::count(s.begin(), s.end(), 2);
         
         CHECK(result["AC"] == 2);
@@ -2846,7 +2846,7 @@ TEMPLATE_TEST_CASE
 // -- overlapping k-mers -------------------------------------------------------
 
     SECTION( "overlapping k-mers are counted" )
-    {   gnx::sq_gen<T> s("AAAA");
+    {   gnx::generic_sequence<T> s("AAAA");
         auto result = gnx::count(s, 2);
         
         CHECK(result["AA"] == 3);  // AA at positions 0,1,2
@@ -2854,7 +2854,7 @@ TEMPLATE_TEST_CASE
     }
 
     SECTION( "verify total k-mer count" )
-    {   gnx::sq_gen<T> s("ACGTACGT");  // 8 bases
+    {   gnx::generic_sequence<T> s("ACGTACGT");  // 8 bases
         auto result = gnx::count(s, 3);  // 3-mers
         
         std::size_t total = 0;
@@ -2884,7 +2884,7 @@ TEMPLATE_TEST_CASE
 
     const auto N{10'000};
 
-    gnx::sq_gen<T> s1(N);
+    gnx::generic_sequence<T> s1(N);
     gnx::rand(s1.begin(), N, "ACGTacgt", seed_pi);
 
     // Get baseline result
@@ -2944,7 +2944,7 @@ TEMPLATE_TEST_CASE
 {   typedef TestType T;
     const auto N{1'000};
 
-    gnx::sq_gen<T> s(N); // device
+    gnx::generic_sequence<T> s(N); // device
     gnx::sq baseline(N); // host
     gnx::rand(s.begin(), N, "ACGTacgt", seed_pi);
     gnx::rand(baseline.begin(), N, "ACGTacgt", seed_pi);
@@ -2996,7 +2996,7 @@ TEMPLATE_TEST_CASE
 )
 {   typedef TestType T;
     const auto N{10'000};
-    gnx::sq_gen<T> s(N);
+    gnx::generic_sequence<T> s(N);
     gnx::rand(s.begin(), N, "ACGT", {35, 15, 15, 35}, seed_pi);
 
     SECTION( "gc-content and gc-ratio" )
@@ -3022,7 +3022,7 @@ TEMPLATE_TEST_CASE
 {   typedef TestType T;
 
     SECTION( "forward_stream" )
-    {   gnx::sequence_bank sb{gnx::forward_stream<gnx::sq_gen<T>>{SAMPLE_GENOME}};
+    {   gnx::sequence_bank sb{gnx::forward_stream<gnx::generic_sequence<T>>{SAMPLE_GENOME}};
         for (const auto& s : sb)
         {   CHECK(gnx::valid(s.sequence()));
             CHECK(s.quality().empty());  // No quality scores in this test

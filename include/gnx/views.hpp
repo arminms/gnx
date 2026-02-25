@@ -14,14 +14,15 @@
 
 namespace gnx {
 
-// forward declaration of sq_gen
+// forward declaration of generic_sequence
 template<typename Container, typename Map>
-class sq_gen;
+class generic_sequence;
 
 /// @brief A non-owning view over a sequence, similar to std::basic_string_view.
-/// @tparam Container The container type used by the owning sq_gen.
+/// @tparam Container The container type used by the owning generic_sequence.
 template<typename Container>
-class sq_view_gen : public std::ranges::view_interface<sq_view_gen<Container>>
+class generic_sequence_view
+:   public std::ranges::view_interface<generic_sequence_view<Container>>
 {
 public:
     using value_type = typename Container::value_type;
@@ -36,15 +37,17 @@ public:
     static constexpr size_type npos = static_cast<size_type>(-1);
 
 // -- constructors -------------------------------------------------------------
-    constexpr sq_view_gen() noexcept = default;
+    constexpr generic_sequence_view() noexcept = default;
 
-    constexpr sq_view_gen(const value_type* data, size_type count) noexcept
+    constexpr generic_sequence_view
+    (const value_type* data, size_type count) noexcept
     :   _data(data)
     ,   _size(count)
     {}
 
     template<typename Map>
-    constexpr sq_view_gen(const sq_gen<Container, Map>& seq) noexcept
+    constexpr generic_sequence_view
+    (const generic_sequence<Container, Map>& seq) noexcept
     :   _data(seq.data())
     ,   _size(seq.size())
     {}
@@ -118,11 +121,13 @@ public:
     }
 
 // -- operations ---------------------------------------------------------------
-    constexpr sq_view_gen substr(size_type pos, size_type count = npos) const
+
+    constexpr generic_sequence_view subseq
+    (size_type pos, size_type count = npos) const
     {   if (pos > _size)
             throw std::out_of_range("gnx::sq_view: pos > size()");
         const size_type rlen = std::min(count, static_cast<size_type>(_size - pos));
-        return sq_view_gen(_data + pos, rlen);
+        return generic_sequence_view(_data + pos, rlen);
     }
 
 private:
@@ -133,79 +138,101 @@ private:
 // -- comparison operators -----------------------------------------------------
     template<typename Container>
     constexpr bool operator==
-    (   const sq_view_gen<Container>& lhs
-    ,   const sq_view_gen<Container>& rhs
+    (   const generic_sequence_view<Container>& lhs
+    ,   const generic_sequence_view<Container>& rhs
     )
     {   return lhs.size() == rhs.size()
         && std::equal(lhs.begin(), lhs.end(), rhs.begin());
     }
 
-    // Note: comparisons with sq_gen are provided generically in sq.hpp.
+    // Note: comparisons with generic_sequence are provided generically in sq.hpp.
     // Avoid defining overlapping overloads here to prevent ambiguity.
 
     template<typename Container>
-    constexpr bool operator!= (const sq_view_gen<Container>& lhs, const sq_view_gen<Container>& rhs)
+    constexpr bool operator!=
+    (   const generic_sequence_view<Container>& lhs
+    ,   const generic_sequence_view<Container>& rhs
+    )
     {   return ! (lhs == rhs);
     }
 
-    // Inequality with sq_gen is covered by the generic operators in sq.hpp.
+    // Inequality with generic_sequence is covered by the generic operators in sq.hpp.
 
     template<typename Container>
-    constexpr std::enable_if_t<std::is_same_v<typename Container::value_type, char>, bool>
-    operator== (const sq_view_gen<Container>& lhs, std::string_view rhs)
-    {   return lhs.size() == rhs.size() && std::equal(lhs.begin(), lhs.end(), rhs.begin());
+    constexpr
+    std::enable_if_t<std::is_same_v<typename Container::value_type, char>, bool>
+    operator==
+    (   const generic_sequence_view<Container>& lhs
+    ,   std::string_view rhs
+    )
+    {   return lhs.size()
+    ==  rhs.size() && std::equal(lhs.begin(), lhs.end(), rhs.begin());
     }
 
     template<typename Container>
-    constexpr std::enable_if_t<std::is_same_v<typename Container::value_type, char>, bool>
-    operator== (std::string_view lhs, const sq_view_gen<Container>& rhs)
+    constexpr
+    std::enable_if_t<std::is_same_v<typename Container::value_type, char>, bool>
+    operator==
+    (std::string_view lhs, const generic_sequence_view<Container>& rhs)
     {   return rhs == lhs;
     }
 
     template<typename Container>
-    constexpr std::enable_if_t<std::is_same_v<typename Container::value_type, char>, bool>
-    operator!= (const sq_view_gen<Container>& lhs, std::string_view rhs)
+    constexpr
+    std::enable_if_t<std::is_same_v<typename Container::value_type, char>, bool>
+    operator!=
+    (const generic_sequence_view<Container>& lhs, std::string_view rhs)
     {   return ! (lhs == rhs);
     }
 
     template<typename Container>
-    constexpr std::enable_if_t<std::is_same_v<typename Container::value_type, char>, bool>
-    operator!= (std::string_view lhs, const sq_view_gen<Container>& rhs)
+    constexpr
+    std::enable_if_t<std::is_same_v<typename Container::value_type, char>, bool>
+    operator!=
+    (std::string_view lhs, const generic_sequence_view<Container>& rhs)
     {   return ! (lhs == rhs);
     }
 
     // Convenience overloads for C-string literals
     template<typename Container>
-    constexpr std::enable_if_t<std::is_same_v<typename Container::value_type, char>, bool>
-    operator== (const sq_view_gen<Container>& lhs, const char* rhs)
+    constexpr
+    std::enable_if_t<std::is_same_v<typename Container::value_type, char>, bool>
+    operator==
+    (const generic_sequence_view<Container>& lhs, const char* rhs)
     {   return lhs == std::string_view(rhs);
     }
 
     template<typename Container>
-    constexpr std::enable_if_t<std::is_same_v<typename Container::value_type, char>, bool>
-    operator== (const char* lhs, const sq_view_gen<Container>& rhs)
+    constexpr
+    std::enable_if_t<std::is_same_v<typename Container::value_type, char>, bool>
+    operator==
+    (const char* lhs, const generic_sequence_view<Container>& rhs)
     {   return std::string_view(lhs) == rhs;
     }
 
     template<typename Container>
-    constexpr std::enable_if_t<std::is_same_v<typename Container::value_type, char>, bool>
-    operator!= (const sq_view_gen<Container>& lhs, const char* rhs)
+    constexpr
+    std::enable_if_t<std::is_same_v<typename Container::value_type, char>, bool>
+    operator!=
+    (const generic_sequence_view<Container>& lhs, const char* rhs)
     {   return ! (lhs == rhs);
     }
 
     template<typename Container>
-    constexpr std::enable_if_t<std::is_same_v<typename Container::value_type, char>, bool>
-    operator!= (const char* lhs, const sq_view_gen<Container>& rhs)
+    constexpr
+    std::enable_if_t<std::is_same_v<typename Container::value_type, char>, bool>
+    operator!=
+    (const char* lhs, const generic_sequence_view<Container>& rhs)
     {   return ! (lhs == rhs);
     }
 
 // -- aliases ------------------------------------------------------------------
-    using sq_view = sq_view_gen<std::vector<char>>;
+    using sq_view = generic_sequence_view<std::vector<char>>;
 
 }   // end gnx namespace
 
-// Enable std::ranges::view concept for sq_view_gen
-namespace std::ranges {
-    template<typename Container>
-    inline constexpr bool enable_view<gnx::sq_view_gen<Container>> = true;
+// Enable std::ranges::view concept for generic_sequence_view
+namespace std::ranges
+{   template<typename Container>
+    inline constexpr bool enable_view<gnx::generic_sequence_view<Container>> = true;
 }

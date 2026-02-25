@@ -10,7 +10,7 @@ Purpose: Make AI agents immediately productive in this Modern C++ header-only li
   - **AMD ROCm** (via `hipcc`)
   - **OpenMP** (for CPU parallelism)
 - **SIMD:** Prioritize explicit SIMD optimizations (AVX2, AVX-512) or portable wrappers where applicable.
-- **Core model:** `gnx::sq_gen<Container>` (aliased as `gnx::sq` for `std::vector<char>`) represents a sequence plus a map of tagged metadata (`std::unordered_map<std::string, std::any>`).
+- **Core model:** `gnx::generic_sequence<Container>` (aliased as `gnx::sq` for `std::vector<char>`) represents a sequence plus a map of tagged metadata (`std::unordered_map<std::string, std::any>`).
 - **I/O format:** Extensible visitors in `gnx/visitor.hpp` serialize/deserialize tagged metadata via two registries: `td_print_visitor` (type-index keyed, using `fmt::memory_buffer`) and `td_scan_visitor` (string keyed). Add types by registering handlers.
 - **FASTA/Q gz input:** `gnx/io/fastaqz.hpp` provides `gnx::in::faqz` which loads a single record by `id` from `.fa.gz/.fq.gz` or stdin using `zlib` + `kseq.h` (embedded in `include/gnx/io/kseq.h`).
 - **Execution policies:** `gnx/execution.hpp` provides execution policies (`seq`, `par`, `unseq`, `par_unseq`, `cuda`, `rocm`, `oneapi`) for controlling parallelization strategy.
@@ -39,7 +39,7 @@ Purpose: Make AI agents immediately productive in this Modern C++ header-only li
 ## Documentation
 - Use Doxygen-style comments `///` for all public APIs.
 - Put documentation and examples in `doc/` in [MyST Markdown](https://mystmd.org/) format.
-- Use `doc/quickstart.md` for a comprehensive quickstart guide with code snippets and explanations.
+- Use `doc/quickstart.md` as a template for a comprehensive quickstart guide with code snippets and explanations and add usage for newly defined classes and algorithms to this file.
 
 ## Build & Install
 - **Build System:** CMake (3.25+).
@@ -77,7 +77,7 @@ build/perf/benchmarks --benchmark_counters_tabular=true
 ```
 
 ## Key Types & Patterns
-- **`gnx::sq_gen<Container>`:**
+- **`gnx::generic_sequence<Container>`:**
   - Sequence storage via `Container` (e.g., `std::vector<char>`); metadata via `_td` tagged data.
   - Subsequence via `operator()(pos, count)`; random access via `operator[]`.
   - I/O: `print(std::ostream&)` and `scan(std::istream&)` encode size, raw sequence, then tagged items `#<tag>|<type>...`.

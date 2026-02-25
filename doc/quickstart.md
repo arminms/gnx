@@ -176,7 +176,7 @@ gnx::sq_view v{s};         // view over s, no copy
 for (auto it = v.begin(); it != v.end(); ++it) { /* use *it */ }
 
 // slicing without allocation
-auto mid = v.substr(1, 2);  // "CG"
+auto mid = v.subseq(1, 2);  // "CG"
 
 // adjust view window
 v.remove_prefix(1);          // now "CGT"
@@ -187,7 +187,7 @@ v.remove_suffix(1);          // now "CG"
 (v != s);                    // true, because s is "ACGT"
 ```
 
-Use `gnx::sq_view_gen<Container>` for custom containers whose `value_type` and layout match `sq_gen`’s expectations.
+Use `gnx::generic_sequence_view<Container>` for custom containers whose `value_type` and layout match `generic_sequence`’s expectations.
 +++
 ```{code-cell} cpp
 std::stringstream ss;

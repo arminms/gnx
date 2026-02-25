@@ -56,16 +56,16 @@ gnx::psq2 v{'A', 'C', 'G', 'T'};
 
 ### Interoperability with `gnx::sq`
 
-`gnx::psq2` and `gnx::sq` (and any `gnx::sq_gen`) can be freely converted;
+`gnx::psq2` and `gnx::sq` (and any `gnx::generic_sequence`) can be freely converted;
 tagged metadata is copied in both directions.
 
 ```cpp
-// sq_gen → psq2
+// generic_sequence → psq2
 gnx::sq src("ACGTACGT"_sq);
 src["_id"] = std::string("chr1");
 gnx::psq2 packed(src);          // sequence + tagged data copied
 
-// psq2 → sq_gen
+// psq2 → generic_sequence
 auto back = packed.to_sq();     // Default target: gnx::sq
 assert(back == "ACGTACGT");
 assert(std::any_cast<std::string>(back["_id"]) == "chr1");
