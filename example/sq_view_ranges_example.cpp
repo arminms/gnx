@@ -1,7 +1,7 @@
 // Example demonstrating sq_view_gen composability with C++20 ranges
 #include <fmt/core.h>
 #include <gnx/sq.hpp>
-#include <gnx/sq_view.hpp>
+#include <gnx/views.hpp>
 #include <ranges>
 #include <cctype>
 

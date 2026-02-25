@@ -27,7 +27,7 @@
     #include <thrust/memory.h>
 #endif // __CUDACC__
 
-#include <gnx/sq_view.hpp>
+#include <gnx/views.hpp>
 #include <gnx/visitor.hpp>
 #include <gnx/io/fastaqz.hpp>
 #include <gnx/memory.hpp>

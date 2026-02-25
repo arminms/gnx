@@ -6,7 +6,7 @@
 #include <utility>
 
 #include <gnx/sq.hpp>
-#include <gnx/sq_view.hpp>
+#include <gnx/views.hpp>
 #include <gnx/psq.hpp>
 #include <gnx/sqb.hpp>
 #include <gnx/interface/forward_stream.hpp>

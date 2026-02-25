@@ -23,7 +23,7 @@ kernelspec:
 
 #include <g3p/gnuplot>
 #include <gnx/sq.hpp>
-#include <gnx/sq_view.hpp>
+#include <gnx/views.hpp>
 #include <gnx/io/fastaqz.hpp>
 #include <gnx/algorithms/valid.hpp>
 #include <gnx/algorithms/random.hpp>
