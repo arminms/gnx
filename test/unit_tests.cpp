@@ -1006,6 +1006,19 @@ TEMPLATE_TEST_CASE( "gnx::io::fastaqz", "[io][in][out]", std::vector<char>)
         CHECK(s == t);
         std::remove(filename.c_str());
     }
+    SECTION( "packed sequence i/o" )
+    {   gnx::psq2 ps;
+        ps.load(SAMPLE_GENOME, 1);
+        CHECK(7553 == std::size(ps));
+        CHECK(ps[0] == 'T');
+        CHECK(ps[7552] == 'A');
+        std::string filename = "test_output.fa";
+        ps.save(filename, gnx::out::fasta());
+        gnx::sq t;
+        t.load(filename);
+        CHECK(ps == t);
+        std::remove(filename.c_str());
+    }
 }
 
 // =============================================================================
