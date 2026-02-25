@@ -108,29 +108,40 @@ public:
         }
         /// Copy-assign from another proxy.
         constexpr reference& operator=(const reference& other) noexcept
-        {   return *this = char(other);   }
-        [[nodiscard]] constexpr bool operator==(char rhs) const noexcept
-        {   return char(*this) == rhs;   }
-        [[nodiscard]] constexpr bool operator==(const reference& rhs) const noexcept
-        {   return char(*this) == char(rhs);   }
+        {   return *this = char(other);
+        }
+        [[nodiscard]]
+        constexpr bool operator==(char rhs) const noexcept
+        {   return char(*this) == rhs;
+        }
+        [[nodiscard]]
+        constexpr bool operator==(const reference& rhs) const noexcept
+        {   return char(*this) == char(rhs);
+        }
     };
 
     /// @brief Read-only proxy reference to a single packed base.
     class const_reference
     {   const ByteContainer& _c;
-        size_type            _pos;
+        size_type          _pos;
     public:
         constexpr const_reference(const ByteContainer& c, size_type pos) noexcept
-        :   _c(c), _pos(pos) {}
+        :   _c(c)
+        ,   _pos(pos)
+        {}
         constexpr operator char() const noexcept
         {   const size_type byte_idx = _pos >> 2u;
             const int shift = 6 - ((_pos & 3u) << 1u);
             return decode((_c[byte_idx] >> shift) & 0x03u);
         }
-        [[nodiscard]] constexpr bool operator==(char rhs) const noexcept
-        {   return char(*this) == rhs;   }
-        [[nodiscard]] constexpr bool operator==(const const_reference& rhs) const noexcept
-        {   return char(*this) == char(rhs);   }
+        [[nodiscard]]
+        constexpr bool operator==(char rhs) const noexcept
+        {   return char(*this) == rhs;
+        }
+        [[nodiscard]]
+        constexpr bool operator==(const const_reference& rhs) const noexcept
+        {   return char(*this) == char(rhs);
+        }
     };
 
     // =========================================================================
@@ -140,7 +151,7 @@ public:
     /// @brief Random-access iterator for packed_generic_sequence_2bit.
     class iterator
     {   ByteContainer* _c;
-        size_type      _pos;
+        size_type    _pos;
     public:
         using iterator_category = std::random_access_iterator_tag;
         using value_type        = char;
@@ -148,37 +159,85 @@ public:
         using pointer           = void;
         using reference         = packed_generic_sequence_2bit::reference;
 
-        constexpr iterator() noexcept : _c(nullptr), _pos(0) {}
+        constexpr iterator() noexcept
+        :   _c(nullptr)
+        ,   _pos(0)
+        {}
         constexpr iterator(ByteContainer* c, size_type pos) noexcept
-        :   _c(c), _pos(pos) {}
+        :   _c(c)
+        ,   _pos(pos)
+        {}
 
-        constexpr reference operator*()  const noexcept { return reference(*_c, _pos);    }
+        constexpr reference operator*() const noexcept
+        {   return reference(*_c, _pos);
+        }
         constexpr reference operator[](difference_type n) const noexcept
-         { return reference(*_c, static_cast<size_type>(_pos + n)); }
+        {   return reference(*_c, static_cast<size_type>(_pos + n));
+        }
 
-        constexpr iterator& operator++()    noexcept { ++_pos; return *this; }
-        constexpr iterator  operator++(int) noexcept { auto tmp = *this; ++_pos; return tmp; }
-        constexpr iterator& operator--()    noexcept { --_pos; return *this; }
-        constexpr iterator  operator--(int) noexcept { auto tmp = *this; --_pos; return tmp; }
-        constexpr iterator& operator+=(difference_type n) noexcept { _pos += n; return *this; }
-        constexpr iterator& operator-=(difference_type n) noexcept { _pos -= n; return *this; }
+        constexpr iterator& operator++() noexcept
+        {   ++_pos;
+            return *this;
+        }
+        constexpr iterator  operator++(int) noexcept
+        {   auto tmp = *this;
+            ++_pos;
+            return tmp;
+        }
+        constexpr iterator& operator--() noexcept
+        {   --_pos;
+            return *this;
+        }
+        constexpr iterator operator--(int) noexcept
+        {   auto tmp = *this;
+            --_pos;
+            return tmp;
+        }
+        constexpr iterator& operator+=(difference_type n) noexcept
+        {   _pos += n;
+            return *this;
+        }
+        constexpr iterator& operator-=(difference_type n) noexcept
+        {   _pos -= n;
+            return *this;
+        }
         constexpr iterator operator+(difference_type n) const noexcept
-        { return iterator(_c, static_cast<size_type>(_pos + n)); }
+        {   return iterator(_c, static_cast<size_type>(_pos + n));
+        }
         constexpr iterator operator-(difference_type n) const noexcept
-        { return iterator(_c, static_cast<size_type>(_pos - n)); }
+        {   return iterator(_c, static_cast<size_type>(_pos - n));
+        }
         constexpr difference_type operator-(const iterator& rhs) const noexcept
-        { return static_cast<difference_type>(_pos) - static_cast<difference_type>(rhs._pos); }
+        {   return static_cast<difference_type>(_pos)
+        -   static_cast<difference_type>(rhs._pos);
+        }
 
-        constexpr bool operator==(const iterator& rhs) const noexcept { return _pos == rhs._pos; }
-        constexpr bool operator!=(const iterator& rhs) const noexcept { return _pos != rhs._pos; }
-        constexpr bool operator< (const iterator& rhs) const noexcept { return _pos <  rhs._pos; }
-        constexpr bool operator<=(const iterator& rhs) const noexcept { return _pos <= rhs._pos; }
-        constexpr bool operator> (const iterator& rhs) const noexcept { return _pos >  rhs._pos; }
-        constexpr bool operator>=(const iterator& rhs) const noexcept { return _pos >= rhs._pos; }
+        constexpr bool operator==(const iterator& rhs) const noexcept
+        {   return _pos == rhs._pos;
+        }
+        constexpr bool operator!=(const iterator& rhs) const noexcept
+        {   return _pos != rhs._pos;
+        }
+        constexpr bool operator< (const iterator& rhs) const noexcept
+        {   return _pos <  rhs._pos;
+        }
+        constexpr bool operator<=(const iterator& rhs) const noexcept
+        {   return _pos <= rhs._pos;
+        }
+        constexpr bool operator> (const iterator& rhs) const noexcept
+        {   return _pos >  rhs._pos;
+        }
+        constexpr bool operator>=(const iterator& rhs) const noexcept
+        {   return _pos >= rhs._pos;
+        }
     };
 
-    friend constexpr iterator operator+(iterator::difference_type n, const iterator& it) noexcept
-    { return it + n; }
+    friend constexpr iterator operator+
+    (   iterator::difference_type n
+    ,   const iterator& it
+    )   noexcept
+    {   return it + n;
+    }
 
     /// @brief Random-access const iterator for packed_generic_sequence_2bit.
     class const_iterator
@@ -191,43 +250,91 @@ public:
         using pointer           = void;
         using reference         = packed_generic_sequence_2bit::const_reference;
 
-        constexpr const_iterator() noexcept : _c(nullptr), _pos(0) {}
-        constexpr const_iterator(const ByteContainer* c, size_type pos) noexcept
-        :   _c(c), _pos(pos) {}
+        constexpr const_iterator () noexcept
+        :   _c(nullptr)
+        ,   _pos(0)
+        {}
+        constexpr const_iterator (const ByteContainer* c, size_type pos) noexcept
+        :   _c(c)
+        ,   _pos(pos)
+        {}
         // implicit conversion from iterator
-        constexpr const_iterator(const iterator& it) noexcept
-        :   _c(it._c), _pos(it._pos) {}
+        constexpr const_iterator (const iterator& it) noexcept
+        :   _c(it._c)
+        ,   _pos(it._pos)
+        {}
 
-        constexpr reference operator*()  const noexcept { return const_reference(*_c, _pos);    }
-        constexpr reference operator[](difference_type n) const noexcept
-        { return const_reference(*_c, static_cast<size_type>(_pos + n)); }
+        constexpr reference operator* () const noexcept
+        {   return const_reference(*_c, _pos);
+        }
+        constexpr reference operator[] (difference_type n) const noexcept
+        {   return const_reference(*_c, static_cast<size_type>(_pos + n));
+        }
 
-        constexpr const_iterator& operator++()    noexcept { ++_pos; return *this; }
-        constexpr const_iterator  operator++(int) noexcept { auto t = *this; ++_pos; return t;  }
-        constexpr const_iterator& operator--()    noexcept { --_pos; return *this; }
-        constexpr const_iterator  operator--(int) noexcept { auto t = *this; --_pos; return t;  }
-        constexpr const_iterator& operator+=(difference_type n) noexcept { _pos += n; return *this; }
-        constexpr const_iterator& operator-=(difference_type n) noexcept { _pos -= n; return *this; }
-        constexpr const_iterator operator+(difference_type n) const noexcept
-        { return const_iterator(_c, static_cast<size_type>(_pos + n)); }
-        constexpr const_iterator operator-(difference_type n) const noexcept
-        { return const_iterator(_c, static_cast<size_type>(_pos - n)); }
-        constexpr difference_type operator-(const const_iterator& rhs) const noexcept
-        { return static_cast<difference_type>(_pos) - static_cast<difference_type>(rhs._pos); }
+        constexpr const_iterator& operator++ () noexcept
+        {   ++_pos;
+            return *this;
+        }
+        constexpr const_iterator operator++ (int) noexcept
+        {   auto t = *this;
+            ++_pos;
+            return t;
+        }
+        constexpr const_iterator& operator-- () noexcept
+        {   --_pos;
+            return *this;
+        }
+        constexpr const_iterator operator-- (int) noexcept
+        {   auto t = *this;
+            --_pos;
+            return t;
+        }
+        constexpr const_iterator& operator+= (difference_type n) noexcept
+        {   _pos += n;
+            return *this;
+        }
+        constexpr const_iterator& operator-= (difference_type n) noexcept
+        {   _pos -= n;
+            return *this;
+        }
+        constexpr const_iterator operator+ (difference_type n) const noexcept
+        {   return const_iterator(_c, static_cast<size_type>(_pos + n));
+        }
+        constexpr const_iterator operator- (difference_type n) const noexcept
+        {   return const_iterator(_c, static_cast<size_type>(_pos - n));
+        }
+        constexpr difference_type operator- (const const_iterator& rhs)
+        const noexcept
+        {   return static_cast<difference_type>(_pos)
+        -   static_cast<difference_type>(rhs._pos);
+        }
 
-        constexpr bool operator==(const const_iterator& rhs) const noexcept { return _pos == rhs._pos; }
-        constexpr bool operator!=(const const_iterator& rhs) const noexcept { return _pos != rhs._pos; }
-        constexpr bool operator< (const const_iterator& rhs) const noexcept { return _pos <  rhs._pos; }
-        constexpr bool operator<=(const const_iterator& rhs) const noexcept { return _pos <= rhs._pos; }
-        constexpr bool operator> (const const_iterator& rhs) const noexcept { return _pos >  rhs._pos; }
-        constexpr bool operator>=(const const_iterator& rhs) const noexcept { return _pos >= rhs._pos; }
+        constexpr bool operator== (const const_iterator& rhs) const noexcept
+        {   return _pos == rhs._pos;
+        }
+        constexpr bool operator!= (const const_iterator& rhs) const noexcept
+        {   return _pos != rhs._pos;
+        }
+        constexpr bool operator<  (const const_iterator& rhs) const noexcept
+        {   return _pos <  rhs._pos;
+        }
+        constexpr bool operator<= (const const_iterator& rhs) const noexcept
+        {   return _pos <= rhs._pos;
+        }
+        constexpr bool operator>  (const const_iterator& rhs) const noexcept
+        {   return _pos >  rhs._pos;
+        }
+        constexpr bool operator>= (const const_iterator& rhs) const noexcept
+        {   return _pos >= rhs._pos;
+        }
     };
 
     friend constexpr const_iterator operator+
     (   const_iterator::difference_type n
     ,   const const_iterator& it
     ) noexcept
-    { return it + n; }
+    {   return it + n;
+    }
 
     using reverse_iterator       = std::reverse_iterator<iterator>;
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
@@ -238,24 +345,31 @@ public:
 
     /// Default constructor. Constructs an empty packed sequence.
     packed_generic_sequence_2bit() noexcept
-    :   _bytes(), _size(0), _ptr_td()
+    :   _bytes()
+    ,   _size(0)
+    ,   _ptr_td()
     {}
-
     /// Constructs a packed sequence from a string view (only ACGT recognized).
     explicit packed_generic_sequence_2bit(std::string_view sv)
-    :   _bytes(num_bytes(sv.size()), uint8_t{0}), _size(sv.size()), _ptr_td()
+    :   _bytes(num_bytes(sv.size()), uint8_t{0})
+    ,   _size(sv.size())
+    ,   _ptr_td()
     {   for (size_type i = 0; i < _size; ++i)
             _set_base(i, sv[i]);
     }
-
     /// Constructs a packed sequence with @a count bases, all initialized to 'A'.
     explicit packed_generic_sequence_2bit(size_type count)
-    :   _bytes(num_bytes(count), uint8_t{0}), _size(count), _ptr_td()
+    :   _bytes(num_bytes(count)
+    ,   uint8_t{0})
+    ,   _size(count)
+    ,   _ptr_td()
     {}
-
     /// Constructs a packed sequence with @a count bases each initialized to @a base.
     packed_generic_sequence_2bit(size_type count, char base)
-    :   _bytes(num_bytes(count), uint8_t{0}), _size(count), _ptr_td()
+    :   _bytes(num_bytes(count)
+    ,   uint8_t{0})
+    ,   _size(count)
+    ,   _ptr_td()
     {   const uint8_t bits = encode(base);
         // fill all full bytes with replicated 2-bit pattern
         if (bits != 0)
@@ -269,52 +383,53 @@ public:
 
     /// Constructs a packed sequence from a range of input iterator of chars.
     template<typename InputIt>
-    requires std::input_iterator<InputIt> &&
-        std::is_convertible_v<typename std::iterator_traits<InputIt>::value_type, char>
+    requires std::input_iterator<InputIt>
+    &&  std::is_convertible_v<typename std::iterator_traits<InputIt>::value_type, char>
     packed_generic_sequence_2bit(InputIt first, InputIt last)
-    :   _bytes(), _size(0), _ptr_td()
+    :   _bytes()
+    ,   _size(0)
+    ,   _ptr_td()
     {   for (auto it = first; it != last; ++it, ++_size)
         {   if (_size % 4 == 0)
                 _bytes.push_back(0);
             _set_base(_size, *it);
         }
     }
-
     /// Constructs a packed sequence from an initializer list.
     packed_generic_sequence_2bit(std::initializer_list<char> init)
     :   packed_generic_sequence_2bit(init.begin(), init.end())
     {}
-
     /// Constructs a packed sequence from a @a sq_gen (any Container/Map).
     template<typename SqContainer, typename SqMap>
     explicit packed_generic_sequence_2bit(const sq_gen<SqContainer, SqMap>& sq)
-    :   _bytes(num_bytes(sq.size()), uint8_t{0}), _size(sq.size()), _ptr_td()
+    :   _bytes(num_bytes(sq.size()), uint8_t{0})
+    ,   _size(sq.size())
+    ,   _ptr_td()
     {   for (size_type i = 0; i < _size; ++i)
             _set_base(i, sq[i]);
         // copy tagged data
         if (sq._has_td())
             _ptr_td = std::make_unique<Map>(*sq._get_td());
     }
-
     /// Copy constructor.
     packed_generic_sequence_2bit(const packed_generic_sequence_2bit& other)
     :   _bytes(other._bytes)
     ,   _size(other._size)
     ,   _ptr_td(other._ptr_td ? std::make_unique<Map>(*other._ptr_td) : nullptr)
     {}
-
     /// Move constructor.
     packed_generic_sequence_2bit(packed_generic_sequence_2bit&& other) noexcept
     :   _bytes(std::move(other._bytes))
     ,   _size(other._size)
     ,   _ptr_td(std::move(other._ptr_td))
-    {   other._size = 0;   }
+    {   other._size = 0;
+    }
 
     // =========================================================================
     // assignment operators
     // =========================================================================
 
-    packed_generic_sequence_2bit& operator=(const packed_generic_sequence_2bit& other)
+    packed_generic_sequence_2bit& operator= (const packed_generic_sequence_2bit& other)
     {   _bytes  = other._bytes;
         _size   = other._size;
         _ptr_td = other._ptr_td ? std::make_unique<Map>(*other._ptr_td) : nullptr;
@@ -384,14 +499,16 @@ public:
 
     /// Returns true if the sequence has no bases and no tagged data.
     [[nodiscard]] bool empty() const noexcept
-    {   return (_size == 0 && (!_ptr_td || _ptr_td->empty()));   }
-
+    {   return (_size == 0 && (!_ptr_td || _ptr_td->empty()));
+    }
     /// Returns the number of bases in the sequence.
-    [[nodiscard]] size_type size()       const noexcept { return _size;          }
-
+    [[nodiscard]] size_type size() const noexcept
+    {   return _size;
+    }
     /// Returns the number of bytes used to store the packed bases.
-    [[nodiscard]] size_type byte_size()  const noexcept { return _bytes.size();  }
-
+    [[nodiscard]] size_type byte_size() const noexcept
+    {   return _bytes.size();
+    }
     /// Returns the approximate size in memory (in bytes) of the packed sequence
     /// including its tagged data.
     [[nodiscard]] size_type size_in_memory() const noexcept
@@ -409,13 +526,13 @@ public:
     // =========================================================================
 
     /// Returns a mutable proxy reference to the base at position @a pos.
-    reference operator[](size_type pos)
-    {   return reference(_bytes, pos);   }
-
+    reference operator[] (size_type pos)
+    {   return reference(_bytes, pos);
+    }
     /// Returns a read-only proxy reference to the base at position @a pos.
     const_reference operator[](size_type pos) const
-    {   return const_reference(_bytes, pos);   }
-
+    {   return const_reference(_bytes, pos);
+    }
     /// Returns a mutable proxy with bounds checking.
     reference at(size_type pos)
     {   if (pos >= _size)
@@ -428,14 +545,26 @@ public:
             throw std::out_of_range("gnx::psq2: pos >= size()");
         return const_reference(_bytes, pos);
     }
-
     /// Returns the decoded base at position @a pos (equivalent to char(operator[](pos))).
     [[nodiscard]] char get_base(size_type pos) const noexcept
-    {   return char(const_reference(_bytes, pos));   }
-
+    {   return char(const_reference(_bytes, pos));
+    }
     /// Returns a raw pointer to the underlying packed byte array.
-    [[nodiscard]] const uint8_t* data() const noexcept { return _bytes.data(); }
-          uint8_t* data()       noexcept { return _bytes.data(); }
+#if defined(__CUDACC__) || defined(__HIPCC__)
+    [[nodiscard]] const uint8_t* data() const noexcept
+    {   return thrust::raw_pointer_cast(_bytes.data());
+    }
+    uint8_t* data() noexcept
+    {   return thrust::raw_pointer_cast(_bytes.data());
+    }
+#else
+    [[nodiscard]] const uint8_t* data() const noexcept
+    {   return _bytes.data();
+    }
+    uint8_t* data() noexcept
+    {   return _bytes.data();
+    }
+#endif
 
     // =========================================================================
     // managing tagged data
@@ -449,7 +578,6 @@ public:
         :   false
         );
     }
-
     /// Returns a reference to the tagged data for @a tag.
     /// Creates a new entry if it does not exist.
     std::any& operator[](const std::string& tag)
@@ -460,7 +588,6 @@ public:
     {   if (!_ptr_td) _ptr_td = std::make_unique<Map>();
         return (*_ptr_td)[std::move(tag)];
     }
-
     /// Returns a const reference to the tagged data for @a tag.
     /// Throws std::out_of_range if the tag does not exist.
     const std::any& operator[](const std::string& tag) const
@@ -473,29 +600,34 @@ public:
     // comparison operators
     // =========================================================================
 
-    bool operator==(const packed_generic_sequence_2bit& rhs) const noexcept
-    {   return _size == rhs._size && _bytes == rhs._bytes;   }
-    bool operator!=(const packed_generic_sequence_2bit& rhs) const noexcept
-    {   return !(*this == rhs);   }
+    bool operator== (const packed_generic_sequence_2bit& rhs) const noexcept
+    {   return _size == rhs._size && _bytes == rhs._bytes;
+    }
+    bool operator!= (const packed_generic_sequence_2bit& rhs) const noexcept
+    {   return !(*this == rhs);
+    }
 
-    bool operator==(std::string_view sv) const noexcept
+    bool operator== (std::string_view sv) const noexcept
     {   if (_size != sv.size()) return false;
         for (size_type i = 0; i < _size; ++i)
             if (get_base(i) != sv[i]) return false;
         return true;
     }
-    bool operator!=(std::string_view sv) const noexcept { return !(*this == sv); }
+    bool operator!=(std::string_view sv) const noexcept
+    {   return !(*this == sv);
+    }
 
     template<typename SqContainer, typename SqMap>
-    bool operator==(const sq_gen<SqContainer, SqMap>& rhs) const
+    bool operator== (const sq_gen<SqContainer, SqMap>& rhs) const
     {   if (_size != rhs.size()) return false;
         for (size_type i = 0; i < _size; ++i)
             if (get_base(i) != rhs[i]) return false;
         return true;
     }
     template<typename SqContainer, typename SqMap>
-    bool operator!=(const sq_gen<SqContainer, SqMap>& rhs) const
-    {   return !(*this == rhs);   }
+    bool operator!= (const sq_gen<SqContainer, SqMap>& rhs) const
+    {   return !(*this == rhs);
+    }
 
     // =========================================================================
     // print / scan (binary stream format)
@@ -506,7 +638,37 @@ public:
     [[nodiscard]] std::string print() const
     {   fmt::memory_buffer buf;
         fmt::format_to(std::back_inserter(buf), "{}", _size);
-        buf.append(_bytes.data(), _bytes.data() + _bytes.size());
+#if defined(__CUDACC__) || defined(__HIPCC__)
+        if constexpr
+        (   std::is_same_v<byte_container_type, thrust::device_vector<byte_type>>
+        )
+        {   universal_host_pinned_vector<byte_type> uhpv(_bytes);
+            buf.append
+            (   thrust::raw_pointer_cast(uhpv.data())
+            ,   thrust::raw_pointer_cast(uhpv.data()) + uhpv.size()
+            );
+        }
+        else if constexpr
+        (   std::is_same_v<byte_container_type, thrust::universal_vector<byte_type>>
+        )
+        {   buf.append
+            (   thrust::raw_pointer_cast(_bytes.data())
+            ,   thrust::raw_pointer_cast(_bytes.data()) + _bytes.size()
+            );
+        }
+#if defined(__HIPCC__)
+        else if constexpr
+        (   std::is_same_v<byte_container_type, gnx::unified_vector<byte_type>>
+        )
+        {   buf.append
+            (   thrust::raw_pointer_cast(_bytes.data())
+            ,   thrust::raw_pointer_cast(_bytes.data()) + _bytes.size()
+            );
+        }
+#endif //__HIPCC__
+        else
+#endif  //__CUDACC__
+            buf.append(_bytes.data(), _bytes.data() + _bytes.size());
         if (_ptr_td)
             for (const auto& [tag, data] : *_ptr_td)
             {   fmt::format_to(std::back_inserter(buf), "#{0}#", tag);
@@ -522,23 +684,64 @@ public:
     }
 
     /// Prints to an output stream (for backward compatibility).
-    void print(std::ostream& os) const { os << print(); }
-
+    void print(std::ostream& os) const
+    {   os << print();
+    }
     /// Scans the packed sequence and tagged data from the input stream @a is.
     void scan(std::istream& is)
     {   is >> _size;
         _bytes.resize(num_bytes(_size));
-        is.read(reinterpret_cast<char*>(_bytes.data()), static_cast<std::streamsize>(_bytes.size()));
+#if defined(__CUDACC__) || defined(__HIPCC__)
+        if constexpr
+        (   std::is_same_v<byte_container_type, thrust::device_vector<byte_type>>
+        )
+        {   universal_host_pinned_vector<byte_type> uhpv(_bytes.size());
+            is.read
+            (   reinterpret_cast<char*>(thrust::raw_pointer_cast(uhpv.data()))
+            ,   static_cast<std::streamsize>(_bytes.size())
+            );
+            thrust::copy(uhpv.begin(), uhpv.end(), _bytes.begin());
+        }
+        else if constexpr
+        (   std::is_same_v<byte_container_type, thrust::universal_vector<byte_type>>
+        )
+        {   is.read
+            (   reinterpret_cast<char*>(thrust::raw_pointer_cast(_bytes.data()))
+            ,   static_cast<std::streamsize>(_bytes.size())
+            );
+        }
+#if defined(__HIPCC__)
+        else if constexpr
+        (   std::is_same_v<byte_container_type, gnx::unified_vector<byte_type>>
+        )
+        {   is.read
+            (   reinterpret_cast<char*>(thrust::raw_pointer_cast(_bytes.data()))
+            ,   static_cast<std::streamsize>(_bytes.size())
+            );
+        }
+#endif //__HIPCC__
+        else
+#endif  //__CUDACC__
+        is.read
+        (   reinterpret_cast<char*>(_bytes.data())
+        ,   static_cast<std::streamsize>(_bytes.size())
+        );
         if (is.peek() == '#' && !_ptr_td)
             _ptr_td = std::make_unique<Map>();
         while (is.peek() == '#')
         {   std::string tag, type;
             std::any a;
             is >> std::quoted(tag, '#') >> std::quoted(type, '|');
-            if (const auto it = td_scan_visitor.find(type); it != td_scan_visitor.cend())
+            if
+            (   const auto it = td_scan_visitor.find(type)
+            ;   it != td_scan_visitor.cend()
+            )
                 it->second(is, a);
             else
-                throw std::runtime_error(fmt::format("gnx::psq2: unregistered type -> {}", type));
+                throw std::runtime_error
+                (   fmt::format("gnx::psq2: unregistered type -> {}"
+                ,   type)
+                );
             (*_ptr_td)[tag] = a;
         }
     }
@@ -548,8 +751,12 @@ public:
     // =========================================================================
 
     /// @cond INTERNAL
-    bool          _has_td()    const noexcept { return static_cast<bool>(_ptr_td); }
-    const Map*    _get_td()    const noexcept { return _ptr_td.get(); }
+    bool _has_td() const noexcept
+    {   return static_cast<bool>(_ptr_td);
+    }
+    const Map* _get_td() const noexcept
+    {   return _ptr_td.get();
+    }
     /// @endcond
 
 private:
@@ -562,7 +769,6 @@ private:
         |   (encode(ch) << shift)
         );
     }
-
     /// Clear the unused padding bits in the last byte.
     void _clear_padding() noexcept
     {   if (_size == 0 || _bytes.empty()) return;
@@ -576,21 +782,38 @@ private:
 // -- free comparison operators ------------------------------------------------
 
 template<typename ByteContainer, typename Map>
-bool operator==(std::string_view lhs, const packed_generic_sequence_2bit<ByteContainer, Map>& rhs)
-{   return rhs == lhs;   }
+bool operator==
+(   std::string_view lhs
+,   const packed_generic_sequence_2bit<ByteContainer, Map>& rhs
+)
+{   return rhs == lhs;
+}
 template<typename ByteContainer, typename Map>
-bool operator==(const char* lhs, const packed_generic_sequence_2bit<ByteContainer, Map>& rhs)
-{   return rhs == std::string_view(lhs);   }
+bool operator==
+(   const char* lhs
+,   const packed_generic_sequence_2bit<ByteContainer, Map>& rhs
+)
+{   return rhs == std::string_view(lhs);
+}
 template<typename ByteContainer, typename Map>
-bool operator==(const packed_generic_sequence_2bit<ByteContainer, Map>& lhs, const char* rhs)
-{   return lhs == std::string_view(rhs);   }
-
-template<typename SqContainer, typename SqMap, typename ByteContainer, typename PMap>
+bool operator==
+(   const packed_generic_sequence_2bit<ByteContainer, Map>& lhs
+,   const char* rhs
+)
+{   return lhs == std::string_view(rhs);
+}
+template
+<   typename SqContainer
+,   typename SqMap
+,   typename ByteContainer
+,   typename PMap
+>
 bool operator==
 (   const sq_gen<SqContainer, SqMap>& lhs
 ,   const packed_generic_sequence_2bit<ByteContainer, PMap>& rhs
 )
-{   return rhs == lhs;   }
+{   return rhs == lhs;
+}
 
 // -- i/o stream operators -----------------------------------------------------
 
@@ -599,14 +822,16 @@ std::ostream& operator<<
 (   std::ostream& os
 ,   const packed_generic_sequence_2bit<ByteContainer, Map>& s
 )
-{   s.print(os); return os;   }
+{   s.print(os); return os;
+}
 
 template<typename ByteContainer, typename Map>
 std::istream& operator>>
 (   std::istream& is
 ,   packed_generic_sequence_2bit<ByteContainer, Map>& s
 )
-{   s.scan(is); return is;   }
+{   s.scan(is); return is;
+}
 
 // -- convenience alias --------------------------------------------------------
 
@@ -617,8 +842,10 @@ using psq2 = packed_generic_sequence_2bit<>;
 
 // -- string literal operator --------------------------------------------------
 
-[[nodiscard]] inline gnx::psq2 operator""_psq2(const char* str, std::size_t)
-{   return gnx::psq2(str);   }
+[[nodiscard]] inline
+gnx::psq2 operator""_psq2 (const char* str, std::size_t)
+{   return gnx::psq2(str);
+}
 
 // -- fmt formatter ------------------------------------------------------------
 
@@ -639,7 +866,7 @@ struct fmt::formatter<gnx::packed_generic_sequence_2bit<ByteContainer, Map>>
 {   auto format
     (   const gnx::packed_generic_sequence_2bit<ByteContainer, Map>& s
     ,   format_context& ctx
-    ) const
+    )   const
     {   std::string out(s.size(), '\0');
         for (std::size_t i = 0; i < s.size(); ++i)
             out[i] = s.get_base(i);
