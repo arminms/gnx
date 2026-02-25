@@ -25,7 +25,8 @@ namespace in {
 /// @tparam Sequence
 template <class Sequence>
 struct fast_aqz
-{   Sequence operator() (std::string_view filename, size_t ndx)
+{   [[nodiscard]]
+    Sequence operator() (std::string_view filename, size_t ndx)
     {   gzFile fp = filename == "-"
         ?   gzdopen(fileno(stdin), "r")
         :   gzopen(std::string(filename).c_str(), "r");
@@ -60,6 +61,7 @@ struct fast_aqz
             ); 
         return s;
     }
+    [[nodiscard]]
     Sequence operator() (std::string_view filename, std::string_view id)
     {   gzFile fp = filename == "-"
         ?   gzdopen(fileno(stdin), "r")
