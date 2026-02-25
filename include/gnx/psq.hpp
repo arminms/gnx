@@ -14,6 +14,8 @@
 #include <cstdint>
 
 #include <gnx/sq.hpp>
+#include <gnx/io/fastaqz.hpp>
+#include <gnx/memory.hpp>
 
 namespace gnx {
 //
@@ -627,6 +629,41 @@ public:
     template<typename SqContainer, typename SqMap>
     bool operator!= (const sq_gen<SqContainer, SqMap>& rhs) const
     {   return !(*this == rhs);
+    }
+
+    // =========================================================================
+    // file i/o
+    // =========================================================================
+    ///
+    /// Loads a sequence from a file by its index using the provided
+    /// @a read function object
+    void load
+    (   std::string_view filename
+    ,   size_type ndx = 0
+    ,   in::fast_aqz<packed_generic_sequence_2bit> read
+    =   in::fast_aqz<packed_generic_sequence_2bit>()
+    )
+    {   *this = read(filename, ndx);
+    }
+    ///
+    /// Loads a sequence from a file by its identifier using the provided
+    /// @a read function object
+    void load
+    (   std::string_view filename
+    ,   std::string_view id
+    ,   in::fast_aqz<packed_generic_sequence_2bit> read
+    =   in::fast_aqz<packed_generic_sequence_2bit>()
+    )
+    {   *this = read(filename, id);
+    }
+    ///
+    /// Saves the sequence to a file using the provided write function object
+    template<typename WriteFunc>
+    void save
+    (   std::string_view filename
+    ,   WriteFunc write
+    )
+    {   write(filename, *this);
     }
 
     // =========================================================================
