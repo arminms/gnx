@@ -568,6 +568,17 @@ public:
     }
 #endif
 
+    /// Returns a non-owning view over the specified subsequence.
+    /// @param pos   Starting base position (default: 0).
+    /// @param count Number of bases in the view (default: to end of sequence).
+    [[nodiscard]] packed_generic_sequence_2bit_view<ByteContainer> operator()
+    (   size_type pos   = 0
+    ,   size_type count = npos
+    )   const
+    {   packed_generic_sequence_2bit_view<ByteContainer> v(*this);
+        return v.subseq(pos, count);
+    }
+
     // =========================================================================
     // managing tagged data
     // =========================================================================
