@@ -13,6 +13,8 @@
 #include <type_traits>
 #include <vector>
 
+#include <gnx/lut/pack2bit.hpp>
+
 namespace gnx {
 
 // forward declaration of generic_sequence
@@ -265,18 +267,12 @@ public:
 
     /// Encode a nucleotide character to a 2-bit value.
     static constexpr uint8_t encode(char c) noexcept
-    {   switch (c)
-        {   case 'C': case 'c': return 0b01u;
-            case 'G': case 'g': return 0b10u;
-            case 'T': case 't': return 0b11u;
-            default:            return 0b00u;
-        }
+    {   return gnx::lut::encode_2bit[static_cast<uint8_t>(c)];
     }
 
     /// Decode a 2-bit value to the corresponding nucleotide character.
     static constexpr char decode(uint8_t bits) noexcept
-    {   constexpr char table[4] = {'A', 'C', 'G', 'T'};
-        return table[bits & 0x03u];
+    {   return gnx::lut::decode_2bit[bits & 0x03u];
     }
 
     // =========================================================================
