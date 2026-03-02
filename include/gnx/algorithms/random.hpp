@@ -385,4 +385,43 @@ inline Sequence dna
 
 } // namespace random
 
+// =============================================================================
+// packed_2bit random sequence generation
+// =============================================================================
+
+template<typename Size>
+inline void rand_packed
+(   uint8_t* out
+,   Size n
+,   uint8_t number_of_bits = 2
+,   std::uint64_t seed = 0
+)
+{   if (0 == seed)
+        seed = std::chrono::system_clock::now().time_since_epoch().count();
+    pcg32 r(seed);
+    uint8_t alphabet_size = 1u << number_of_bits;
+    for (Size i = 0; i < n; ++i)
+    {   uint8_t byte{0};
+        for (uint8_t j = 0; j < alphabet_size; ++j)
+        {   uint8_t bits = r(alphabet_size);
+            byte |= (bits << (j * number_of_bits));
+        }
+        out[i] = byte;
+    }
+}
+
+namespace random::packed_2bit {
+
+template<sequence_container Sequence>
+inline Sequence dna
+(   std::size_t length
+,   std::uint64_t seed = 0
+)
+{   Sequence seq(length);
+    rand_packed(seq.data(), seq.num_bytes(length), 2, seed);
+    return seq;
+}
+
+} // namespace random::packed_2bit
+
 } // namespace gnx
