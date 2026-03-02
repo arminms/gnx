@@ -781,6 +781,14 @@ TEMPLATE_TEST_CASE
         u[1] = t[1]; // write 'C'
         CHECK(char(u[1]) == 'C');
     }
+
+// -- random algorithm ---------------------------------------------------------
+
+    SECTION( "random algorithm" )
+    {   auto t = gnx::random::packed_2bit::dna<decltype(s)>(20, seed_pi);
+        // t.save("test_random_psq2.fa", gnx::out::fasta());
+        CHECK(t == "GGCAACACTAGAACTCTGCT");
+    }
 }
 
 // =============================================================================
