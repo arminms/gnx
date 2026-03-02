@@ -51,7 +51,7 @@ public:
     using byte_type           = uint8_t;
     using size_type           = std::size_t;
     using difference_type     = std::ptrdiff_t;
-    using byte_container_type = ByteContainer;
+    using container_type      = ByteContainer;
     using map_type            = Map;
 
     static constexpr size_type npos = static_cast<size_type>(-1);
@@ -683,7 +683,7 @@ public:
         fmt::format_to(std::back_inserter(buf), "{}", _size);
 #if defined(__CUDACC__) || defined(__HIPCC__)
         if constexpr
-        (   std::is_same_v<byte_container_type, thrust::device_vector<byte_type>>
+        (   std::is_same_v<container_type, thrust::device_vector<byte_type>>
         )
         {   universal_host_pinned_vector<byte_type> uhpv(_bytes);
             buf.append
@@ -692,7 +692,7 @@ public:
             );
         }
         else if constexpr
-        (   std::is_same_v<byte_container_type, thrust::universal_vector<byte_type>>
+        (   std::is_same_v<container_type, thrust::universal_vector<byte_type>>
         )
         {   buf.append
             (   thrust::raw_pointer_cast(_bytes.data())
@@ -701,7 +701,7 @@ public:
         }
 #if defined(__HIPCC__)
         else if constexpr
-        (   std::is_same_v<byte_container_type, gnx::unified_vector<byte_type>>
+        (   std::is_same_v<container_type, gnx::unified_vector<byte_type>>
         )
         {   buf.append
             (   thrust::raw_pointer_cast(_bytes.data())
@@ -736,7 +736,7 @@ public:
         _bytes.resize(num_bytes(_size));
 #if defined(__CUDACC__) || defined(__HIPCC__)
         if constexpr
-        (   std::is_same_v<byte_container_type, thrust::device_vector<byte_type>>
+        (   std::is_same_v<container_type, thrust::device_vector<byte_type>>
         )
         {   universal_host_pinned_vector<byte_type> uhpv(_bytes.size());
             is.read
@@ -746,7 +746,7 @@ public:
             thrust::copy(uhpv.begin(), uhpv.end(), _bytes.begin());
         }
         else if constexpr
-        (   std::is_same_v<byte_container_type, thrust::universal_vector<byte_type>>
+        (   std::is_same_v<container_type, thrust::universal_vector<byte_type>>
         )
         {   is.read
             (   reinterpret_cast<char*>(thrust::raw_pointer_cast(_bytes.data()))
@@ -755,7 +755,7 @@ public:
         }
 #if defined(__HIPCC__)
         else if constexpr
-        (   std::is_same_v<byte_container_type, gnx::unified_vector<byte_type>>
+        (   std::is_same_v<container_type, gnx::unified_vector<byte_type>>
         )
         {   is.read
             (   reinterpret_cast<char*>(thrust::raw_pointer_cast(_bytes.data()))

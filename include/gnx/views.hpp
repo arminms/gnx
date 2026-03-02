@@ -255,11 +255,11 @@ class packed_generic_sequence_2bit_view
 :   public std::ranges::view_interface<packed_generic_sequence_2bit_view<ByteContainer>>
 {
 public:
-    using value_type          = char;
-    using byte_type           = uint8_t;
-    using size_type           = std::size_t;
-    using difference_type     = std::ptrdiff_t;
-    using byte_container_type = ByteContainer;
+    using value_type      = char;
+    using byte_type       = uint8_t;
+    using size_type       = std::size_t;
+    using difference_type = std::ptrdiff_t;
+    using container_type  = ByteContainer;
 
     static constexpr size_type npos = static_cast<size_type>(-1);
 
