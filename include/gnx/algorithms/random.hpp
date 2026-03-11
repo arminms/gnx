@@ -58,6 +58,28 @@ __global__ void leapfrogging
         out[i] = shared_alphabet[g()];
 }
 
+template<typename Size, typename Generator>
+__global__ void leapfrogging_packed
+(   uint8_t* out
+,   Size n
+,   uint8_t number_of_bits
+,   Generator g
+)
+{   const Size alphabet_size = static_cast<Size>(1u << number_of_bits);
+    auto idx{blockIdx.x * blockDim.x + threadIdx.x};
+    auto stride{blockDim.x * gridDim.x};
+    g.discard(idx * alphabet_size);
+    for (auto i{idx}; i < n; i += stride)
+    {   uint8_t byte{0};
+        for (Size j = 0; j < alphabet_size; ++j)
+        {   const uint8_t bits = static_cast<uint8_t>(g());
+            byte |= static_cast<uint8_t>(bits << (j * number_of_bits));
+        }
+        out[i] = byte;
+        g.discard((stride - 1) * alphabet_size);
+    }
+}
+
 } // end kernel namespace
 
 template
@@ -108,6 +130,51 @@ inline void rand_device
     ,   n
     ,   thrust::raw_pointer_cast(d_alphabet.data())
     ,   static_cast<Size>(alphabet.size())
+    ,   gen
+    );
+}
+
+template<typename ExecPolicy, typename Size>
+inline void rand_packed_device
+(   const ExecPolicy& policy
+,   uint8_t* out
+,   Size n
+,   uint8_t number_of_bits
+,   std::uint64_t seed = 0
+)
+{   if (0 == seed)
+        seed = std::chrono::system_clock::now().time_since_epoch().count();
+
+    const auto alphabet_size = static_cast<Size>(1u << number_of_bits);
+    auto gen = ranx::bind
+    (   trng::uniform_int_dist(0, alphabet_size)
+    ,   pcg32(seed)
+    );
+
+    const Size block_size{256};
+    int sm_count;
+#if defined(__HIPCC__)
+    hipStream_t stream = 0;
+#else
+    cudaStream_t stream = 0;
+#endif
+    if constexpr (has_stream_member<ExecPolicy>)
+        stream = policy.stream();
+
+    int device;
+#if defined(__HIPCC__)
+    hipGetDevice(&device);
+    hipDeviceGetAttribute(&sm_count, hipDeviceAttributeMultiprocessorCount, device);
+#else
+    cudaGetDevice(&device);
+    cudaDeviceGetAttribute(&sm_count, cudaDevAttrMultiProcessorCount, device);
+#endif
+
+    // launch leapfrogging kernel for packed bytes
+    kernel::leapfrogging_packed<<<sm_count, block_size, 0, stream>>>
+    (   out
+    ,   n
+    ,   number_of_bits
     ,   gen
     );
 }
@@ -410,6 +477,25 @@ inline void rand_packed
     }
 }
 
+#if defined(__CUDACC__) || defined(__HIPCC__)
+template<typename ExecPolicy, typename Size>
+inline void rand_packed
+(   ExecPolicy&& policy
+,   uint8_t* out
+,   Size n
+,   uint8_t number_of_bits = 2
+,   std::uint64_t seed = 0
+)
+{   detail::rand_packed_device
+    (   std::forward<ExecPolicy>(policy)
+    ,   out
+    ,   n
+    ,   number_of_bits
+    ,   seed
+    );
+}
+#endif
+
 namespace random::packed_2bit {
 
 template<sequence_container Sequence>
@@ -418,7 +504,35 @@ inline Sequence dna
 ,   std::uint64_t seed = 0
 )
 {   Sequence seq(length);
+#if defined(__CUDACC__)
+    if constexpr (gnx::device_resident<typename Sequence::container_type>)
+    {   rand_packed
+        (   thrust::cuda::par
+        ,   seq.data()
+        ,   seq.num_bytes(length)
+        ,   2
+        ,   seed
+        );
+        cudaDeviceSynchronize();
+    }
+    else
+        rand_packed(seq.data(), seq.num_bytes(length), 2, seed);
+#elif defined(__HIPCC__)
+    if constexpr (gnx::device_resident<typename Sequence::container_type>)
+    {   rand_packed
+        (   thrust::hip::par
+        ,   seq.data()
+        ,   seq.num_bytes(length)
+        ,   2
+        ,   seed
+        );
+        hipDeviceSynchronize();
+    }
+    else
+        rand_packed(seq.data(), seq.num_bytes(length), 2, seed);
+#else
     rand_packed(seq.data(), seq.num_bytes(length), 2, seed);
+#endif
     return seq;
 }
 
