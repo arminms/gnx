@@ -787,7 +787,14 @@ TEMPLATE_TEST_CASE
     SECTION( "random algorithm" )
     {   auto t = gnx::random::packed_2bit::dna<decltype(s)>(20, seed_pi);
         // t.save("test_random_psq2.fa", gnx::out::fasta());
+#if defined(__CUDACC__) || defined(__HIPCC__)
+        if constexpr (std::is_same_v<T, std::vector<uint8_t>>)
+            CHECK(t == "GGCAACACTAGAACTCTGCT");
+        else
+            CHECK(gnx::valid_nucleotide(t.to_sq()));
+#else
         CHECK(t == "GGCAACACTAGAACTCTGCT");
+#endif
     }
 }
 
@@ -1737,6 +1744,111 @@ TEMPLATE_TEST_CASE
         CHECK(r == t);
         hipStreamSynchronize(stream);
         hipStreamDestroy(stream);
+    }
+}
+#endif //__HIPCC__
+
+// =============================================================================
+// rand_packed() algorithm device tests
+// =============================================================================
+
+#if defined(__CUDACC__)
+TEMPLATE_TEST_CASE
+(   "gnx::rand_packed::device"
+,   "[algorithm][random][packed_2bit][cuda]"
+ ,   thrust::device_vector<uint8_t>
+)
+{   typedef TestType T;
+    using packed_type = gnx::packed_generic_sequence_2bit<T>;
+
+    constexpr std::size_t packed_length{257};
+    const auto byte_count = gnx::psq2::num_bytes(packed_length);
+
+    packed_type expected(packed_length);
+    gnx::rand_packed(thrust::cuda::par, expected.data(), byte_count, 2, seed_pi);
+    cudaDeviceSynchronize();
+
+    SECTION( "device execution policy" )
+    {   packed_type generated(packed_length);
+        gnx::rand_packed(thrust::cuda::par, generated.data(), byte_count, 2, seed_pi);
+        cudaDeviceSynchronize();
+        for (std::size_t i = 0; i < packed_length; ++i)
+            CHECK(generated.get_base(i) == expected.get_base(i));
+    }
+
+    SECTION( "cuda stream" )
+    {   packed_type generated(packed_length);
+        cudaStream_t stream;
+        cudaStreamCreate(&stream);
+        gnx::rand_packed
+        (   thrust::cuda::par.on(stream)
+        ,   generated.data()
+        ,   byte_count
+        ,   2
+        ,   seed_pi
+        );
+        cudaStreamSynchronize(stream);
+        cudaStreamDestroy(stream);
+
+        for (std::size_t i = 0; i < packed_length; ++i)
+            CHECK(generated.get_base(i) == expected.get_base(i));
+    }
+
+    SECTION( "random::packed_2bit::dna uses device path" )
+    {   auto generated = gnx::random::packed_2bit::dna<packed_type>(packed_length, seed_pi);
+        for (std::size_t i = 0; i < packed_length; ++i)
+            CHECK(generated.get_base(i) == expected.get_base(i));
+    }
+}
+#endif //__CUDACC__
+
+#if defined(__HIPCC__)
+TEMPLATE_TEST_CASE
+(   "gnx::rand_packed::device"
+,   "[algorithm][random][packed_2bit][rocm]"
+,   thrust::universal_vector<uint8_t>
+,   gnx::unified_vector<uint8_t>
+)
+{   typedef TestType T;
+    using packed_type = gnx::packed_generic_sequence_2bit<T>;
+
+    constexpr std::size_t packed_length{257};
+    const auto byte_count = gnx::psq2::num_bytes(packed_length);
+
+    packed_type expected(packed_length);
+    gnx::rand_packed(thrust::hip::par, expected.data(), byte_count, 2, seed_pi);
+    hipDeviceSynchronize();
+
+    SECTION( "device execution policy" )
+    {   packed_type generated(packed_length);
+        gnx::rand_packed(thrust::hip::par, generated.data(), byte_count, 2, seed_pi);
+        hipDeviceSynchronize();
+        for (std::size_t i = 0; i < packed_length; ++i)
+            CHECK(generated.get_base(i) == expected.get_base(i));
+    }
+
+    SECTION( "hip stream" )
+    {   packed_type generated(packed_length);
+        hipStream_t stream;
+        hipStreamCreate(&stream);
+        gnx::rand_packed
+        (   thrust::hip::par.on(stream)
+        ,   generated.data()
+        ,   byte_count
+        ,   2
+        ,   seed_pi
+        );
+        hipStreamSynchronize(stream);
+        hipStreamDestroy(stream);
+
+        for (std::size_t i = 0; i < packed_length; ++i)
+            CHECK(generated.get_base(i) == expected.get_base(i));
+    }
+
+    SECTION( "random::packed_2bit::dna uses device path" )
+    {   auto generated = gnx::random::packed_2bit::dna<packed_type>(packed_length, seed_pi);
+        for (std::size_t i = 0; i < packed_length; ++i)
+            CHECK(generated.get_base(i) == expected.get_base(i));
     }
 }
 #endif //__HIPCC__
