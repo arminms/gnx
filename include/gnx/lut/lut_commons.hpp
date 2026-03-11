@@ -35,6 +35,13 @@ thrust::device_vector<T>& get_static_device(std::array<T, 256> const& table)
     return *vec;
 }
 
+template <typename T, int Id>
+thrust::device_vector<T>& get_static_device(std::array<T, 256> const& table)
+{   static std::unique_ptr<thrust::device_vector<T>, device_safe_deleter<T>>
+        vec(new thrust::device_vector<T>(table.begin(), table.end()));
+    return *vec;
+}
+
 } // namespace gnx::lut
 
 #endif // __CUDACC__ || __HIPCC__
