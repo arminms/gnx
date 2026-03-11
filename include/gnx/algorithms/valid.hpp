@@ -115,7 +115,9 @@ inline bool valid_device
        stream = policy.stream();
 
     thrust::device_vector<result_type> d_partial_results(grid_size);
-    auto d_lut = lut::get_static_device(table);
+    auto& d_lut = nucleotide
+    ?   lut::get_static_device<result_type, 0>(lut::valid_nucleotide)
+    :   lut::get_static_device<result_type, 1>(lut::valid_peptide);
 
     kernel::valid_kernel<<<grid_size, BLOCK_THREADS, 0, stream>>>
     (   thrust::raw_pointer_cast(&first[0])
