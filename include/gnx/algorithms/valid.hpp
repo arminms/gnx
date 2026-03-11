@@ -101,7 +101,6 @@ inline bool valid_device
     if (n <= 0)
         return true;
 
-    const auto& table = nucleotide ? lut::valid_nucleotide : lut::valid_peptide;
     result_type result = 0;
     difference_type elements_per_block = BLOCK_THREADS * ITEMS_PER_THREAD;
     unsigned int grid_size = (n + elements_per_block - 1) / elements_per_block;
