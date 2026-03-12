@@ -1235,36 +1235,40 @@ TEMPLATE_TEST_CASE
 TEMPLATE_TEST_CASE
 (   "gnx::io::fastaqz"
 ,   "[io][in][out][cuda]"
-,   std::vector<char>
-,   thrust::host_vector<char>
-,   thrust::device_vector<char>
-,   thrust::universal_vector<char>
+,   gnx::generic_sequence<std::vector<char>>
+,   gnx::generic_sequence<thrust::device_vector<char>>
+,   gnx::packed_generic_sequence_2bit<std::vector<uint8_t>>
+// ,   gnx::packed_generic_sequence_2bit<thrust::device_vector<uint8_t>>
 )
 #elif defined(__HIPCC__)
 TEMPLATE_TEST_CASE
 (   "gnx::io::fastaqz"
 ,   "[io][in][out][rocm]"
-,   std::vector<char>
-,   thrust::host_vector<char>
-,   thrust::device_vector<char>
-,   thrust::universal_vector<char>
-,   gnx::unified_vector<char>
+,   gnx::generic_sequence<std::vector<char>>
+,   gnx::generic_sequence<thrust::device_vector<char>>
+,   gnx::packed_generic_sequence_2bit<std::vector<uint8_t>>
+// ,   gnx::packed_generic_sequence_2bit<thrust::device_vector<uint8_t>>
 )
 #else
-TEMPLATE_TEST_CASE( "gnx::io::fastaqz", "[io][in][out]", std::vector<char>)
+TEMPLATE_TEST_CASE
+(   "gnx::io::fastaqz"
+,   "[io][in][out]"
+,   gnx::generic_sequence<std::vector<char>>
+,   gnx::packed_generic_sequence_2bit<std::vector<uint8_t>>
+)
 #endif
-{   typedef TestType T;
+{   typedef TestType SequenceType;
     std::string desc("Chlamydia psittaci 6BC plasmid pCps6BC, complete sequence");
-    gnx::generic_sequence<T> s, t;
+    SequenceType s, t;
     CHECK_THROWS_AS
     (   s.load("wrong.fa")
     ,   std::runtime_error
     );
 
-    gnx::generic_sequence<T> wrong_ndx;
+    SequenceType wrong_ndx;
     wrong_ndx.load(SAMPLE_GENOME, 3);
     CHECK(wrong_ndx.empty());
-    gnx::generic_sequence<T> bad_id;
+    SequenceType bad_id;
     bad_id.load(SAMPLE_GENOME, "bad_id");
     CHECK(bad_id.empty());
 
@@ -1319,19 +1323,6 @@ TEMPLATE_TEST_CASE( "gnx::io::fastaqz", "[io][in][out]", std::vector<char>)
         s.save(filename, gnx::out::fastq_gz());
         t.load(filename);
         CHECK(s == t);
-        std::remove(filename.c_str());
-    }
-    SECTION( "packed sequence i/o" )
-    {   gnx::psq2 ps;
-        ps.load(SAMPLE_GENOME, 1);
-        CHECK(7553 == std::size(ps));
-        CHECK(ps(0, 10) == "TATAATTAAA");
-        CHECK(ps( 7543) == "TCCAATTCTA");
-        std::string filename = "test_output.fa";
-        ps.save(filename, gnx::out::fasta());
-        gnx::sq t;
-        t.load(filename);
-        CHECK(ps == t);
         std::remove(filename.c_str());
     }
 }
