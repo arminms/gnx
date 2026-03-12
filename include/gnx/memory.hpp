@@ -6,6 +6,18 @@
 #include <cstdlib>
 #include <memory>
 #include <type_traits>
+#include <iostream>
+#include <vector>
+#include <limits>
+#include <new>
+
+#ifdef _WIN32
+    #include <windows.h>
+#else
+    #include <sys/mman.h>
+    #include <unistd.h>
+    #include <stdlib.h>
+#endif
 
 #if defined(__CUDACC__)
     #include <thrust/universal_vector.h>
@@ -24,6 +36,18 @@ namespace gnx
 {
 
 #if defined(__HIPCC__)
+#endif
+
+#if defined(__CUDACC__)
+    template <typename T>
+    using host_pinned_allocator = thrust::mr::stateless_resource_allocator
+    <   T
+    ,   thrust::cuda::universal_host_pinned_memory_resource
+    >;
+
+    template <typename T>
+    using universal_host_pinned_vector = thrust::universal_vector<T, host_pinned_allocator<T>>;
+#elif defined(__HIPCC__)
     // custom allocator for host pinned memory on ROCm platform
     template<class T>
     struct host_pinned_allocator : thrust::device_malloc_allocator<T>
@@ -74,21 +98,71 @@ template<class T>
 // Define a unified vector type
 template<class T>
     using unified_vector = thrust::host_vector<T, unified_allocator<T>>;
+
+template <typename T>
+    using universal_host_pinned_vector = host_pinned_vector<T>;
+#else
+template <typename T>
+struct host_pinned_allocator
+{   using value_type = T;
+
+    host_pinned_allocator() noexcept
+    {}
+    template <typename U> host_pinned_allocator(const host_pinned_allocator<U>&) noexcept
+    {}
+
+    T* allocate(std::size_t n)
+    {   if (n > std::numeric_limits<std::size_t>::max() / sizeof(T))
+            throw std::bad_array_new_length();
+
+        std::size_t size = n * sizeof(T);
+        void* ptr = nullptr;
+
+#ifdef _WIN32
+        // Windows: allocate and attempt to lock
+        ptr = VirtualAlloc(NULL, size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+        if (ptr)
+        {   if (!VirtualLock(ptr, size))
+                fmt::print // potential failure if exceeds process working set limit
+                (   stderr
+                ,   "Warning: VirtualLock failed. Memory remains pageable.\n"
+                );
+        }
+#else
+        // Linux/POSIX: align to page size for mlock
+        long page_size = sysconf(_SC_PAGESIZE);
+        if (posix_memalign(&ptr, page_size, size) == 0)
+        {   if (mlock(ptr, size) != 0)
+                fmt::print
+                (   stderr
+                ,   "Warning: mlock failed (check ulimit -l). Memory remains pageable.\n"
+                );
+        }
 #endif
 
-#if defined(__CUDACC__)
-    template <typename T>
-    using pinned_host_allocator = thrust::mr::stateless_resource_allocator
-    <   T
-    ,   thrust::cuda::universal_host_pinned_memory_resource
-    >;
+        if (!ptr) throw std::bad_alloc();
+        return static_cast<T*>(ptr);
+    }
 
-    template <typename T>
-    using universal_host_pinned_vector = thrust::universal_vector<T, pinned_host_allocator<T>>;
-#elif defined(__HIPCC__)
-    template <typename T>
-    using universal_host_pinned_vector = host_pinned_vector<T>;
-#endif // __CUDACC__
+    void deallocate(T* p, std::size_t n) noexcept
+    {   std::size_t size = n * sizeof(T);
+#ifdef _WIN32
+        VirtualUnlock(p, size);
+        VirtualFree(p, 0, MEM_RELEASE);
+#else
+        munlock(p, size);
+        free(p);
+#endif
+    }
+
+    // Boilerplate for allocator equality
+    bool operator==(const host_pinned_allocator&) const { return true; }
+    bool operator!=(const host_pinned_allocator&) const { return false; }
+};
+
+template<class T>
+    using universal_host_pinned_vector = std::vector<T, host_pinned_allocator<T>>;
+#endif
 
 
 // -- default_init_allocator ---------------------------------------------------
