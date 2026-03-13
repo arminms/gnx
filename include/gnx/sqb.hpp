@@ -9,28 +9,28 @@
 
 namespace gnx {
 
-template <std::ranges::range InterfaceType>
+template <std::ranges::range BackendType>
 class sequence_bank
-{   InterfaceType _interface;
+{   BackendType _backend;
 public:
-    using value_type = typename InterfaceType::value_type;
-    using iterator = typename InterfaceType::iterator;
-    using interface_type = InterfaceType;
+    using value_type = typename BackendType::value_type;
+    using iterator = typename BackendType::iterator;
+    using backend_type = BackendType;
 
     // disable default constructor
     sequence_bank() = delete;
-    sequence_bank(const InterfaceType& interface)
-    requires std::is_copy_constructible_v<InterfaceType>
-    :   _interface(interface)
+    sequence_bank(const BackendType& backend)
+    requires std::is_copy_constructible_v<BackendType>
+    :   _backend(backend)
     {}
-    sequence_bank(InterfaceType&& interface) noexcept(std::is_nothrow_move_constructible_v<InterfaceType>)
-    :   _interface(std::move(interface))
+    sequence_bank(BackendType&& backend) noexcept(std::is_nothrow_move_constructible_v<BackendType>)
+    :   _backend(std::move(backend))
     {}
     iterator begin()
-    {   return _interface.begin();
+    {   return _backend.begin();
     }
     iterator end()
-    {   return _interface.end();
+    {   return _backend.end();
     }
 };
 
