@@ -9,7 +9,7 @@
 #include <gnx/views.hpp>
 #include <gnx/psq.hpp>
 #include <gnx/sqb.hpp>
-#include <gnx/interface/forward_stream.hpp>
+#include <gnx/backend/forward_stream.hpp>
 #include <gnx/io/fastaqz.hpp>
 #include <gnx/algorithms/valid.hpp>
 #include <gnx/algorithms/random.hpp>
@@ -3427,7 +3427,7 @@ TEMPLATE_TEST_CASE
 
 TEMPLATE_TEST_CASE
 (   "gnx::sequence_bank"
-,   "[interface][forward_stream]"
+,   "[backend][forward_stream]"
 ,   std::vector<char>
 )
 {   typedef TestType T;
