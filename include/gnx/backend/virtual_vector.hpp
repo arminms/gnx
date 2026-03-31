@@ -8,7 +8,6 @@
 #include <cstdint>
 #include <cstdio>
 #include <fstream>
-#include <optional>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -19,6 +18,7 @@
 
 #include <gnx/concepts.hpp>
 #include <gnx/io/bgzf.h>
+#include <gnx/utility/create_index.hpp>
 
 namespace gnx {
 
@@ -35,9 +35,11 @@ namespace gnx {
 /// sequence is requested, the file is seeked to the precomputed byte offset.
 ///
 /// **bgzip-compressed FASTA:** The .fai (with uncompressed byte offsets)
-/// and the .gzi bgzip block index must already exist beside the file — run
-/// `samtools faidx file.fa.gz` to generate both. The .gzi maps uncompressed
-/// byte offsets (as stored in the .fai) to BGZF virtual offsets
+/// must already exist alongside the file — run `samtools faidx file.fa.gz`
+/// to generate it. If the .gzi bgzip block index is absent it is built
+/// automatically by scanning block headers and footers without decompression.
+/// The .gzi maps uncompressed byte offsets (as stored in the .fai) to BGZF
+/// virtual offsets
 /// (block_address << 16 | intra_block_offset) required by bgzf_seek.
 ///
 /// Compatible with gnx::sequence_bank as a BackendType.
@@ -144,9 +146,10 @@ public:
     /// index for on-demand random access.
     ///
     /// For plain FASTA files the .fai index is built automatically if it does
-    /// not exist. For bgzip-compressed files both the .fai (with uncompressed
-    /// byte offsets) and the .gzi bgzip block index must already exist — run
-    /// `samtools faidx file.fa.gz` to generate both.
+    /// not exist. For bgzip-compressed files the .fai (with uncompressed byte
+    /// offsets) must already exist — run `samtools faidx file.fa.gz` to
+    /// generate it. The .gzi bgzip block index is built automatically if it
+    /// does not exist.
     ///
     /// @param fasta_path  Path to the FASTA or bgzip-compressed FASTA file.
     /// @param fai_path    Path to the .fai index file. When empty the path is
@@ -182,14 +185,7 @@ public:
             {
                 std::ifstream gzi_probe(gzi_path);
                 if (!gzi_probe.good())
-                    throw std::runtime_error
-                    (   fmt::format
-                        (   "gnx::virtual_vector: .gzi index not found for bgzip "
-                            "file -> {} (run: samtools faidx {})"
-                        ,   gzi_path
-                        ,   _fasta_path
-                        )
-                    );
+                    create_gzi(_fasta_path, gzi_path);
             }
             load_gzi(gzi_path);
             _bgzf_fp = bgzf_open(_fasta_path.c_str(), "r");
@@ -204,7 +200,7 @@ public:
         else
         {   std::ifstream probe(idx_path);
             if (!probe.good())
-                build_fai(idx_path);
+                create_fai(_fasta_path, idx_path);
             load_fai(idx_path);
             _fp = std::fopen(_fasta_path.c_str(), "rb");
             if (!_fp)
@@ -308,92 +304,6 @@ private:
     void close_handles() noexcept
     {   if (_fp)      { std::fclose(_fp);      _fp      = nullptr; }
         if (_bgzf_fp) { bgzf_close(_bgzf_fp);  _bgzf_fp = nullptr; }
-    }
-
-    /// @brief Scans @c _fasta_path and writes a SAMtools-compatible .fai index
-    ///        to @p fai_path.
-    ///
-    /// The FASTA file is read in binary mode so byte offsets are exact on all
-    /// platforms. Both LF and CRLF line endings are handled correctly.
-    ///
-    /// @throws std::runtime_error  If @c _fasta_path cannot be read or
-    ///                             @p fai_path cannot be created.
-    void build_fai(const std::string& fai_path)
-    {   FILE* fa = std::fopen(_fasta_path.c_str(), "rb");
-        if (!fa)
-            throw std::runtime_error
-            (   fmt::format
-                (   "gnx::virtual_vector: cannot open FASTA to build index -> {}"
-                ,   _fasta_path
-                )
-            );
-        std::ofstream out(fai_path);
-        if (!out)
-        {   std::fclose(fa);
-            throw std::runtime_error
-            (   fmt::format
-                (   "gnx::virtual_vector: cannot create FAI index -> {}"
-                ,   fai_path
-                )
-            );
-        }
-        // Byte position in the file; updated inside read_line.
-        std::int64_t pos = 0;
-        // Read one raw line; returns {content_without_CR_LF, raw_byte_count}
-        // or nullopt at EOF.
-        auto read_line = [&]() -> std::optional<std::pair<std::string, std::int32_t>>
-        {   std::string content;
-            std::int32_t raw = 0;
-            bool have = false;
-            int c;
-            while ((c = std::fgetc(fa)) != EOF)
-            {   ++pos; ++raw; have = true;
-                if (c == '\n') break;
-                if (c != '\r') content += static_cast<char>(c);
-            }
-            if (!have) return std::nullopt;
-            return std::make_pair(std::move(content), raw);
-        };
-        struct Builder
-        {   std::string  name;
-            std::int64_t length     = 0;
-            std::int64_t offset     = 0;
-            std::int32_t linebases  = 0;
-            std::int32_t linewidth  = 0;
-            bool         first_line = true;
-        };
-        std::optional<Builder> cur;
-        auto flush = [&]()
-        {   if (cur && !cur->name.empty())
-                out << cur->name  << '\t'
-                    << cur->length    << '\t'
-                    << cur->offset    << '\t'
-                    << cur->linebases << '\t'
-                    << cur->linewidth << '\n';
-            cur.reset();
-        };
-        while (true)
-        {   auto res = read_line();
-            if (!res) break;
-            auto& [content, rawlen] = *res;
-            if (!content.empty() && content[0] == '>')
-            {   flush();
-                cur.emplace();
-                std::size_t ws = content.find_first_of(" \t", 1);
-                cur->name   = content.substr(1, ws - 1);
-                cur->offset = pos;  // first base is right after the header '\n'
-            }
-            else if (cur && !content.empty())
-            {   if (cur->first_line)
-                {   cur->linebases  = static_cast<std::int32_t>(content.size());
-                    cur->linewidth  = rawlen;
-                    cur->first_line = false;
-                }
-                cur->length += static_cast<std::int64_t>(content.size());
-            }
-        }
-        flush();
-        std::fclose(fa);
     }
 
     void load_fai(const std::string& path)
