@@ -4,6 +4,7 @@
 #include <catch2/catch_all.hpp>
 
 #include <utility>
+#include <filesystem>
 
 #include <gnx/sq.hpp>
 #include <gnx/views.hpp>
@@ -18,7 +19,7 @@
 #include <gnx/algorithms/local_align.hpp>
 #include <gnx/algorithms/count.hpp>
 #include <gnx/algorithms/complement.hpp>
-#include <gnx/utility/gc-content.hpp>
+#include <gnx/utility/gc_content.hpp>
 
 const uint64_t seed_pi{3141592654};
 
@@ -3446,69 +3447,104 @@ TEMPLATE_TEST_CASE
 // virtual_vector sequence bank tests
 // =============================================================================
 
-/// Decompress a .gz file to a temporary plain file; caller owns the result path.
-static std::string decompress_to_tmp(const char* gz_path)
-{   char tmp_tmpl[] = "/tmp/gnx_vv_XXXXXX.fa";
-    int fd = mkstemps(tmp_tmpl, 3);  // suffix ".fa" has length 3
-    if (fd == -1)
-        throw std::runtime_error("decompress_to_tmp: mkstemps failed");
-    close(fd);
-    std::string tmp(tmp_tmpl);
-    gzFile gz = gzopen(gz_path, "rb");
-    if (!gz)
-        throw std::runtime_error
-        (   std::string("decompress_to_tmp: cannot open ") + gz_path
-        );
-    FILE* out = std::fopen(tmp.c_str(), "wb");
-    if (!out)
-    {   gzclose(gz);
-        throw std::runtime_error
-        (   std::string("decompress_to_tmp: cannot create ") + tmp
-        );
-    }
-    char buf[65536];
-    int n;
-    while ((n = gzread(gz, buf, sizeof(buf))) > 0)
-        std::fwrite(buf, 1, static_cast<std::size_t>(n), out);
-    std::fclose(out);
-    gzclose(gz);
-    return tmp;
-}
+template <typename T>
+struct fasta_fixture
+{   using SequenceType = T;
+    fasta_fixture()
+    {   auto tmp = std::filesystem::temp_directory_path();
+        tmp_fa        = (tmp / "gnx_test.fa").string();
+        tmp_fai       = (tmp / "gnx_test.fa.fai").string();
+        tmp_fa_gz     = (tmp / "gnx_test.fa.gz").string();
+        tmp_fa_gz_fai = (tmp / "gnx_test.fa.gz.fai").string();
+        tmp_fa_gz_gzi = (tmp / "gnx_test.fa.gz.gzi").string();
 
-TEMPLATE_TEST_CASE
-(   "gnx::sequence_bank<virtual_vector>"
+        gzFile gz = gzopen(SAMPLE_GENOME, "rb");
+        if (!gz)
+            throw std::runtime_error
+            (   std::string("decompress_to_tmp: cannot open ")
+            +   tmp_fa_gz
+            );
+        FILE* out = std::fopen(tmp_fa.c_str(), "wb");
+        if (!out)
+        {   gzclose(gz);
+            throw std::runtime_error
+            (   std::string("decompress_to_tmp: cannot create ")
+            +   tmp_fa
+            );
+        }
+        BGZF* bgz = bgzf_open(tmp_fa_gz.c_str(), "wb");
+        if (!bgz)
+        {   gzclose(gz);
+            std::fclose(out);
+            throw std::runtime_error
+            (   std::string("decompress_to_tmp: cannot create ")
+            +   tmp_fa_gz
+            );
+        }
+        char buf[65536];
+        int n;
+        while ((n = gzread(gz, buf, sizeof(buf))) > 0)
+        {   std::fwrite(buf, 1, static_cast<std::size_t>(n), out);
+            bgzf_write(bgz, buf, static_cast<std::size_t>(n));
+        }
+        std::fclose(out);
+        bgzf_close(bgz);
+        gzclose(gz);
+
+        gnx::create_fai(tmp_fa, tmp_fai);
+        std::filesystem::copy_file
+        (   tmp_fai
+        ,   tmp_fa_gz_fai
+        ,   std::filesystem::copy_options::overwrite_existing
+        );
+        gnx::create_gzi(tmp_fa_gz, tmp_fa_gz_gzi);
+    }
+    ~fasta_fixture()
+    {   // Clean up temporary files created during tests.
+        std::filesystem::remove(tmp_fa);
+        std::filesystem::remove(tmp_fai);
+        std::filesystem::remove(tmp_fa_gz);
+        std::filesystem::remove(tmp_fa_gz_fai);
+        std::filesystem::remove(tmp_fa_gz_gzi);
+    }
+
+    std::string tmp_fa;
+    std::string tmp_fa_gz;
+    std::string tmp_fai;
+    std::string tmp_fa_gz_fai;
+    std::string tmp_fa_gz_gzi;
+};
+
+TEMPLATE_TEST_CASE_METHOD
+(   fasta_fixture
+,   "gnx::sequence_bank<virtual_vector>"
 ,   "[backend][virtual_vector]"
 ,   gnx::generic_sequence<std::vector<char>>
 ,   gnx::packed_generic_sequence_2bit<std::vector<uint8_t>>
 )
-{   typedef TestType SequenceType;
-
-    // Decompress the test genome once per section run; clean up at end.
-    std::string tmp_fa  = decompress_to_tmp(SAMPLE_GENOME);
-    std::string tmp_fai = tmp_fa + ".fai";
-    // Ensure no stale index so auto-build is exercised.
-    std::remove(tmp_fai.c_str());
+{   typedef typename fasta_fixture<TestType>::SequenceType SequenceType;
 
     SECTION( "size and empty" )
-    {   gnx::virtual_vector<SequenceType> vv(tmp_fa);
+    {   gnx::virtual_vector<SequenceType> vv(this->tmp_fa);
         CHECK(vv.size() == 2);
         CHECK_FALSE(vv.empty());
     }
 
     SECTION( "auto-builds .fai when missing" )
-    {   REQUIRE_FALSE(std::ifstream(tmp_fai).good()); // guard: no index yet
-        gnx::virtual_vector<SequenceType> vv(tmp_fa);
-        CHECK(std::ifstream(tmp_fai).good());         // index was created
+    {   std::filesystem::remove(this->tmp_fai);             // remove any existing index
+        REQUIRE_FALSE(std::ifstream(this->tmp_fai).good()); // guard: no index yet
+        gnx::virtual_vector<SequenceType> vv(this->tmp_fa);
+        CHECK(std::ifstream(this->tmp_fai).good());         // index was created
     }
 
     SECTION( "name() returns correct IDs without disk I/O" )
-    {   gnx::virtual_vector<SequenceType> vv(tmp_fa);
+    {   gnx::virtual_vector<SequenceType> vv(this->tmp_fa);
         CHECK(std::string(vv.name(0)) == "NC_017287.1");
         CHECK(std::string(vv.name(1)) == "NC_017288.1");
     }
 
     SECTION( "entry() fields match expected FAI values" )
-    {   gnx::virtual_vector<SequenceType> vv(tmp_fa);
+    {   gnx::virtual_vector<SequenceType> vv(this->tmp_fa);
         const auto& e0 = vv.entry(0);
         CHECK(e0.name   == "NC_017287.1");
         CHECK(e0.length == 1171667);
@@ -3518,7 +3554,7 @@ TEMPLATE_TEST_CASE
     }
 
     SECTION( "operator[] reads correct sequence content" )
-    {   gnx::virtual_vector<SequenceType> vv(tmp_fa);
+    {   gnx::virtual_vector<SequenceType> vv(this->tmp_fa);
         auto s0 = vv[0];
         CHECK(std::size(s0) == 1171667);
         CHECK("NC_017287.1" == std::any_cast<std::string>(s0["_id"]));
@@ -3530,14 +3566,14 @@ TEMPLATE_TEST_CASE
     }
 
     SECTION( "at() throws std::out_of_range for invalid index" )
-    {   gnx::virtual_vector<SequenceType> vv(tmp_fa);
+    {   gnx::virtual_vector<SequenceType> vv(this->tmp_fa);
         CHECK_NOTHROW(vv.at(0));
         CHECK_NOTHROW(vv.at(1));
         CHECK_THROWS_AS(vv.at(2), std::out_of_range);
     }
 
     SECTION( "iterator yields valid nucleotide sequences" )
-    {   gnx::virtual_vector<SequenceType> vv(tmp_fa);
+    {   gnx::virtual_vector<SequenceType> vv(this->tmp_fa);
         std::size_t count = 0;
         for (const auto& s : vv)
         {   CHECK(gnx::valid_nucleotide(s));
@@ -3547,7 +3583,7 @@ TEMPLATE_TEST_CASE
     }
 
     SECTION( "random-access iterator arithmetic" )
-    {   gnx::virtual_vector<SequenceType> vv(tmp_fa);
+    {   gnx::virtual_vector<SequenceType> vv(this->tmp_fa);
         auto it = vv.begin();
         CHECK(vv.end() - vv.begin() == 2);
         CHECK(std::size(*it) == 1171667);   // seq0
@@ -3560,20 +3596,20 @@ TEMPLATE_TEST_CASE
 
     SECTION( "reuses existing .fai on second construction" )
     {   // First construction: builds the index
-        {   gnx::virtual_vector<SequenceType> vv1(tmp_fa);
+        {   gnx::virtual_vector<SequenceType> vv1(this->tmp_fa);
             CHECK(vv1.size() == 2);
         }
         // Second construction: loads the existing index (size stays correct)
-        gnx::virtual_vector<SequenceType> vv2(tmp_fa);
+        gnx::virtual_vector<SequenceType> vv2(this->tmp_fa);
         CHECK(vv2.size() == 2);
         CHECK(std::string(vv2.name(0)) == "NC_017287.1");
     }
 
     SECTION( "custom fai_path" )
-    {   std::string custom_fai = tmp_fa + ".custom.fai";
+    {   std::string custom_fai = this->tmp_fa + ".custom.fai";
         std::remove(custom_fai.c_str());
         {
-            gnx::virtual_vector<SequenceType> vv(tmp_fa, custom_fai);
+            gnx::virtual_vector<SequenceType> vv(this->tmp_fa, custom_fai);
             CHECK(std::ifstream(custom_fai).good());
             CHECK(vv.size() == 2);
             CHECK(std::string(vv.name(1)) == "NC_017288.1");
@@ -3583,7 +3619,7 @@ TEMPLATE_TEST_CASE
 
     SECTION( "sequence_bank integration" )
     {   gnx::sequence_bank sb
-        {   gnx::virtual_vector<SequenceType>{tmp_fa}
+        {   gnx::virtual_vector<SequenceType>{this->tmp_fa}
         };
         std::size_t count = 0;
         for (const auto& s : sb)
@@ -3592,7 +3628,74 @@ TEMPLATE_TEST_CASE
         }
         CHECK(count == 2);
     }
+}
 
-    std::remove(tmp_fai.c_str());
-    std::remove(tmp_fa.c_str());
+// =============================================================================
+// virtual_vector bgzip tests  (doc/Chlamydia_psittaci_MN.fna.gz)
+// The .fai and .gzi are pre-built and committed alongside the .gz file.
+// =============================================================================
+
+TEMPLATE_TEST_CASE_METHOD
+(   fasta_fixture
+,   "gnx::sequence_bank<virtual_vector> bgzip"
+,   "[backend][virtual_vector][bgzip]"
+,   gnx::generic_sequence<std::vector<char>>
+,   gnx::packed_generic_sequence_2bit<std::vector<uint8_t>>
+)
+{   typedef typename fasta_fixture<TestType>::SequenceType SequenceType;
+
+    SECTION( "size and empty" )
+    {   gnx::virtual_vector<SequenceType> vv(this->tmp_fa_gz);
+        CHECK(vv.size() == 2);
+        CHECK_FALSE(vv.empty());
+    }
+
+    SECTION( "name() returns correct IDs" )
+    {   gnx::virtual_vector<SequenceType> vv(this->tmp_fa_gz);
+        CHECK(std::string(vv.name(0)) == "NC_017287.1");
+        CHECK(std::string(vv.name(1)) == "NC_017288.1");
+    }
+
+    SECTION( "entry() fields match FAI values" )
+    {   gnx::virtual_vector<SequenceType> vv(this->tmp_fa_gz);
+        const auto& e0 = vv.entry(0);
+        CHECK(e0.name   == "NC_017287.1");
+        CHECK(e0.length == 1171667);
+        CHECK(e0.offset == 55);
+        const auto& e1 = vv.entry(1);
+        CHECK(e1.name   == "NC_017288.1");
+        CHECK(e1.length == 7553);
+        CHECK(e1.offset == 1186439);
+    }
+
+    SECTION( "operator[] reads correct sequences" )
+    {   gnx::virtual_vector<SequenceType> vv(this->tmp_fa_gz);
+        auto s0 = vv[0];
+        CHECK(std::size(s0) == 1171667);
+        CHECK("NC_017287.1" == std::any_cast<std::string>(s0["_id"]));
+        auto s1 = vv[1];
+        CHECK(std::size(s1) == 7553);
+        CHECK("NC_017288.1" == std::any_cast<std::string>(s1["_id"]));
+    }
+
+    SECTION( "iterator yields valid nucleotide sequences" )
+    {   gnx::virtual_vector<SequenceType> vv(this->tmp_fa_gz);
+        std::size_t count = 0;
+        for (const auto& s : vv)
+        {   CHECK(gnx::valid_nucleotide(s));
+            ++count;
+        }
+        CHECK(count == 2);
+    }
+
+    SECTION( "auto-builds .gzi when missing" )
+    {   std::filesystem::remove(this->tmp_fa_gz_gzi);
+        // No .gzi present — constructor must auto-generate it.
+        REQUIRE_NOTHROW(gnx::virtual_vector<SequenceType>{this->tmp_fa_gz});
+        CHECK(std::ifstream(this->tmp_fa_gz_gzi).good());  // index was created
+        {   gnx::virtual_vector<SequenceType> vv(this->tmp_fa_gz);
+            CHECK(std::size(vv[0]) == 1171667);
+            CHECK(std::size(vv[1]) == 7553);
+        }
+    }
 }
