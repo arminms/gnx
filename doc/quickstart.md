@@ -29,6 +29,23 @@ kernelspec:
 #include <gnx/algorithms/random.hpp>
 #include <gnx/algorithms/count.hpp>
 #include <gnx/algorithms/local_align.hpp>
+
+#include <gnx/sqb.hpp>
+#include <gnx/backend/forward_stream.hpp>
+#include <gnx/backend/virtual_vector.hpp>
+```
++++
+```{code-cell} cpp
+gnx::sequence_bank sb
+{   gnx::virtual_vector<gnx::sq>{"Chlamydia_psittaci_MN.fna.gz"}
+};
+```
++++
+```{code-cell} cpp
+for (const auto& s : sb)
+    std::cout << std::any_cast<std::string>(s["_id"])
+              << ' ' << s.size()
+              << "\n";
 ```
 
 Making a biological sequence in Gnx is easy:
