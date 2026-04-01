@@ -109,21 +109,26 @@ namespace out {
 /// @brief A function object for writing sequences to FASTA files.
 struct fasta
 {   fasta(std::size_t line_width = 80)
-    :   _line_width(line_width)
+    :   _fp(nullptr)
+    ,   _line_width(line_width)
     {}
-    template <class Sequence>
-    int operator()
-    (   std::string_view filename
-    ,   const Sequence& seq
-    )
-    {   FILE* fp = filename == "-"
+    void open(std::string_view filename)
+    {   _fp = filename == "-"
         ?   stdout
         :   fopen(std::string(filename).c_str(), "wb");
-        if (nullptr == fp)
+        if (nullptr == _fp)
             throw std::runtime_error
             (   fmt::format("gnx::fasta: could not open file -> {}", filename)
             );
-        std::string header = seq.has("_id")
+    }
+    void close()
+    {   if (_fp && _fp != stdout)
+            fclose(_fp);
+        _fp = nullptr;
+    }
+    template <class Sequence>
+    void write(const Sequence& seq)
+    {   std::string header = seq.has("_id")
         ?   ">" + std::any_cast<std::string>(seq["_id"])
         :   ">gnx_seq";
         header += seq.has("_desc")
@@ -133,7 +138,7 @@ struct fasta
         (   header.c_str()
         ,   sizeof(typename Sequence::value_type)
         ,   header.size()
-        ,   fp
+        ,   _fp
         );
         const typename Sequence::value_type* data = nullptr;
         universal_host_pinned_vector<typename Sequence::value_type>
@@ -160,9 +165,9 @@ struct fasta
                 (   line.data()
                 ,   sizeof(typename Sequence::value_type)
                 ,   line.size()
-                ,   fp
+                ,   _fp
                 );
-                fwrite("\n", 1, 1, fp);
+                fwrite("\n", 1, 1, _fp);
             }
         }
         else
@@ -170,15 +175,24 @@ struct fasta
             (   data
             ,   sizeof(typename Sequence::value_type)
             ,   std::size(seq)
-            ,   fp
+            ,   _fp
             );
-            fwrite("\n", 1, 1, fp);
+            fwrite("\n", 1, 1, _fp);
         }
-        fclose(fp);
+    }
+    template <class Sequence>
+    int operator()
+    (   std::string_view filename
+    ,   const Sequence& seq
+    )
+    {   open(filename);
+        write(seq);
+        close();
         return 0;
     }
 
 private:
+    FILE* _fp;
     std::size_t _line_width;
 };
 
@@ -186,28 +200,32 @@ private:
 /// with gzip.
 struct fasta_gz
 {   fasta_gz(std::size_t line_width = 80)
-    :   _line_width(line_width)
+    :   _fp(nullptr)
+    ,   _line_width(line_width)
     {}
-    template <class Sequence>
-    int operator()
-    (   std::string_view filename
-    ,   const Sequence& seq
-    ,   typename Sequence::size_type line_width = 80
-    )
-    {   BGZF* fp = filename == "-"
+    void open(std::string_view filename)
+    {   _fp = filename == "-"
         ?   bgzf_dopen(fileno(stdout), "wb")
         :   bgzf_open(std::string(filename).c_str(), "wb");
-        if (nullptr == fp)
+        if (nullptr == _fp)
             throw std::runtime_error
             (   fmt::format("gnx::fasta_gz: could not open file -> {}", filename)
             );
-        std::string header = seq.has("_id")
+    }
+    void close()
+    {   if (_fp)
+            bgzf_close(_fp);
+        _fp = nullptr;
+    }
+    template <class Sequence>
+    void write(const Sequence& seq)
+    {   std::string header = seq.has("_id")
         ?   ">" + std::any_cast<std::string>(seq["_id"])
         :   ">gnx_seq";
         header += seq.has("_desc")
         ?   " " + std::any_cast<std::string>(seq["_desc"]) + "\n"
         :   "\n";
-        bgzf_write(fp, header.c_str(), header.size());
+        bgzf_write(_fp, header.c_str(), header.size());
         const typename Sequence::value_type* data = nullptr;
         universal_host_pinned_vector<typename Sequence::value_type>
             pinned_seq(std::size(seq));
@@ -229,41 +247,53 @@ struct fasta_gz
                 (   data + i
                 ,   std::min(_line_width, std::size(seq) - i)
                 );
-                bgzf_write(fp,  line.data(), line.size());
-                bgzf_write(fp, "\n", 1);
+                bgzf_write(_fp,  line.data(), line.size());
+                bgzf_write(_fp, "\n", 1);
             }
         }
         else
-        {   bgzf_write(fp, data, std::size(seq));
-            bgzf_write(fp, "\n", 1);
-        }   
-        bgzf_close(fp);
+        {   bgzf_write(_fp, data, std::size(seq));
+            bgzf_write(_fp, "\n", 1);
+        }
+    }
+    template <class Sequence>
+    int operator()
+    (   std::string_view filename
+    ,   const Sequence& seq
+    )
+    {   open(filename);
+        write(seq);
+        close();
         return 0;
     }
 
 private:
+    BGZF* _fp;
     std::size_t _line_width;
 };
 
 /// @brief A function object for writing sequences to FASTQ files.
 struct fastq
 {   fastq(std::size_t line_width = 0)
-    :   _line_width(line_width)
+    :   _fp(nullptr)
+    ,   _line_width(line_width)
     {}
-    template <class Sequence>
-    int operator()
-    (   std::string_view filename
-    ,   const Sequence& seq
-    ,   typename Sequence::size_type line_width = 80
-    )
-    {   FILE* fp = filename == "-"
+    void open(std::string_view filename)
+    {   _fp = filename == "-"
         ?   stdout
         :   fopen(std::string(filename).c_str(), "wb");
-        if (nullptr == fp)
-            throw std::runtime_error
+        if (nullptr == _fp)            throw std::runtime_error
             (   fmt::format("gnx::fastq: could not open file -> {}", filename)
             );
-        std::string header = seq.has("_id")
+    }
+    void close()
+    {   if (_fp && _fp != stdout)
+            fclose(_fp);
+        _fp = nullptr;
+    }
+    template <class Sequence>
+    void write(const Sequence& seq)
+    {   std::string header = seq.has("_id")
         ?   "@" + std::any_cast<std::string>(seq["_id"])
         :   "@gnx_seq";
         header += seq.has("_desc")
@@ -273,7 +303,7 @@ struct fastq
         (   header.c_str()
         ,   sizeof(typename Sequence::value_type)
         ,   header.size()
-        ,   fp
+        ,   _fp
         );
         const typename Sequence::value_type* data = nullptr;
         universal_host_pinned_vector<typename Sequence::value_type>
@@ -300,9 +330,9 @@ struct fastq
             (   line.data()
             ,   sizeof(typename Sequence::value_type)
             ,   line.size()
-            ,   fp
+            ,   _fp
             );
-            fwrite("\n", 1, 1, fp);
+            fwrite("\n", 1, 1, _fp);
         }
         }
         else
@@ -310,11 +340,11 @@ struct fastq
             (   data
             ,   sizeof(typename Sequence::value_type)
             ,   std::size(seq)
-            ,   fp
+            ,   _fp
             );
-            fwrite("\n", 1, 1, fp);
+            fwrite("\n", 1, 1, _fp);
         }
-        fwrite("+\n", 1, 2, fp);
+        fwrite("+\n", 1, 2, _fp);
         std::string qs = seq.has("_qs")
         ?   std::any_cast<std::string>(seq["_qs"])
         :   std::string(std::size(seq), 'I'); // dummy quality string
@@ -332,9 +362,9 @@ struct fastq
                 (   line.data()
                 ,   sizeof(std::string_view::value_type)
                 ,   line.size()
-                ,   fp
+                ,   _fp
                 );
-                fwrite("\n", 1, 1, fp);
+                fwrite("\n", 1, 1, _fp);
             }
         }
         else
@@ -342,15 +372,24 @@ struct fastq
             (   qs.data()
             ,   sizeof(std::string_view::value_type)
             ,   qs.size()
-            ,   fp
+            ,   _fp
             );
-            fwrite("\n", 1, 1, fp);
+            fwrite("\n", 1, 1, _fp);
         }
-        fclose(fp);
+    }
+    template <class Sequence>
+    int operator()
+    (   std::string_view filename
+    ,   const Sequence& seq
+    )
+    {   open(filename);
+        write(seq);
+        close();
         return 0;
     }
 
 private:
+    FILE* _fp;
     std::size_t _line_width;
 };
 
@@ -358,28 +397,32 @@ private:
 /// with gzip.
 struct fastq_gz
 {   fastq_gz(std::size_t line_width = 0)
-    :   _line_width(line_width)
+    :   _fp(nullptr)
+    ,   _line_width(line_width)
     {}
-    template <class Sequence>
-    int operator()
-    (   std::string_view filename
-    ,   const Sequence& seq
-    ,   typename Sequence::size_type line_width = 80
-    )
-    {   BGZF* fp = filename == "-"
+    void open(std::string_view filename)
+    {   _fp = filename == "-"
         ?   bgzf_dopen(fileno(stdout), "wb")
         :   bgzf_open(std::string(filename).c_str(), "wb");
-        if (nullptr == fp)
+        if (nullptr == _fp)
             throw std::runtime_error
             (   fmt::format("gnx::fastq_gz: could not open file -> {}", filename)
             );
-        std::string header = seq.has("_id")
+    }
+    void close()
+    {   if (_fp)
+            bgzf_close(_fp);
+        _fp = nullptr;
+    }
+    template <class Sequence>
+    void write(const Sequence& seq)
+    {   std::string header = seq.has("_id")
         ?   "@" + std::any_cast<std::string>(seq["_id"])
         :   "@gnx_seq";
         header += seq.has("_desc")
         ?   " " + std::any_cast<std::string>(seq["_desc"]) + "\n"
         :   "\n";
-        bgzf_write(fp, header.c_str(), header.size());
+        bgzf_write(_fp, header.c_str(), header.size());
         const typename Sequence::value_type* data = nullptr;
         universal_host_pinned_vector<typename Sequence::value_type>
             pinned_seq(std::size(seq));
@@ -401,15 +444,15 @@ struct fastq_gz
                 (   data + i
                 ,   std::min(_line_width, std::size(seq) - i)
                 );
-                bgzf_write(fp, line.data(), line.size());
-                bgzf_write(fp, "\n", 1);
+                bgzf_write(_fp, line.data(), line.size());
+                bgzf_write(_fp, "\n", 1);
             }
         }
         else
-        {   bgzf_write(fp, data,  std::size(seq));
-            bgzf_write(fp, "\n", 1);
+        {   bgzf_write(_fp, data,  std::size(seq));
+            bgzf_write(_fp, "\n", 1);
         }
-        bgzf_write(fp, "+\n", 2);
+        bgzf_write(_fp, "+\n", 2);
         std::string qs = seq.has("_qs")
         ?   std::any_cast<std::string>(seq["_qs"])
         :   std::string(std::size(seq), 'I'); // dummy quality string
@@ -423,19 +466,27 @@ struct fastq_gz
                 (   qs.data() + i
                 ,   std::min(_line_width, qs.size() - i)
                 );
-                bgzf_write(fp, line.data(), line.size());
-                bgzf_write(fp, "\n", 1);
+                bgzf_write(_fp, line.data(), line.size());
+                bgzf_write(_fp, "\n", 1);
             }
         }
         else
-        {   bgzf_write(fp, qs.data(), qs.size());
-            bgzf_write(fp, "\n", 1);
+        {   bgzf_write(_fp, qs.data(), qs.size());
+            bgzf_write(_fp, "\n", 1);
         }
-        bgzf_close(fp);
+    }
+    template <class Sequence>
+    int operator()
+    (   std::string_view filename
+    ,   const Sequence& seq
+    )
+    {   open(filename);
+        write(seq);
+        close();
         return 0;
     }
-
 private:
+    BGZF* _fp;
     std::size_t _line_width;
 };
 
