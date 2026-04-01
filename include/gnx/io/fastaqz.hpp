@@ -118,7 +118,7 @@ struct fasta
     )
     {   FILE* fp = filename == "-"
         ?   stdout
-        :   fopen(std::string(filename).c_str(), "w");
+        :   fopen(std::string(filename).c_str(), "wb");
         if (nullptr == fp)
             throw std::runtime_error
             (   fmt::format("gnx::fasta: could not open file -> {}", filename)
@@ -258,7 +258,7 @@ struct fastq
     )
     {   FILE* fp = filename == "-"
         ?   stdout
-        :   fopen(std::string(filename).c_str(), "w");
+        :   fopen(std::string(filename).c_str(), "wb");
         if (nullptr == fp)
             throw std::runtime_error
             (   fmt::format("gnx::fastq: could not open file -> {}", filename)
