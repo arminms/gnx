@@ -11,8 +11,10 @@
 
 #include <zlib.h>
 #include <gnx/io/kseq.h>
-#include <gnx/io/bgzf.h>
 #include <gnx/memory.hpp>
+
+#define BGZF_MT // enable multi-threading support in bgzf (only effective on writing)
+#include <gnx/io/bgzf.h>
 
 namespace gnx {
 
@@ -218,8 +220,14 @@ struct fasta_gz
         _fp = nullptr;
     }
     template <class Sequence>
-    void write(const Sequence& seq)
-    {   std::string header = seq.has("_id")
+    void write
+    (   const Sequence& seq
+    ,   int n_threads = 0
+    ,   int n_sub_blks = 64
+    )
+    {   if (n_threads > 0)
+            bgzf_mt(_fp, n_threads, n_sub_blks);
+        std::string header = seq.has("_id")
         ?   ">" + std::any_cast<std::string>(seq["_id"])
         :   ">gnx_seq";
         header += seq.has("_desc")
@@ -415,8 +423,14 @@ struct fastq_gz
         _fp = nullptr;
     }
     template <class Sequence>
-    void write(const Sequence& seq)
-    {   std::string header = seq.has("_id")
+    void write
+    (   const Sequence& seq
+    ,   int n_threads = 0
+    ,   int n_sub_blks = 64
+    )
+    {   if (n_threads > 0)
+            bgzf_mt(_fp, n_threads, n_sub_blks);
+        std::string header = seq.has("_id")
         ?   "@" + std::any_cast<std::string>(seq["_id"])
         :   "@gnx_seq";
         header += seq.has("_desc")
