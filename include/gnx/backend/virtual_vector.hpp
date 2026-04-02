@@ -294,12 +294,11 @@ public:
     {   return {this, static_cast<std::ptrdiff_t>(_index.size())};
     }
 
-    template<typename Stream = out::fasta>
+    template<typename Stream = out::fasta_gz>
     requires write_functor<Stream, SequenceType>
     void save
     (   std::string_view filename
-    ,   Stream s = Stream()
-    ,   bool compress = true
+    ,   Stream s = Stream(true) // enable faidx by default
     ,   int n_threads = 0
     ,   int n_sub_blks = 64
     ) const
@@ -317,53 +316,6 @@ public:
             s.write(seq);
         }
         s.close();
-        std::string fasta_filename = std::string(filename);
-        create_fai(fasta_filename, fasta_filename + ".fai");
-        if (compress)
-        {   FILE* fasta_fp = std::fopen(fasta_filename.c_str(), "rb");
-            if (!fasta_fp)
-                throw std::runtime_error
-                (   fmt::format
-                    (   "gnx::virtual_vector::save: cannot open FASTA for "
-                        "compression -> {}"
-                    ,   fasta_filename
-                    )
-                );
-            std::string gz_path = std::string(filename) + ".gz";
-            BGZF* bgz_fp = bgzf_open(gz_path.c_str(), "wb");
-            if (!bgz_fp)
-            {   std::fclose(fasta_fp);
-                throw std::runtime_error
-                (   fmt::format
-                    (   "gnx::virtual_vector::save: cannot open bgzip output "
-                        "file -> {}"
-                    ,   gz_path
-                    )
-                );
-            }
-            if (n_threads > 0)
-                bgzf_mt(bgz_fp, n_threads, n_sub_blks);
-            char buf[65536];
-            std::size_t n;
-            while ((n = std::fread(buf, 1, sizeof(buf), fasta_fp)) > 0)
-            {   if (bgzf_write(bgz_fp, buf, n) < 0)
-                {   bgzf_close(bgz_fp);
-                    std::fclose(fasta_fp);
-                    throw std::runtime_error
-                    (   fmt::format
-                        (   "gnx::virtual_vector::save: I/O error writing bgzip"
-                            " file -> {}"
-                        ,   gz_path
-                        )
-                    );
-                }
-            }
-            bgzf_close(bgz_fp);
-            std::fclose(fasta_fp);
-            std::filesystem::remove(fasta_filename);
-            std::filesystem::rename(fasta_filename + ".fai", gz_path + ".fai");
-            create_gzi(gz_path, gz_path + ".gzi");
-        }
     }
 
 private:
