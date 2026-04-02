@@ -44,6 +44,11 @@ concept sequence_container
 &&  has_size_type<T>
 ;
 
+template<typename T, typename S>
+concept write_functor = requires(T t, std::string_view f, const S& s)
+{   { t.operator()(f, s) } -> std::same_as<int>;
+};
+
 #if defined(__CUDACC__) || defined(__HIPCC__)
 // helper alias to get the system tag of a container
 template <typename Container>
