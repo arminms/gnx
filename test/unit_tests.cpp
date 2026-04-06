@@ -3444,85 +3444,70 @@ TEMPLATE_TEST_CASE
 }
 
 // =============================================================================
-// virtual_vector sequence bank tests
+// fixtures for virtual_vector tests
 // =============================================================================
 
 template <typename T>
-struct fasta_fixture
+struct fai_fixture
 {   using SequenceType = T;
-    fasta_fixture()
+    fai_fixture()
     {   auto tmp = std::filesystem::temp_directory_path();
         tmp_fa        = (tmp / "gnx_test.fa").string();
         tmp_fai       = (tmp / "gnx_test.fa.fai").string();
+
+        gnx::sequence_bank sb{gnx::forward_stream<SequenceType>{SAMPLE_GENOME}};
+        gnx::out::fasta out(true);
+        out.open(tmp_fa);
+        for (const auto& s : sb)
+            out.write(s());
+        out.close();
+    }
+    ~fai_fixture()
+    {   // Clean up temporary files created during tests.
+        std::filesystem::remove(tmp_fa);
+        std::filesystem::remove(tmp_fai);
+    }
+
+    std::string tmp_fa;
+    std::string tmp_fai;
+};
+
+template <typename T>
+struct gzi_fixture
+{   using SequenceType = T;
+    gzi_fixture()
+    {   auto tmp = std::filesystem::temp_directory_path();
         tmp_fa_gz     = (tmp / "gnx_test.fa.gz").string();
         tmp_fa_gz_fai = (tmp / "gnx_test.fa.gz.fai").string();
         tmp_fa_gz_gzi = (tmp / "gnx_test.fa.gz.gzi").string();
 
-        gzFile gz = gzopen(SAMPLE_GENOME, "rb");
-        if (!gz)
-            throw std::runtime_error
-            (   std::string("decompress_to_tmp: cannot open ")
-            +   tmp_fa_gz
-            );
-        FILE* out = std::fopen(tmp_fa.c_str(), "wb");
-        if (!out)
-        {   gzclose(gz);
-            throw std::runtime_error
-            (   std::string("decompress_to_tmp: cannot create ")
-            +   tmp_fa
-            );
-        }
-        BGZF* bgz = bgzf_open(tmp_fa_gz.c_str(), "wb");
-        if (!bgz)
-        {   gzclose(gz);
-            std::fclose(out);
-            throw std::runtime_error
-            (   std::string("decompress_to_tmp: cannot create ")
-            +   tmp_fa_gz
-            );
-        }
-        char buf[65536];
-        int n;
-        while ((n = gzread(gz, buf, sizeof(buf))) > 0)
-        {   std::fwrite(buf, 1, static_cast<std::size_t>(n), out);
-            bgzf_write(bgz, buf, static_cast<std::size_t>(n));
-        }
-        std::fclose(out);
-        bgzf_close(bgz);
-        gzclose(gz);
-
-        gnx::create_fai(tmp_fa, tmp_fai);
-        std::filesystem::copy_file
-        (   tmp_fai
-        ,   tmp_fa_gz_fai
-        ,   std::filesystem::copy_options::overwrite_existing
-        );
-        gnx::create_gzi(tmp_fa_gz, tmp_fa_gz_gzi);
+        gnx::sequence_bank sb{gnx::forward_stream<SequenceType>{SAMPLE_GENOME}};
+        gnx::out::fasta_gz out(true);
+        out.open(tmp_fa_gz);
+        for (const auto& s : sb)
+            out.write(s());
+        out.close();
     }
-    ~fasta_fixture()
+    ~gzi_fixture()
     {   // Clean up temporary files created during tests.
-        std::filesystem::remove(tmp_fa);
-        std::filesystem::remove(tmp_fai);
         std::filesystem::remove(tmp_fa_gz);
         std::filesystem::remove(tmp_fa_gz_fai);
         std::filesystem::remove(tmp_fa_gz_gzi);
     }
 
-    std::string tmp_fa;
     std::string tmp_fa_gz;
-    std::string tmp_fai;
     std::string tmp_fa_gz_fai;
     std::string tmp_fa_gz_gzi;
 };
 
 TEMPLATE_TEST_CASE_METHOD
-(   fasta_fixture
+(   fai_fixture
 ,   "gnx::sequence_bank<virtual_vector>"
 ,   "[backend][virtual_vector]"
 ,   gnx::generic_sequence<std::vector<char>>
 ,   gnx::packed_generic_sequence_2bit<std::vector<uint8_t>>
 )
-{   typedef typename fasta_fixture<TestType>::SequenceType SequenceType;
+{   typedef typename fai_fixture<TestType>::SequenceType SequenceType;
 
     SECTION( "size and empty" )
     {   gnx::virtual_vector<SequenceType> vv(this->tmp_fa);
@@ -3630,19 +3615,14 @@ TEMPLATE_TEST_CASE_METHOD
     }
 }
 
-// =============================================================================
-// virtual_vector bgzip tests  (doc/Chlamydia_psittaci_MN.fna.gz)
-// The .fai and .gzi are pre-built and committed alongside the .gz file.
-// =============================================================================
-
 TEMPLATE_TEST_CASE_METHOD
-(   fasta_fixture
+(   gzi_fixture
 ,   "gnx::sequence_bank<virtual_vector> bgzip"
 ,   "[backend][virtual_vector][bgzip]"
 ,   gnx::generic_sequence<std::vector<char>>
 ,   gnx::packed_generic_sequence_2bit<std::vector<uint8_t>>
 )
-{   typedef typename fasta_fixture<TestType>::SequenceType SequenceType;
+{   typedef typename gzi_fixture<TestType>::SequenceType SequenceType;
 
     SECTION( "size and empty" )
     {   gnx::virtual_vector<SequenceType> vv(this->tmp_fa_gz);
@@ -3698,4 +3678,10 @@ TEMPLATE_TEST_CASE_METHOD
             CHECK(std::size(vv[1]) == 7553);
         }
     }
+
+    SECTION( "save()" )
+    {   gnx::virtual_vector<SequenceType> vv(this->tmp_fa_gz);
+        vv.save("/tmp/test3.fa.gz");
+    }
+
 }
