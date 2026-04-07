@@ -71,6 +71,10 @@ if (${GNX_ENABLE_HIP})
   endif()
 endif()
 
+## check for PThreads
+#
+find_package(Threads REQUIRED)
+
 ## check for zlib
 #
 find_package(ZLIB REQUIRED)
@@ -125,6 +129,7 @@ add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 target_compile_features(${PROJECT_NAME} INTERFACE cxx_std_20)
 target_link_libraries(${PROJECT_NAME} INTERFACE
   OpenMP::OpenMP_CXX
+  Threads::Threads
   ZLIB::ZLIB
   fmt::fmt
   g3p::g3p
