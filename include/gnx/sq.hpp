@@ -27,6 +27,7 @@
     #include <thrust/memory.h>
 #endif // __CUDACC__
 
+#include <gnx/concepts.hpp>
 #include <gnx/views.hpp>
 #include <gnx/visitor.hpp>
 #include <gnx/io/fastaqz.hpp>
@@ -403,10 +404,11 @@ public:
     }
     ///
     /// Saves the sequence to a file using the provided write function object
-    template<typename WriteFunc>
+    template<typename WriteFunc = out::fasta_gz>
+    requires write_functor<WriteFunc, generic_sequence>
     void save
     (   std::string_view filename
-    ,   WriteFunc write
+    ,   WriteFunc write = WriteFunc()
     )
     {   write(filename, *this);
     }
