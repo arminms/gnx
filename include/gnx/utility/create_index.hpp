@@ -234,7 +234,7 @@ inline void create_gzi
             );
         }
         const std::uint32_t usize =
-                static_cast<std::uint32_t>(ibuf[0])
+               static_cast<std::uint32_t>(ibuf[0])
             | (static_cast<std::uint32_t>(ibuf[1]) << 8)
             | (static_cast<std::uint32_t>(ibuf[2]) << 16)
             | (static_cast<std::uint32_t>(ibuf[3]) << 24);
