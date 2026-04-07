@@ -316,10 +316,10 @@ struct fasta_gz
     template <class Sequence>
     void write
     (   const Sequence& seq
-    ,   int n_threads = 0
-    ,   int n_sub_blks = 64
+    ,   int n_threads = 1
+    ,   int n_sub_blks = 256
     )
-    {   if (n_threads > 0)
+    {   if (n_threads > 1)
             bgzf_mt(_fp, n_threads, n_sub_blks);
         // Lambda that wraps bgzf_write and tracks BGZF block boundaries for
         // the .gzi index. When _gzi_fp is null it degrades to a plain write.
@@ -654,10 +654,10 @@ struct fastq_gz
     template <class Sequence>
     void write
     (   const Sequence& seq
-    ,   int n_threads = 0
-    ,   int n_sub_blks = 64
+    ,   int n_threads = 1
+    ,   int n_sub_blks = 256
     )
-    {   if (n_threads > 0)
+    {   if (n_threads > 1)
             bgzf_mt(_fp, n_threads, n_sub_blks);
         // Lambda that wraps bgzf_write and tracks BGZF block boundaries for
         // the .gzi index. When _gzi_fp is null it degrades to a plain write.
