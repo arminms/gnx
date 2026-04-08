@@ -128,8 +128,8 @@ add_library(${PROJECT_NAME} INTERFACE)
 add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 target_compile_features(${PROJECT_NAME} INTERFACE cxx_std_20)
 target_link_libraries(${PROJECT_NAME} INTERFACE
+  $<IF:$<BOOL:${MSVC}>,PThreads4WIN::PThreads4WIN,Threads::Threads>
   OpenMP::OpenMP_CXX
-  Threads::Threads
   ZLIB::ZLIB
   fmt::fmt
   g3p::g3p
