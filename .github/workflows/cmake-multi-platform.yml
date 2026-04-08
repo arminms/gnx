@@ -61,4 +61,6 @@ jobs:
 
     - name: Test
       working-directory: ${{github.workspace}}/build
-      run: ctest -j 1 --output-on-failure
+      env:
+        CTEST_PARALLEL_LEVEL: 1
+      run: ctest --output-on-failure
