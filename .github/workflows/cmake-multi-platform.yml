@@ -41,9 +41,7 @@ jobs:
 
     - name: Configure with CMake (Windows)
       run: |
-        cmake -S ${{github.workspace}} -B build \
-        -DGNX_ENABLE_BENCHMARKS=OFF \
-        -DCMAKE_TOOLCHAIN_FILE="$Env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
+        cmake -S ${{github.workspace}} -B build -DGNX_ENABLE_BENCHMARKS=OFF -DCMAKE_TOOLCHAIN_FILE="$Env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
       if: matrix.os == 'windows-latest'
 
     - name: Configure with CMake (macOS)
