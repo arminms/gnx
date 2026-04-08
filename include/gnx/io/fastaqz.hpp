@@ -319,7 +319,9 @@ struct fasta_gz
     ,   int n_threads = 1
     ,   int n_sub_blks = 256
     )
-    {   if (n_threads > 1)
+    {   // MT mode makes bgzf_tell unreliable for block boundary detection,
+        // so only enable it when we are not tracking GZI index entries.
+        if (n_threads > 1 && !_gzi_fp)
             bgzf_mt(_fp, n_threads, n_sub_blks);
         // Lambda that wraps bgzf_write and tracks BGZF block boundaries for
         // the .gzi index. When _gzi_fp is null it degrades to a plain write.
@@ -657,7 +659,9 @@ struct fastq_gz
     ,   int n_threads = 1
     ,   int n_sub_blks = 256
     )
-    {   if (n_threads > 1)
+    {   // MT mode makes bgzf_tell unreliable for block boundary detection,
+        // so only enable it when we are not tracking GZI index entries.
+        if (n_threads > 1 && !_gzi_fp)
             bgzf_mt(_fp, n_threads, n_sub_blks);
         // Lambda that wraps bgzf_write and tracks BGZF block boundaries for
         // the .gzi index. When _gzi_fp is null it degrades to a plain write.
@@ -683,6 +687,7 @@ struct fastq_gz
         :   "\n";
         tracked_write(header.c_str(), header.size());
         const std::uint64_t offset = _cumul_upos;
+
         const typename Sequence::value_type* data = nullptr;
         universal_host_pinned_vector<typename Sequence::value_type>
             pinned_seq(std::size(seq));
@@ -708,6 +713,7 @@ struct fastq_gz
                 tracked_write("\n", 1);
             }
         }
+
         else
         {   tracked_write(data, std::size(seq));
             tracked_write("\n", 1);

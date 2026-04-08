@@ -52,6 +52,7 @@ typedef SSIZE_T ssize_t;
 
 #ifdef BGZF_MT
 #include <pthread.h>
+#include <atomic>
 #endif
 
 #define BGZF_BLOCK_SIZE 0xff00 // make sure compressBound(BGZF_BLOCK_SIZE) < BGZF_MAX_BLOCK_SIZE
@@ -658,7 +659,7 @@ typedef struct
 typedef struct mtaux_t
 {
     int n_threads, n_blks, curr, done;
-    volatile int proc_cnt;
+    std::atomic<long> proc_cnt;
     void **blk;
     int *len;
     worker_t *w;
@@ -688,7 +689,7 @@ static int worker_aux(worker_t *w)
         memcpy(w->mt->blk[i], w->buf, clen);
         w->mt->len[i] = clen;
     }
-    __sync_fetch_and_add(&w->mt->proc_cnt, 1);
+    w->mt->proc_cnt.fetch_add(1);
     return 0;
 }
 
