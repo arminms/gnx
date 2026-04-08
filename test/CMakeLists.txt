@@ -52,7 +52,6 @@ endif()
 target_link_libraries(unit_tests PRIVATE
   ${PROJECT_NAME}::${PROJECT_NAME}
   Catch2::Catch2WithMain
-  Threads::Threads
   ranx::openmp
 )
 
