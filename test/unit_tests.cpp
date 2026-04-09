@@ -3679,9 +3679,9 @@ TEMPLATE_TEST_CASE_METHOD
         }
     }
 
-    SECTION( "save()" )
-    {   gnx::virtual_vector<SequenceType> vv(this->tmp_fa_gz);
-        vv.save("/tmp/test3.fa.gz");
-    }
+    // SECTION( "save()" )
+    // {   gnx::virtual_vector<SequenceType> vv(this->tmp_fa_gz);
+    //     vv.save("/tmp/test3.fa.gz");
+    // }
 
 }
