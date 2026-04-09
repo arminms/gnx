@@ -22,7 +22,7 @@ option(GNX_ENABLE_HIP "Enable ROCm HIP support ?" ON)
 #
 project(
   gnx
-  VERSION 0.2.0
+  VERSION 0.3.0
   LANGUAGES CXX
   DESCRIPTION "Biological sequences for Modern C++"
 )
@@ -151,7 +151,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
   SOVERSION ${gnx_VERSION_MAJOR}
 )
 
-## only perform the installation when ranx is not being used as a subproject
+## only perform the installation when gnx is not being used as a subproject
 #
 if (NOT_SUBPROJECT)
   ## specifying the export name for the targets
@@ -249,5 +249,9 @@ if (NOT_SUBPROJECT)
     endif()
     add_subdirectory(perf)
   endif()
+
+  ## add gnx executable
+  #
+  add_subdirectory(src)
 
 endif(NOT_SUBPROJECT)
