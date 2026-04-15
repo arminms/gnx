@@ -22,28 +22,28 @@ endif()
 
 ## defining target for gnx executable
 #
-add_executable(gnx_cmd gnx.cpp)
-set_target_properties(gnx_cmd PROPERTIES OUTPUT_NAME gnx)
+add_executable(gnx_cli gnx.cpp)
+set_target_properties(gnx_cli PROPERTIES OUTPUT_NAME gnx)
 
-# if(CUDAToolkit_FOUND)
-#   set_source_files_properties(gnx.cpp PROPERTIES LANGUAGE CUDA)
-#   target_compile_options(gnx_cmd PRIVATE
-#     $<$<COMPILE_LANGUAGE:CUDA>:--extended-lambda>
-#     $<$<AND:$<CONFIG:Debug>,$<COMPILE_LANGUAGE:CUDA>>:-G;-src-in-ptx>
-#   )
-# endif()
+if(CUDAToolkit_FOUND)
+  set_source_files_properties(gnx.cpp PROPERTIES LANGUAGE CUDA)
+  target_compile_options(gnx_cli PRIVATE
+    $<$<COMPILE_LANGUAGE:CUDA>:--extended-lambda>
+    $<$<AND:$<CONFIG:Debug>,$<COMPILE_LANGUAGE:CUDA>>:-G;-src-in-ptx>
+  )
+endif()
 
-# if(hip_FOUND)
-#   set_source_files_properties(gnx.cpp PROPERTIES LANGUAGE HIP)
-#   target_compile_options(gnx_cmd PRIVATE
-#     -Wno-unused-result -Wno-pass-failed
-#     $<$<COMPILE_LANGUAGE:HIP>:--offload-arch=gfx942>
-#   )
-# endif()
+if(hip_FOUND)
+  set_source_files_properties(gnx.cpp PROPERTIES LANGUAGE HIP)
+  target_compile_options(gnx_cli PRIVATE
+    -Wno-unused-result -Wno-pass-failed
+    $<$<COMPILE_LANGUAGE:HIP>:--offload-arch=gfx942>
+  )
+endif()
 
-## defining link libraries for gnx_cmd
+## defining link libraries for gnx_cli
 #
-target_link_libraries(gnx_cmd PRIVATE
+target_link_libraries(gnx_cli PRIVATE
   ${PROJECT_NAME}::${PROJECT_NAME}
   CLI11::CLI11
 )
