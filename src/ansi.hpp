@@ -20,8 +20,11 @@
 #include <cstring>
 #include <cstdio>
 #include <string>
+#include <string_view>
 
 namespace ansi {
+
+using namespace std::string_view_literals;
 
 inline bool is_terminal() noexcept
 {   static const bool terminal = ISATTY(FILENO(stdout));
@@ -69,180 +72,112 @@ inline bool is_terminal() noexcept
 
 namespace fg {
 
-    inline std::string black()
-    {   return is_terminal() && supports_color()
-        ?   std::string{"\033[30m"}
-        :   std::string{};
+    inline std::string_view black()
+    {   return is_terminal() && supports_color() ? "\033[30m"sv : ""sv;
     };
-    inline std::string red()
-    {   return is_terminal() && supports_color()
-        ?   std::string{"\033[31m"}
-        :   std::string{};
+    inline std::string_view red()
+    {   return is_terminal() && supports_color() ? "\033[31m"sv : ""sv;
     };
-    inline std::string green()
-    {   return is_terminal() && supports_color()
-        ?   std::string{"\033[32m"}
-        :   std::string{};
+    inline std::string_view green()
+    {   return is_terminal() && supports_color() ? "\033[32m"sv : ""sv;
     };
-    inline std::string yellow()
-    {   return is_terminal() && supports_color()
-        ?   std::string{"\033[33m"}
-        :   std::string{};
+    inline std::string_view yellow()
+    {   return is_terminal() && supports_color() ? "\033[33m"sv : ""sv;
     };
-    inline std::string blue()
-    {   return is_terminal() && supports_color()
-        ?   std::string{"\033[34m"}
-        :   std::string{};
+    inline std::string_view blue()
+    {   return is_terminal() && supports_color() ? "\033[34m"sv : ""sv;
     };
-    inline std::string magenta()
-    {   return is_terminal() && supports_color()
-        ?   std::string{"\033[35m"}
-        :   std::string{};
+    inline std::string_view magenta()
+    {   return is_terminal() && supports_color() ? "\033[35m"sv : ""sv;
     };
-    inline std::string cyan()
-    {   return is_terminal() && supports_color()
-        ?   std::string{"\033[36m"}
-        :   std::string{};
+    inline std::string_view cyan()
+    {   return is_terminal() && supports_color() ? "\033[36m"sv : ""sv;
     };
-    inline std::string white()
-    {   return is_terminal() && supports_color()
-        ?   std::string{"\033[37m"}
-        :   std::string{};
+    inline std::string_view white()
+    {   return is_terminal() && supports_color() ? "\033[37m"sv : ""sv;
     };
-    inline std::string bright_black()
-    {   return is_terminal() && supports_color()
-        ?   std::string{"\033[90m"}
-        :   std::string{};
+    inline std::string_view bright_black()
+    {   return is_terminal() && supports_color() ? "\033[90m"sv : ""sv;
     };
-    inline std::string bright_red()
-    {   return is_terminal() && supports_color()
-        ?   std::string{"\033[91m"}
-        :   std::string{};
+    inline std::string_view bright_red()
+    {   return is_terminal() && supports_color() ? "\033[91m"sv : ""sv;
     };
-    inline std::string bright_green()
-    {   return is_terminal() && supports_color()
-        ?   std::string{"\033[92m"}
-        :   std::string{};
+    inline std::string_view bright_green()
+    {   return is_terminal() && supports_color() ? "\033[92m"sv : ""sv;
     };
-    inline std::string bright_yellow()
-    {   return is_terminal() && supports_color()
-        ?   std::string{"\033[93m"}
-        :   std::string{};
+    inline std::string_view bright_yellow()
+    {   return is_terminal() && supports_color() ? "\033[93m"sv : ""sv;
     };
-    inline std::string bright_blue()
-    {   return is_terminal() && supports_color()
-        ?   std::string{"\033[94m"}
-        :   std::string{};
+    inline std::string_view bright_blue()
+    {   return is_terminal() && supports_color() ? "\033[94m"sv : ""sv;
     };
-    inline std::string bright_magenta()
-    {   return is_terminal() && supports_color()
-        ?   std::string{"\033[95m"}
-        :   std::string{};
+    inline std::string_view bright_magenta()
+    {   return is_terminal() && supports_color() ? "\033[95m"sv : ""sv;
     };
-    inline std::string bright_cyan()
-    {   return is_terminal() && supports_color()
-        ?   std::string{"\033[96m"}
-        :   std::string{};
+    inline std::string_view bright_cyan()
+    {   return is_terminal() && supports_color() ? "\033[96m"sv : ""sv;
     };
-    inline std::string bright_white()
-    {   return is_terminal() && supports_color()
-        ?   std::string{"\033[97m"}
-        :   std::string{};
+    inline std::string_view bright_white()
+    {   return is_terminal() && supports_color() ? "\033[97m"sv : ""sv;
     };
-    inline std::string reset()
-    {   return is_terminal() && supports_color()
-        ?   std::string{"\033[39m"}
-        :   std::string{};
+    inline std::string_view reset()
+    {   return is_terminal() && supports_color() ? "\033[39m"sv : ""sv;
     };
 
 }   // namespace fg
 
 namespace bg {
 
-    inline std::string black()
-    {   return is_terminal() && supports_color()
-        ?   std::string{"\033[40m"}
-        :   std::string{};
+    inline std::string_view black()
+    {   return is_terminal() && supports_color() ? "\033[40m"sv : ""sv;
     };
-    inline std::string red()
-    {   return is_terminal() && supports_color()
-        ?   std::string{"\033[41m"}
-        :   std::string{};
+    inline std::string_view red()
+    {   return is_terminal() && supports_color() ? "\033[41m"sv : ""sv;
     };
-    inline std::string green()
-    {   return is_terminal() && supports_color()
-        ?   std::string{"\033[42m"}
-        :   std::string{};
+    inline std::string_view green()
+    {   return is_terminal() && supports_color() ? "\033[42m"sv : ""sv;
     };
-    inline std::string yellow()
-    {   return is_terminal() && supports_color()
-        ?   std::string{"\033[43m"}
-        :   std::string{};
+    inline std::string_view yellow()
+    {   return is_terminal() && supports_color() ? "\033[43m"sv : ""sv;
     };
-    inline std::string blue()
-    {   return is_terminal() && supports_color()
-        ?   std::string{"\033[44m"}
-        :   std::string{};
+    inline std::string_view blue()
+    {   return is_terminal() && supports_color() ? "\033[44m"sv : ""sv;
     };
-    inline std::string magenta()
-    {   return is_terminal() && supports_color()
-        ?   std::string{"\033[45m"}
-        :   std::string{};
+    inline std::string_view magenta()
+    {   return is_terminal() && supports_color() ? "\033[45m"sv : ""sv;
     };
-    inline std::string cyan()
-    {   return is_terminal() && supports_color()
-        ?   std::string{"\033[46m"}
-        :   std::string{};
+    inline std::string_view cyan()
+    {   return is_terminal() && supports_color() ? "\033[46m"sv : ""sv;
     };
-    inline std::string white()
-    {   return is_terminal() && supports_color()
-        ?   std::string{"\033[47m"}
-        :   std::string{};
+    inline std::string_view white()
+    {   return is_terminal() && supports_color() ? "\033[47m"sv : ""sv;
     };
-    inline std::string bright_black()
-    {   return is_terminal() && supports_color()
-        ?   std::string{"\033[100m"}
-        :   std::string{};
+    inline std::string_view bright_black()
+    {   return is_terminal() && supports_color() ? "\033[100m"sv : ""sv;
     };
-    inline std::string bright_red()
-    {   return is_terminal() && supports_color()
-        ?   std::string{"\033[101m"}
-        :   std::string{};
+    inline std::string_view bright_red()
+    {   return is_terminal() && supports_color() ? "\033[101m"sv : ""sv;
     };
-    inline std::string bright_green()
-    {   return is_terminal() && supports_color()
-        ?   std::string{"\033[102m"}
-        :   std::string{};
+    inline std::string_view bright_green()
+    {   return is_terminal() && supports_color() ? "\033[102m"sv : ""sv;
     };
-    inline std::string bright_yellow()
-    {   return is_terminal() && supports_color()
-        ?   std::string{"\033[103m"}
-        :   std::string{};
+    inline std::string_view bright_yellow()
+    {   return is_terminal() && supports_color() ? "\033[103m"sv : ""sv;
     };
-    inline std::string bright_blue()
-    {   return is_terminal() && supports_color()
-        ?   std::string{"\033[104m"}
-        :   std::string{};
+    inline std::string_view bright_blue()
+    {   return is_terminal() && supports_color() ? "\033[104m"sv : ""sv;
     };
-    inline std::string bright_magenta()
-    {   return is_terminal() && supports_color()
-        ?   std::string{"\033[105m"}
-        :   std::string{};
+    inline std::string_view bright_magenta()
+    {   return is_terminal() && supports_color() ? "\033[105m"sv : ""sv;
     };
-    inline std::string bright_cyan()
-    {   return is_terminal() && supports_color()
-        ?   std::string{"\033[106m"}
-        :   std::string{};
+    inline std::string_view bright_cyan()
+    {   return is_terminal() && supports_color() ? "\033[106m"sv : ""sv;
     };
-    inline std::string bright_white()
-    {   return is_terminal() && supports_color()
-        ?   std::string{"\033[107m"}
-        :   std::string{};
+    inline std::string_view bright_white()
+    {   return is_terminal() && supports_color() ? "\033[107m"sv : ""sv;
     };
-    inline std::string reset()
-    {   return is_terminal() && supports_color()
-        ?   std::string{"\033[49m"}
-        :   std::string{};
+    inline std::string_view reset()
+    {   return is_terminal() && supports_color() ? "\033[49m"sv : ""sv;
     };
 
 } // namespace bg
@@ -310,40 +245,26 @@ namespace rgb {
 
 namespace style {
 
-    inline std::string reset()
-    {   return is_terminal() && supports_color()
-        ?   std::string{"\033[0m"}
-        :   std::string{};
+    inline std::string_view reset()
+    {   return is_terminal() && supports_color() ? "\033[0m"sv : ""sv;
     };
-    inline std::string bold()
-    {   return is_terminal() && supports_color()
-        ?   std::string{"\033[1m"}
-        :   std::string{};
+    inline std::string_view bold()
+    {   return is_terminal() && supports_color() ? "\033[1m"sv : ""sv;
     };
-    inline std::string dim()
-    {   return is_terminal() && supports_color()
-        ?   std::string{"\033[2m"}
-        :   std::string{};
+    inline std::string_view dim()
+    {   return is_terminal() && supports_color() ? "\033[2m"sv : ""sv;
     };
-    inline std::string italic()
-    {   return is_terminal() && supports_color()
-        ?   std::string{"\033[3m"}
-        :   std::string{};
+    inline std::string_view italic()
+    {   return is_terminal() && supports_color() ? "\033[3m"sv : ""sv;
     };
-    inline std::string underline()
-    {   return is_terminal() && supports_color()
-        ?   std::string{"\033[4m"}
-        :   std::string{};
+    inline std::string_view underline()
+    {   return is_terminal() && supports_color() ? "\033[4m"sv : ""sv;
     };
-    inline std::string inverse()
-    {   return is_terminal() && supports_color()
-        ?   std::string{"\033[7m"}
-        :   std::string{};
+    inline std::string_view inverse()
+    {   return is_terminal() && supports_color() ? "\033[7m"sv : ""sv;
     };
-    inline std::string strikethrough()
-    {   return is_terminal() && supports_color()
-        ?   std::string{"\033[9m"}
-        :   std::string{};
+    inline std::string_view strikethrough()
+    {   return is_terminal() && supports_color() ? "\033[9m"sv : ""sv;
     };
 
 }   // namespace style
