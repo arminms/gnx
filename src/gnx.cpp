@@ -5,6 +5,7 @@
 #include <string>
 
 #include <CLI/CLI.hpp>
+#include <fmt/color.h>
 
 #include <gnx/sq.hpp>
 
@@ -90,10 +91,12 @@ int main
     gnx_cli.allow_windows_style_options();      // allow /option style for Windows users
     // gnx_cli.description("A command-line tool for biological sequence manipulation and analysis");
     gnx_cli.footer
-    (   ansi::fg::yellow()
-    +   "With no FILE, or when FILE is -, read standard input.\n"
-        "Report bugs to <https://github.com/arminms/gnx/issues>."
-    +   ansi::fg::reset()
+    (   fmt::format
+        (   "{}With no FILE, or when FILE is -, read standard input.\n"
+            "Report bugs to <https://github.com/arminms/gnx/issues>.{}"
+        ,   ansi::fg::yellow()
+        ,   ansi::fg::reset()
+        )
     );
 
     // global options
