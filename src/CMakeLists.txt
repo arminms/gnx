@@ -22,7 +22,13 @@ endif()
 
 ## defining target for gnx executable
 #
-add_executable(gnx_cli gnx.cpp)
+add_executable(gnx_cli
+  ansi.hpp
+  bgzip.hpp
+  bgzip.cpp
+  gnx.hpp
+  gnx.cpp
+)
 set_target_properties(gnx_cli PROPERTIES OUTPUT_NAME gnx)
 
 if(CUDAToolkit_FOUND)
