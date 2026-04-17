@@ -1,15 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Armin Sobhani
 //
-#include <vector>
-#include <string>
 
-#include <CLI/CLI.hpp>
-#include <fmt/color.h>
-
-#include <gnx/sq.hpp>
-
-#include "ansi.hpp"
+#include "gnx.hpp"
+#include "bgzip.hpp"
 
 //-- get_runtime_version -----------------------------------------------------//
 
@@ -49,7 +43,7 @@ int main
 (   int argc
 ,   char** argv
 )
-{   std::vector<std::string> input_files;
+{   auto g_opt = std::make_shared<gnx_options>();
 
 #if defined(__CUDACC__)
     cudaDeviceProp prop;
@@ -84,18 +78,18 @@ int main
     argv = gnx_cli.ensure_utf8(argv);
 
     // global configuration
-    gnx_cli.require_subcommand(1);              // Force user to pick a subcommand
-    gnx_cli.get_formatter()->description_paragraph_width(88); // Make help output look clean
-    gnx_cli.get_formatter()->column_width(45);  // Make help output look clean
-    gnx_cli.fallthrough(true);                  // allow options to be specified after subcommand
-    gnx_cli.allow_windows_style_options();      // allow /option style for Windows users
-    // gnx_cli.description("A command-line tool for biological sequence manipulation and analysis");
+    gnx_cli.require_subcommand(1);         // Force user to pick a subcommand
+    gnx_cli.get_formatter()->description_paragraph_width(88);    // Make help output look clean
+    gnx_cli.get_formatter()->column_width(35);                   // Make help output look clean
+    gnx_cli.get_formatter()->enable_option_type_names(false);   // Don't show option type names in help
+    gnx_cli.fallthrough(true);             // allow options to be specified after subcommand
+    // gnx_cli.allow_windows_style_options(); // allow /option style for Windows users
+    gnx_cli.description("A command-line tool for biological sequence manipulation and analysis");
     gnx_cli.footer
     (   fmt::format
-        (   "{}With no FILE, or when FILE is -, read standard input.\n"
-            "Report bugs to <https://github.com/arminms/gnx/issues>.{}"
-        ,   ansi::fg::yellow()
-        ,   ansi::fg::reset()
+        (   "{}Report bugs to <https://github.com/arminms/gnx/issues>.{}"
+        ,   ansi::style::bold()
+        ,   ansi::style::reset()
         )
     );
 
@@ -119,17 +113,22 @@ int main
         )
 #endif
     );
-    version_flag
-    ->  group("COMMON OPTIONS")
+    // version_flag
+    // ->  group("COMMON OPTIONS")
     // ->  configurable(false)
     // ->  callback_priority(CLI::CallbackPriority::First)
+    // ;
+    gnx_cli.add_flag
+    (   "-t,--time,--time-it"
+    ,   g_opt->time_it
+    ,   "Time the execution of the subcommand"
+    )
+    // ->  group("COMMON OPTIONS")
     ;
-    int threads = 1;
-    gnx_cli.add_option("-t,--threads", threads, "number of threads to use")
-    ->  group("COMMON OPTIONS")
-    ->  default_val("1")
-    ->  check(CLI::PositiveNumber)
-    ;
+
+    // Call the setup functions for the subcommands.
+    setup_bgzip(gnx_cli, *g_opt);
+
     // gnx_cli.add_option("input", input_files, "Input file(s) to process")
     // ->  group("COMMON OPTIONS")
     // // ->  required()
@@ -137,37 +136,37 @@ int main
     // ->  expected(-1) // allow multiple input files
     // ;
 
-    // --- subcommand: gnx faidx ---
-    auto* faidx = gnx_cli.add_subcommand
-    (   "faidx", "Index FASTA/FASTQ (optionally BGZF-compressed) file(s)"
-    );
-    faidx->alias("index");
+    // // --- subcommand: gnx faidx ---
+    // auto* faidx = gnx_cli.add_subcommand
+    // (   "faidx", "Index FASTA/FASTQ (optionally BGZF-compressed) file(s)"
+    // );
+    // faidx->alias("index");
 
-    // --- subcommand: gnx count ---
-    auto* count = gnx_cli.add_subcommand
-    (   "count", "Count sequences in FastA/FastQ file(s)"
-    )
-    ->  ignore_case();
-    count->description
-    (   //"Count sequences in FastA/FastQ file(s)\n\n"
-        //  "Usage: gnx count [OPTIONS] FILE...\n\n"
-        "Counts the number of sequences, residues, and optionally GC and AT "
-        "contents for each FILE, and total values if more than one FILE is "
-        "specified. Supports both uncompressed and gzipped FastA and FastQ "
-        "files. With no FILE, or when FILE is -, read standard input. The "
-        "options below may be used to select which counts are printed, always "
-        "in the following order: #seq, #res, residue counts, AT-Content and "
-        "GC-Content."
-    );
-    count->add_option("FILE,-i,--in,--input", input_files, "input file(s) or '-' for stdin")
-    ->  type_name("PATH")
-    ->  allow_extra_args(true)
-    // ->  check(CLI::ExistingFile)
-    ;
-    count->add_flag
-    (   "-s,--seqs"
-    ,   "print the number of sequences in each FILE and total"
-    );
+    // // --- subcommand: gnx count ---
+    // auto* count = gnx_cli.add_subcommand
+    // (   "count", "Count sequences in FastA/FastQ file(s)"
+    // )
+    // ->  ignore_case();
+    // count->description
+    // (   //"Count sequences in FastA/FastQ file(s)\n\n"
+    //     //  "Usage: gnx count [OPTIONS] FILE...\n\n"
+    //     "Counts the number of sequences, residues, and optionally GC and AT "
+    //     "contents for each FILE, and total values if more than one FILE is "
+    //     "specified. Supports both uncompressed and gzipped FastA and FastQ "
+    //     "files. With no FILE, or when FILE is -, read standard input. The "
+    //     "options below may be used to select which counts are printed, always "
+    //     "in the following order: #seq, #res, residue counts, AT-Content and "
+    //     "GC-Content."
+    // );
+    // count->add_option("FILE,-i,--in,--input", input_files, "input file(s) or '-' for stdin")
+    // ->  type_name("PATH")
+    // ->  allow_extra_args(true)
+    // // ->  check(CLI::ExistingFile)
+    // ;
+    // count->add_flag
+    // (   "-s,--seqs"
+    // ,   "print the number of sequences in each FILE and total"
+    // );
 
 
     try
