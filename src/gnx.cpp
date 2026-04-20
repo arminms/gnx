@@ -176,5 +176,5 @@ int main
     {   return gnx_cli.exit(e);
     }
 
-    return 0;
+    return g_opt->return_code;
 }
