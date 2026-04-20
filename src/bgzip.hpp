@@ -11,12 +11,11 @@ struct bgzip_options
     bool use_stdout{false};
     bool decompress{false};
     bool force{false};
-    bool with_index{true};
+    bool with_index{false};
     bool keep_input{false};
     int compression_level{-1};
     int threads = 1;
-    // std::size_t line_width;
 };
 
-void setup_bgzip(CLI::App& app, gnx_options const& g_opt);
-void run_bgzip(gnx_options const& g_opt, const bgzip_options& opt);
+void setup_bgzip(CLI::App& app, gnx_options& g_opt);
+void run_bgzip(gnx_options& g_opt, const bgzip_options& opt);
