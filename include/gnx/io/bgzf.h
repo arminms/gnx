@@ -39,6 +39,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <utility>
+#include <tuple>
 #include <sys/types.h>
 #include <zlib.h>
 
