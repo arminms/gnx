@@ -9,10 +9,13 @@
 #include <stdexcept>
 #include <cstdio>
 #include <filesystem>
+#include <cmath>
 
 #include <CLI/CLI.hpp>
 #include <CLI/Timer.hpp>
 #include <fmt/core.h>
+
+#include <omp.h>
 
 #include "ansi.hpp"
 
@@ -29,4 +32,5 @@ void printerr(fmt::format_string<Args...> fmt, Args&&... args)
 struct gnx_options
 {   bool time_it{false};
     int return_code{0};
+    int num_procs{0};
 };

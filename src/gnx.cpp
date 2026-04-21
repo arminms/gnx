@@ -44,6 +44,7 @@ int main
 ,   char** argv
 )
 {   auto g_opt = std::make_shared<gnx_options>();
+    g_opt->num_procs = omp_get_num_procs();
 
 #if defined(__CUDACC__)
     cudaDeviceProp prop;
