@@ -17,7 +17,10 @@ void bgzip
 ,   gnx_options& g_opt
 ,   bgzip_options const& opt
 )
-{   // input file checkings...
+{   // make a local copy since we will be modifying it
+    bool keep_input = opt.keep_input || opt.use_stdout || file == "-";
+
+    // input file checkings...
     if (std::filesystem::is_directory(file))
     {   printerr("[bgzip]: {} is a directory -- ignored\n", file);
         return;
@@ -38,7 +41,7 @@ void bgzip
     }
     // output file checkings...
     std::string out_file{};
-    if (opt.decompress && !opt.use_stdout)
+    if (opt.decompress && !opt.use_stdout && file != "-")
     {   if
         (   ext == ".gz"
         ||  ext == ".bgz"
@@ -57,6 +60,10 @@ void bgzip
     }
     else if (opt.use_stdout)
     {   out_file = "standard output";
+    }
+    else if (!opt.output_file.empty())
+    {   out_file = opt.output_file;
+        keep_input = true;
     }
     else
     {   out_file = file + ".gz";
@@ -185,12 +192,14 @@ void bgzip
         else
         {   BGZF* out_bgzf = static_cast<BGZF*>(out);
             int threads_to_use
-            =   opt.threads == -1
-            ?   std::min
-                (   int(std::log(double(std::filesystem::file_size(file)) / 1.0e4))
-                ,   g_opt.num_procs
-                )
-            :   file == "-" ? 1 : opt.threads;
+            =   file == "-"
+            ?   1
+            :   opt.threads == -1
+                ?   std::min
+                    (   int(std::log(double(std::filesystem::file_size(file)) / 1.0e4))
+                    ,   g_opt.num_procs
+                    )
+                :   opt.threads;
             if (threads_to_use > 1)
                 bgzf_mt(out_bgzf, threads_to_use, 256);
             // fmt::print
@@ -214,7 +223,7 @@ void bgzip
         if (opt.with_index && !opt.decompress)
         {   std::string index_file = out_file + ".gzi";
             try
-            {   gnx::create_gzi(file + ".gz", index_file);
+            {   gnx::create_gzi(out_file, index_file);
             }
             catch (const std::runtime_error& e)
             {   printerr("[bgzip]: {}\n", e.what());
@@ -224,7 +233,7 @@ void bgzip
         }
     }
 
-    if (!opt.keep_input && !opt.use_stdout)
+    if (!keep_input)
     {   if (std::remove(file.c_str()) != 0)
         {   printerr("[bgzip]: {} -- error deleting input file\n", file);
             g_opt.return_code = 1;
@@ -239,11 +248,23 @@ void bgzip
 {   if (opt.input_files.empty())
         bgzip("-", g_opt, opt);
     else
+    {   if (!opt.output_file.empty() && opt.input_files.size() > 1)
+        {   printerr
+            (   "[bgzip]: output file {}{}{} cannot be specified for multiple "
+                "input files\n"
+            ,   ansi::fg::yellow()
+            ,   opt.output_file
+            ,   ansi::fg::reset()
+            );
+            g_opt.return_code = 1;
+            return;
+        }
         // for (auto const& file : opt.input_files)
         //     bgzip(file, g_opt, opt);
         #pragma omp parallel for schedule(dynamic) if(opt.input_files.size() > 1)
         for (std::size_t i = 0; i < opt.input_files.size(); ++i)
             bgzip(opt.input_files[i], g_opt, opt);
+    }
 }
 
 }   // namespace detail
