@@ -2,8 +2,11 @@
 // Copyright (c) 2026 Armin Sobhani
 // Implementation of the bgzip subcommand for compressing FASTA/FASTQ files
 //
-#define BGZF_MT
-#include <gnx/io/bgzf.h>
+#include <gnx/sq.hpp>
+#include <gnx/sqb.hpp>
+#include <gnx/backend/forward_stream.hpp>
+#include <gnx/io/fastaqz.hpp>
+#include <gnx/utility/create_index.hpp>
 
 #include "bgzip.hpp"
 
@@ -22,7 +25,8 @@ void bgzip
     auto ext = std::filesystem::path(file).extension().string();
     if
     (   !opt.decompress
-    &&  (  ext == ".gz"
+    &&  (  ext == ".bgz"
+        || ext == ".gz"
         || ext == ".gzip"
         || ext == ".tgz"
         || ext == ".z"
@@ -35,8 +39,13 @@ void bgzip
     // output file checkings...
     std::string out_file{};
     if (opt.decompress && !opt.use_stdout)
-    {   // check if file has the right extension
-        if (ext == ".gz" || ext == ".gzip" || ext == ".zip" || ext == ".z")
+    {   if
+        (   ext == ".gz"
+        ||  ext == ".bgz"
+        ||  ext == ".gzip"
+        ||  ext == ".zip"
+        ||  ext == ".z"
+        )
             out_file = file.substr(0, file.size() - ext.size());
         else if (ext == ".tgz")
             out_file = file.substr(0, file.size() - ext.size()) + ".tar";
@@ -59,84 +68,162 @@ void bgzip
         return;
     }
 
-    gzFile in = file == "-"
-    ?   gzdopen(STDIN_FILENO, "rb")
-    :   gzopen(file.c_str(), "rb");
-    if (!in)
-    {   printerr("[bgzip]: {} -- no such file or directory\n", file);
-        return;
-    }
-    void* out
-    =   opt.decompress
-    ?   static_cast<void*>
-        (   opt.use_stdout
-        ?   stdout
-        :   fopen(out_file.c_str(), "wb")
+    if (opt.decompress && opt.with_index)
+        printerr("[bgzip]: ignored -i|--index option for decompression\n");
+
+    if
+    (   opt.with_index
+    &&  (   ext == ".fa"
+        ||  ext == ".fas"
+        ||  ext == ".fasta"
+        ||  ext == ".fna"
+        ||  ext == ".faa"
+        ||  ext == ".ffn"
         )
-    :   static_cast<void*>
-        (   opt.use_stdout
-        ?   bgzf_dopen(fileno(stdout), "wb")
-        :   bgzf_open(out_file.c_str(), "wb")
-        )
-    ;
-    if (!out)
-    {   gzclose(in);
-        printerr
-        (   "[bgzip]: cannot open {}\n"
-        ,   out_file
-        );
-        g_opt.return_code = 1;
-        return;
-    }
-    char buffer[16384];
-    int bytes_read;
-    if (opt.decompress)
-    {   FILE* out_fp = static_cast<FILE*>(out);
-        while ((bytes_read = gzread(in, buffer, sizeof(buffer))) > 0)
-        {   if
-            (   std::fwrite(buffer, 1, bytes_read, out_fp)
-            !=  static_cast<size_t>(bytes_read)
-            )
-            {   fclose(out_fp);
-                gzclose(in);
-                printerr("[bgzip]: error writing to {}\n", out_file);
-                g_opt.return_code = 1;
+    )
+    {   try
+        {   gnx::sequence_bank sb{gnx::forward_stream<gnx::sq>{file}};
+            gnx::out::fasta_gz out(true);
+            out.open(out_file);
+            for (const auto& s : sb)
+            {   if (s().empty())
+                {   printerr("[bgzip]: {} -- not a valid FASTA file\n", file);
+                    g_opt.return_code = 1;
+                    out.close();
+                    std::remove(out_file.c_str());
+                    return;
+                }
+                out.write(s());
             }
+            out.close();
         }
-        if (opt.use_stdout)
-            std::fflush(out_fp);
-        else
-            fclose(out_fp);
+        catch (const std::runtime_error& e)
+        {   printerr("[bgzip]: {}\n", e.what());
+            g_opt.return_code = 1;
+            std::remove(out_file.c_str());
+            return;
+        }
+    }
+    else if
+    (   opt.with_index
+    &&  (   ext == ".fastq"
+        ||  ext == ".fq"
+        )
+    )
+    {   try
+        {   gnx::sequence_bank sb{gnx::forward_stream<gnx::sq>{file}};
+            gnx::out::fastq_gz out(true);
+            out.open(out_file);
+            for (const auto& s : sb)
+            {   if (s.quality().empty())
+                {   printerr("[bgzip]: {} -- not a valid FASTQ file\n", file);
+                    g_opt.return_code = 1;
+                    out.close();
+                    std::remove(out_file.c_str());
+                    return;
+                }
+                out.write(s());
+            }
+            out.close();
+        }
+        catch (const std::runtime_error& e)
+        {   printerr("[bgzip]: {}\n", e.what());
+            g_opt.return_code = 1;
+            std::remove(out_file.c_str());
+            return;
+        }
     }
     else
-    {   BGZF* out_bgzf = static_cast<BGZF*>(out);
-        int threads_to_use
-        =   opt.threads == -1
-        ?   std::min
-            (   int(std::log(double(std::filesystem::file_size(file)) / 1.0e4))
-            ,   g_opt.num_procs
+    {   gzFile in = file == "-"
+        ?   gzdopen(STDIN_FILENO, "rb")
+        :   gzopen(file.c_str(), "rb");
+        if (!in)
+        {   printerr("[bgzip]: {} -- no such file or directory\n", file);
+        }
+        void* out
+        =   opt.decompress
+        ?   static_cast<void*>
+            (   opt.use_stdout
+            ?   stdout
+            :   fopen(out_file.c_str(), "wb")
             )
-        :   file == "-" ? 1 : opt.threads;
-        if (threads_to_use > 1)
-            bgzf_mt(out_bgzf, threads_to_use, 256);
-        // fmt::print
-        // (   stderr
-        // ,   "[bgzip]: compressing {} with {} thread(s)\n"
-        // ,   file
-        // ,   threads_to_use
-        // );
-        while ((bytes_read = gzread(in, buffer, sizeof(buffer))) > 0)
-        {   
-            if (bgzf_write(out_bgzf, buffer, bytes_read) != bytes_read)
-            {   bgzf_close(out_bgzf);
-                gzclose(in);
-                printerr("[bgzip]: error writing to {}\n", out_file);
+        :   static_cast<void*>
+            (   opt.use_stdout
+            ?   bgzf_dopen(fileno(stdout), "wb")
+            :   bgzf_open(out_file.c_str(), "wb")
+            )
+        ;
+        if (!out)
+        {   gzclose(in);
+            printerr
+            (   "[bgzip]: cannot open {}\n"
+            ,   out_file
+            );
+            g_opt.return_code = 1;
+            return;
+        }
+        char buffer[16384];
+        int bytes_read;
+        if (opt.decompress)
+        {   FILE* out_fp = static_cast<FILE*>(out);
+            while ((bytes_read = gzread(in, buffer, sizeof(buffer))) > 0)
+            {   if
+                (   std::fwrite(buffer, 1, bytes_read, out_fp)
+                !=  static_cast<size_t>(bytes_read)
+                )
+                {   fclose(out_fp);
+                    gzclose(in);
+                    printerr("[bgzip]: error writing to {}\n", out_file);
+                    g_opt.return_code = 1;
+                }
+            }
+            if (opt.use_stdout)
+                std::fflush(out_fp);
+            else
+                fclose(out_fp);
+        }
+        else
+        {   BGZF* out_bgzf = static_cast<BGZF*>(out);
+            int threads_to_use
+            =   opt.threads == -1
+            ?   std::min
+                (   int(std::log(double(std::filesystem::file_size(file)) / 1.0e4))
+                ,   g_opt.num_procs
+                )
+            :   file == "-" ? 1 : opt.threads;
+            if (threads_to_use > 1)
+                bgzf_mt(out_bgzf, threads_to_use, 256);
+            // fmt::print
+            // (   stderr
+            // ,   "[bgzip]: compressing {} with {} thread(s)\n"
+            // ,   file
+            // ,   threads_to_use
+            // );
+            while ((bytes_read = gzread(in, buffer, sizeof(buffer))) > 0)
+            {   
+                if (bgzf_write(out_bgzf, buffer, bytes_read) != bytes_read)
+                {   bgzf_close(out_bgzf);
+                    gzclose(in);
+                    printerr("[bgzip]: error writing to {}\n", out_file);
+                    g_opt.return_code = 1;
+                }
+            }
+            bgzf_close(out_bgzf);
+        }
+        gzclose(in);
+        if (opt.with_index && !opt.decompress)
+        {   std::string index_file = out_file + ".gzi";
+            try
+            {   gnx::create_gzi(file + ".gz", index_file);
+            }
+            catch (const std::runtime_error& e)
+            {   printerr("[bgzip]: {}\n", e.what());
                 g_opt.return_code = 1;
+                std::remove(index_file.c_str());
             }
         }
-        bgzf_close(out_bgzf);
     }
-    gzclose(in);
+
     if (!opt.keep_input && !opt.use_stdout)
     {   if (std::remove(file.c_str()) != 0)
         {   printerr("[bgzip]: {} -- error deleting input file\n", file);
