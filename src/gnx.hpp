@@ -28,9 +28,16 @@ void printerr(fmt::format_string<Args...> fmt, Args&&... args)
 {   fmt::print(stderr, fmt, std::forward<Args>(args)...);
 }
 
+/// @brief A base class for subcommands of the gnx command-line tool
+struct command
+{   virtual ~command() = default;
+    virtual void run() = 0;
+};
+
 /// @brief A struct to hold global options and state for the gnx command-line tool
 struct gnx_options
-{   bool time_it{false};
+{   std::vector<command*> commands;
+    bool time_it{false};
     int return_code{0};
     int num_procs{0};
 };

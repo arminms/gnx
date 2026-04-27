@@ -5,17 +5,22 @@
 
 #include "gnx.hpp"
 
-struct bgzip_options
-{   std::vector<std::string> input_files;
-    std::string output_file;
-    bool use_stdout{false};
-    bool decompress{false};
-    bool force{false};
-    bool with_index{false};
-    bool keep_input{false};
-    int compression_level{-1};
-    int threads = 1;
-};
+struct bgzip : public command
+{   bgzip(CLI::App& app, gnx_options& opt);
+    void run() override;
 
-void setup_bgzip(CLI::App& app, gnx_options& g_opt);
-void run_bgzip(gnx_options& g_opt, const bgzip_options& opt);
+private:
+    gnx_options& _opt;
+    std::vector<std::string> _input_files;
+    std::string _output_file;
+    bool _use_stdout;
+    bool _decompress;
+    bool _force;
+    bool _with_index;
+    bool _keep_input;
+    int _compression_level;
+    int _threads;
+
+    void run_bgzip();
+    void run_bgzip(std::string const& file);
+};

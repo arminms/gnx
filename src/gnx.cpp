@@ -122,13 +122,13 @@ int main
     gnx_cli.add_flag
     (   "-t,--time,--time-it"
     ,   g_opt->time_it
-    ,   "Time the execution of the subcommand"
+    ,   "Time the execution of the command"
     )
     // ->  group("COMMON OPTIONS")
     ;
 
-    // Call the setup functions for the subcommands.
-    setup_bgzip(gnx_cli, *g_opt);
+    // create subcommands
+    auto bgzip_command = std::make_shared<bgzip>(gnx_cli, *g_opt);
 
     // gnx_cli.add_option("input", input_files, "Input file(s) to process")
     // ->  group("COMMON OPTIONS")
