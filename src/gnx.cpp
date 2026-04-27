@@ -4,6 +4,7 @@
 
 #include "gnx.hpp"
 #include "bgzip.hpp"
+#include "complement.hpp"
 
 //-- get_runtime_version -----------------------------------------------------//
 
@@ -128,7 +129,8 @@ int main
     ;
 
     // create subcommands
-    auto bgzip_command = std::make_shared<bgzip>(gnx_cli, *g_opt);
+    auto bgzip_command      = std::make_shared<bgzip>(gnx_cli, *g_opt);
+    auto complement_command = std::make_shared<complement_cmd>(gnx_cli, *g_opt);
 
     // gnx_cli.add_option("input", input_files, "Input file(s) to process")
     // ->  group("COMMON OPTIONS")
