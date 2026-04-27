@@ -4,6 +4,7 @@ Purpose: Make AI agents immediately productive in this Modern C++ header-only li
 
 ## Big Picture
 - **Library type:** Header-only CMake `INTERFACE` target `gnx::gnx` exposing headers under `include/gnx/**`. No compiled sources.
+- **CLI tool:** `src/` contains the `gnx` command-line program (CMake target `gnx_cli`, output binary `gnx`). Uses git-style subcommands via CLI11 v2.6.2. See the [CLI Tool](#cli-tool) section for how to add new subcommands.
 - **Language:** C++20 (utilize Concepts, Ranges, and `std::span` heavily).
 - **Parallelism:** Support heterogeneous computing. Code should be compatible with:
   - **NVIDIA CUDA** (via `nvcc`)
@@ -15,7 +16,7 @@ Purpose: Make AI agents immediately productive in this Modern C++ header-only li
 - **FASTA/Q gz input:** `gnx/io/fastaqz.hpp` provides `gnx::in::faqz` which loads a single record by `id` from `.fa.gz/.fq.gz` or stdin using `zlib` + `kseq.h` (embedded in `include/gnx/io/kseq.h`).
 - **Execution policies:** `gnx/execution.hpp` provides execution policies (`seq`, `par`, `unseq`, `par_unseq`, `cuda`, `rocm`, `oneapi`) for controlling parallelization strategy.
 - **Memory utilities:** `gnx/memory.hpp` provides allocators and utilities for heterogeneous memory (host, device, pinned, unified).
-- **External deps:** `ZLIB::ZLIB`, `fmt::fmt-header-only` (v11.0.2+), `g3p::g3p`, and `ranx::openmp` (all fetched if not found). `Catch2` and `Google Benchmark` fetched for tests/benchmarks.
+- **External deps:** `ZLIB::ZLIB`, `fmt::fmt-header-only` (v11.0.2+), `g3p::g3p`, `ranx::openmp`, and `CLI11::CLI11` (v2.6.2, all fetched if not found). `Catch2` and `Google Benchmark` fetched for tests/benchmarks.
 
 ## Coding Style & Conventions
 - **Naming:** Follow standard C++ library conventions (snake_case for functions/variables, PascalCase for Template Concepts).
@@ -48,6 +49,7 @@ Purpose: Make AI agents immediately productive in this Modern C++ header-only li
 - **Build (library consumers):** The library has no sources to compile; configure to generate and install headers + package config.
 - **Install headers:** [include/CMakeLists.txt](include/CMakeLists.txt) installs `include/gnx/**` to `${CMAKE_INSTALL_INCLUDEDIR}`.
 - **Package config:** Generated files `${project}-config.cmake`, `${project}-targets.cmake` under `${CMAKE_INSTALL_LIBDIR}/cmake/gnx` enable `find_package(gnx CONFIG)` in consumer projects.
+- **CLI binary:** Built automatically alongside the library (no extra CMake switch). Installed to `${CMAKE_INSTALL_BINDIR}` per [src/CMakeLists.txt](src/CMakeLists.txt).
 
 Example local build + install:
 ```bash
@@ -55,6 +57,28 @@ cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j
 cmake --install build --prefix $HOME/.local
 ```
+
+## CLI Tool
+- **Binary:** `gnx` (CMake target `gnx_cli` in [src/CMakeLists.txt](src/CMakeLists.txt)); linked against `gnx::gnx` and `CLI11::CLI11`.
+- **Architecture:**
+  - [src/gnx.hpp](src/gnx.hpp): `command` abstract base class (pure virtual `run()`); `gnx_options` struct holding global state (`num_procs`, `time_it`, `return_code`, `commands` registry); `printerr()` for type-safe stderr output via `fmt`.
+  - [src/gnx.cpp](src/gnx.cpp): `main()` — detects OpenMP procs and GPU runtime, creates `CLI::App`, instantiates subcommand objects (which self-register in their constructors), then calls `gnx_cli.parse()`.
+  - [src/ansi.hpp](src/ansi.hpp): conditional ANSI color helpers — `ansi::fg::*()`, `ansi::bg::*()`, `ansi::style::*()`. All functions return `""` when stdout is not a terminal or color is unsupported.
+- **Current subcommands:** `bgzip` (aliases: `compress`, `decompress`) — block-compress or decompress FASTA/FASTQ files using BGZF format, optionally building `.fai`/`.gzi` indexes.
+
+### Adding a New Subcommand
+Use [src/bgzip.hpp](src/bgzip.hpp) and [src/bgzip.cpp](src/bgzip.cpp) as the canonical template. Four steps:
+
+1. **Create `src/my_cmd.hpp`** — Declare `struct my_cmd : public command` with constructor `(CLI::App& app, gnx_options& opt)`, `void run() override`, and private member fields for each option/flag value.
+2. **Create `src/my_cmd.cpp`** — In the constructor: call `app.add_subcommand("my_cmd", "description")`, optionally chain `.alias("...")` for alternative names, register options with `add_option()` / `add_flag()` (use `CLI::Range`, `CLI::ExistingFile`, etc. for validation), then end with `subcmd->callback([this]() { run(); })`. In `run()`: wrap main logic in `CLI::AutoTimer` when `_opt.time_it` is true; use OMP `parallel for` over files via `_opt.num_procs` for multi-file batch processing.
+3. **Edit `src/gnx.cpp`** — Add `#include "my_cmd.hpp"` and instantiate `auto my_cmd = std::make_shared<my_cmd>(gnx_cli, *g_opt);` in `main()` before the `parse()` call.
+4. **Edit `src/CMakeLists.txt`** — Append `my_cmd.hpp` and `my_cmd.cpp` to the `add_executable(gnx_cli ...)` source list.
+
+**Key CLI conventions:**
+- Use `printerr(...)` (from `src/gnx.hpp`) for all error output to stderr; never `std::cerr` directly.
+- Positional `FILE` argument defaults to `"-"` (stdin); use `.allow_extra_args(true)` for accepting multiple files.
+- Chain `.alias("...")` on the subcommand pointer for alternative invocation names.
+- For GPU-aware subcommands, use gnx execution policies and `if constexpr` dispatch — same pattern as library algorithms.
 
 ## Tests
 - **Switch:** `GNX_ENABLE_TESTS` (default ON). Disabled when used as a subproject (`NOT_SUBPROJECT` logic).
@@ -182,5 +206,6 @@ fmt::print("Sequence: {}\n", s);  // Uses custom fmt::formatter
 - When adding tests, put them in `test/unit_tests.cpp` and rely on Catch2 v3, ensuring coverage for both Host and Device execution paths..
 - When adding benchmarks, use Google Benchmark in `perf/benchmarks.cpp`, ensuring coverage for both Host and Device execution paths.
 - Keep `CMakeLists.txt` consistent: `INTERFACE` target, exported config, and install rules.
+- When adding a CLI subcommand, follow the 4-step recipe in the [CLI Tool](#cli-tool) section. Use [src/bgzip.hpp](src/bgzip.hpp) and [src/bgzip.cpp](src/bgzip.cpp) as the canonical template.
 
 Feedback: If any workflows or conventions feel unclear or incomplete (e.g., expected tag types, g3p usage patterns), tell us which sections need more detail and propose additions.
