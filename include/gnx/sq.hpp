@@ -577,7 +577,7 @@ public:
 
 // -- string literal operator --------------------------------------------------
 
-    gnx::sq operator""_sq (const char* str, std::size_t len)
+    inline gnx::sq operator""_sq (const char* str, std::size_t len)
     {   return gnx::sq(str);   }
 
 // -- fmt formatter for gnx::sq ------------------------------------------------
