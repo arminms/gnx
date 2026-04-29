@@ -26,13 +26,19 @@ add_executable(gnx_cli
   ansi.hpp
   bgzip.hpp
   bgzip.cpp
+  complement.hpp
+  complement.cpp
   gnx.hpp
   gnx.cpp
 )
 set_target_properties(gnx_cli PROPERTIES OUTPUT_NAME gnx)
 
 if(CUDAToolkit_FOUND)
-  set_source_files_properties(gnx.cpp PROPERTIES LANGUAGE CUDA)
+  set_source_files_properties(
+    gnx.cpp
+    complement.cpp
+    PROPERTIES LANGUAGE CUDA
+  )
   target_compile_options(gnx_cli PRIVATE
     $<$<COMPILE_LANGUAGE:CUDA>:--extended-lambda>
     $<$<AND:$<CONFIG:Debug>,$<COMPILE_LANGUAGE:CUDA>>:-G;-src-in-ptx>
@@ -40,7 +46,11 @@ if(CUDAToolkit_FOUND)
 endif()
 
 if(hip_FOUND)
-  set_source_files_properties(gnx.cpp PROPERTIES LANGUAGE HIP)
+  set_source_files_properties(
+    gnx.cpp
+    complement.cpp
+    PROPERTIES LANGUAGE HIP
+  )
   target_compile_options(gnx_cli PRIVATE
     -Wno-unused-result -Wno-pass-failed
     $<$<COMPILE_LANGUAGE:HIP>:--offload-arch=gfx942>
