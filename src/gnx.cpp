@@ -6,38 +6,6 @@
 #include "bgzip.hpp"
 #include "complement.hpp"
 
-//-- get_runtime_version -----------------------------------------------------//
-
-#if defined(__CUDACC__)
-std::string get_runtime_version()
-{   int version{0};
-    std::string result;
-    if (cudaSuccess == cudaRuntimeGetVersion(&version))
-    {   int major = version / 1000;
-         int minor = (version % 1000) / 10;
-         int patch = version % 10;
-         result = fmt::format("{}.{}.{}", major, minor, patch);
-    }
-    else result = "failed to get CUDA version";
-    return result;
-}
-#endif //__CUDACC__
-
-#if defined(__HIPCC__)
-std::string get_runtime_version()
-{   int version{0};
-    std::string result;
-    if (hipSuccess == hipRuntimeGetVersion(&version))
-    {    int major = version / 10000000;
-         int minor = (version % 10000000) / 100000;
-         int patch = version % 100000;
-         result = fmt::format("{}.{}.{}", major, minor, patch);
-    }
-    else result = "failed to get HIP version";
-    return result;
-}
-#endif //__HIPCC__
-
 /// --- main() ---------------------------------------------------------------//
 
 int main
@@ -47,22 +15,6 @@ int main
 {   auto g_opt = std::make_shared<gnx_options>();
     g_opt->num_procs = omp_get_num_procs();
 
-#if defined(__CUDACC__)
-    cudaDeviceProp prop;
-    std::string device_name
-    =   (cudaGetDeviceProperties(&prop, 0) == cudaSuccess)
-    ?   prop.name
-    :   ""
-    ;
-#elif defined(__HIPCC__)
-    hipDeviceProp_t prop;
-    std::string device_name
-    =   (hipGetDeviceProperties(&prop, 0) == hipSuccess)
-    ?   prop.name
-    :   ""
-    ;
-#endif
-
     CLI::App gnx_cli
     {   fmt::format
         (   "Program : gnx "
@@ -70,7 +22,7 @@ int main
 #if defined(__CUDACC__) || defined(__HIPCC__)
             "Version : {}\nDevice   : {}"
         ,   GNX_VERSION
-        ,   device_name.empty() ? "Not detected" : device_name
+        ,   g_opt->gpu_name
 #else
             "Version : {}"
         ,   GNX_VERSION
@@ -86,7 +38,7 @@ int main
     gnx_cli.get_formatter()->enable_option_type_names(false);   // Don't show option type names in help
     gnx_cli.fallthrough(true);             // allow options to be specified after subcommand
     // gnx_cli.allow_windows_style_options(); // allow /option style for Windows users
-    gnx_cli.description("A command-line tool for biological sequence manipulation and analysis");
+    // gnx_cli.description("A command-line tool for biological sequence manipulation and analysis");
     gnx_cli.footer
     (   fmt::format
         (   "{}Report bugs to <https://github.com/arminms/gnx/issues>.{}"
@@ -102,12 +54,12 @@ int main
 #if defined(__CUDACC__)
         (   "GNX\t: {}\nCUDA\t: {}\n\nCopyright (C) 2026 Armin Sobhani"
         ,   GNX_VERSION
-        ,   get_runtime_version()
+        ,   g_opt->runtime_version
         )
 #elif defined(__HIPCC__)
         (   "GNX\t: {}\nROCm\t: {}\n\nCopyright (C) 2026 Armin Sobhani"
         ,   GNX_VERSION
-        ,   get_runtime_version()
+        ,   g_opt->runtime_version
         )
 #else
         (   "GNX\t: {}\n\nCopyright (C) 2026 Armin Sobhani"
