@@ -136,7 +136,9 @@ struct host_pinned_allocator
         {   if (mlock(ptr, size) != 0)
                 fmt::print
                 (   stderr
-                ,   "Warning: mlock failed (check ulimit -l). Memory remains pageable.\n"
+                ,   "Warning: mlock failed (errno {}). Memory remains pageable."
+                    " Check 'ulimit -l'\n"
+                ,   errno
                 );
         }
 #endif
@@ -405,7 +407,7 @@ template<class T>
     //
     // must be changed to use the C++17 std::aligned_alloc or std::align_val_t
     // return new (std::align_val_t(16)) int[40]; // 128-bit alignment
-    void*
+    inline void*
     detail::allocate_aligned_memory(size_t align, size_t size)
     {   // assert(align >= sizeof(void*));
         // assert(nail::is_power_of_two(align));
@@ -423,7 +425,7 @@ template<class T>
     // this function is used by the aligned_allocator
     // to deallocate memory that was allocated with
     // detail::allocate_aligned_memory
-    void
+    inline void
     detail::deallocate_aligned_memory(void *ptr) noexcept
 #if defined(_WIN32)
     {   return _aligned_free(ptr);   }
