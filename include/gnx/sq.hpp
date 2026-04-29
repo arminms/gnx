@@ -572,6 +572,11 @@ public:
     ///
     /// A sequence of @a char
     using sq = generic_sequence<std::vector<char>>;
+    ///
+    /// A sequence of @a char stored in a GPU device vector.
+#if defined(__CUDACC__) || defined(__HIPCC__)
+    using dsq = generic_sequence<thrust::device_vector<char>>;
+#endif // __CUDACC__ || __HIPCC__
 
 }   // end gnx namespace
 
