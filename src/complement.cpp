@@ -2,12 +2,12 @@
 // Copyright (c) 2026 Armin Sobhani
 // Implementation of the complement subcommand for the gnx CLI tool
 //
-#include <gnx/sq.hpp>
-#include <gnx/backend/forward_stream.hpp>
-#include <gnx/io/fastaqz.hpp>
-#include <gnx/algorithms/complement.hpp>
-
 #include "complement.hpp"
+
+#include <gnx/sq.hpp>
+#include <gnx/io/fastaqz.hpp>
+#include <gnx/backend/forward_stream.hpp>
+#include <gnx/algorithms/complement.hpp>
 
 complement_cmd::complement_cmd
 (   CLI::App& app
@@ -61,6 +61,17 @@ complement_cmd::complement_cmd
     )
     ->  type_name("PATH")
     ;
+#if defined(__CUDACC__) || defined(__HIPCC__)
+    if (opt.gpu_available)
+    {   sub->add_flag
+        (   "-G,--gpu"
+        ,   _use_gpu
+        ,   fmt::format("Run on GPU ({})", opt.gpu_name)
+        )
+        ->  default_val(false)
+        ;
+    }
+#endif // __CUDACC__ || __HIPCC__
 
     sub->callback([this]() { run(); });
 }
@@ -77,7 +88,14 @@ void complement_cmd::run()
 
 void complement_cmd::run_complement()
 {   if (_input_files.empty())
-        run_complement("-");
+#if defined(__CUDACC__) || defined(__HIPCC__)
+        if (_use_gpu)
+            run_complement<gnx::dsq>("-");
+        else
+            run_complement<gnx::sq>("-");
+#else
+        run_complement<gnx::sq>("-");
+#endif // __CUDACC__ || __HIPCC__
     else
     {   if (!_output_file.empty() && _input_files.size() > 1)
         {   printerr
@@ -90,12 +108,24 @@ void complement_cmd::run_complement()
             _opt.return_code = 1;
             return;
         }
+#if defined(__CUDACC__) || defined(__HIPCC__)
+        if (_use_gpu)
+            // #pragma omp parallel for schedule(dynamic) if(_input_files.size() > 1)
+            for (std::size_t i = 0; i < _input_files.size(); ++i)
+                run_complement<gnx::dsq>(_input_files[i]);
+        else
+            #pragma omp parallel for schedule(dynamic) if(_input_files.size() > 1)
+            for (std::size_t i = 0; i < _input_files.size(); ++i)
+                run_complement<gnx::sq>(_input_files[i]);
+#else
         #pragma omp parallel for schedule(dynamic) if(_input_files.size() > 1)
         for (std::size_t i = 0; i < _input_files.size(); ++i)
-            run_complement(_input_files[i]);
+            run_complement<gnx::sq>(_input_files[i]);
+#endif // __CUDACC__ || __HIPCC__
     }
 }
 
+template <typename T>
 void complement_cmd::run_complement(std::string const& file)
 {   bool is_stdin = (file == "-");
 
@@ -147,7 +177,7 @@ void complement_cmd::run_complement(std::string const& file)
     }
 
     try
-    {   gnx::forward_stream<gnx::sq> stream{file};
+    {   gnx::forward_stream<T> stream{file};
         auto it     = stream.begin();
         auto end_it = stream.end();
 
@@ -169,9 +199,9 @@ void complement_cmd::run_complement(std::string const& file)
         };
 
         if      (is_fastq && out_gz) { gnx::out::fastq_gz w; process(w); }
-        else if (is_fastq)           { gnx::out::fastq   w; process(w); }
+        else if (is_fastq)           { gnx::out::fastq    w; process(w); }
         else if (out_gz)             { gnx::out::fasta_gz w; process(w); }
-        else                         { gnx::out::fasta   w; process(w); }
+        else                         { gnx::out::fasta    w; process(w); }
 
         if (in_place)
             std::filesystem::rename(tmp_path, file);
