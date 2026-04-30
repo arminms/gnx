@@ -10,6 +10,7 @@
 #include <stdexcept>
 #include <utility>
 #include <vector>
+#include <filesystem>
 
 #include <zlib.h>
 #include <gnx/io/kseq.h>
@@ -167,7 +168,7 @@ struct fasta
         );
         if (_faidx)
         {   std::size_t line_bases = _line_width ? _line_width : std::size(seq);
-            std::size_t line_bytes = line_bases * sizeof(typename Sequence::value_type) + 1;
+            std::size_t line_bytes = line_bases * sizeof(char) + 1;
             std::int64_t offset = ftello(_fp);
             fmt::print
             (   _faidx_fp
@@ -413,37 +414,49 @@ private:
 /// @brief A function object for writing sequences in FASTQ format and
 /// optionally with a .fai index file.
 struct fastq
-{   fastq(bool faidx = false, std::size_t line_width = 0)
+{   fastq
+    (   bool faidx = false
+    ,   size_t buffer_size = 65536
+    )
     :   _fp(nullptr)
     ,   _faidx_fp(nullptr)
     ,   _faidx(faidx)
-    ,   _line_width(line_width)
-    {}
+    ,   _serial(1)
+    {   if (!_faidx) _buffer.reserve(buffer_size);
+    }
     void open(std::string_view filename)
-    {   _fp = filename == "-"
+    {   _filename = filename;
+        _fp = _filename == "-"
         ?   stdout
-        :   fopen(std::string(filename).c_str(), "wb");
+        :   fopen(_filename.c_str(), "wb");
         if (nullptr == _fp)
             throw std::runtime_error
             (   fmt::format("gnx::fastq: could not open file -> {}", filename)
             );
-        if (_faidx && filename != "-")
-        {   _faidx_fp = fopen((std::string(filename) + ".fai").c_str(), "wb");
+        if (_faidx && _filename != "-")
+        {   _faidx_fp = fopen((_filename + ".fai").c_str(), "wb");
             if (nullptr == _faidx_fp)
             {   fclose(_fp);
                 throw std::runtime_error
                 (   fmt::format
                     (   "gnx::fastq: could not create FAI index file -> {}.fai"
-                    ,   filename
+                    ,   _filename
                     )
                 );
             }
         }
         else
             _faidx = false; // disable faidx if output is stdout
+
+        _filename
+        =   filename == "-"
+        ?   "gnx_sq"
+        :   std::filesystem::path(filename).stem().string();
     }
     void close()
-    {   if (_fp && _fp != stdout)
+    {   if (_buffer.size() > 0)
+            fwrite(_buffer.data(), sizeof(char), _buffer.size(), _fp);
+        if (_fp && _fp != stdout)
             fclose(_fp);
         if (_faidx_fp)
             fclose(_faidx_fp);
@@ -452,26 +465,24 @@ struct fastq
     }
     template <class Sequence>
     void write(const Sequence& seq)
-    {   std::string id = seq.has("_id")
-        ?   std::any_cast<std::string>(seq["_id"])
-        :   "gnx_seq";
-        std::string header = "@" + id;
-        header += seq.has("_desc")
-        ?   " " + std::any_cast<std::string>(seq["_desc"]) + "\n"
-        :   "\n";
-        fwrite
-        (   header.c_str()
-        ,   sizeof(typename Sequence::value_type)
-        ,   header.size()
-        ,   _fp
+    {   fmt::format_to
+        (   std::back_inserter(_buffer)
+        ,   "@{}{}\n"
+        ,   seq.has("_id") 
+            ?   std::any_cast<std::string>(seq["_id"])
+            :   _filename + "." + std::to_string(_serial)
+        ,   seq.has("_desc")
+            ?   " " + std::any_cast<std::string>(seq["_desc"])
+            :   ""
         );
+
         if (_faidx)
-        {   std::size_t line_bases = _line_width ? _line_width : std::size(seq);
-            std::size_t line_bytes = line_bases * sizeof(typename Sequence::value_type) + 1;
+        {   fwrite(_buffer.data(), sizeof(char), _buffer.size(), _fp);
+            _buffer.clear();
+            std::size_t line_bases = std::size(seq);
+            std::size_t line_bytes = line_bases * sizeof(char) + 1;
             std::int64_t offset = ftello(_fp);
-            const std::size_t seq_lines = _line_width
-            ?   (std::size(seq) + _line_width - 1) / _line_width
-            :   1;
+            const std::size_t seq_lines = 1;
             std::int64_t qualoffset = offset
                 + static_cast<std::int64_t>(std::size(seq))
                 + static_cast<std::int64_t>(seq_lines)  // newlines after sequence
@@ -479,7 +490,9 @@ struct fastq
             fmt::print
             (   _faidx_fp
             ,   "{}\t{}\t{}\t{}\t{}\t{}\n"
-            ,   id
+            ,   seq.has("_id") 
+                ?   std::any_cast<std::string>(seq["_id"])
+                :   _filename + "." + std::to_string(_serial)
             ,   std::size(seq)
             ,   offset
             ,   line_bases
@@ -487,76 +500,38 @@ struct fastq
             ,   qualoffset
             );
         }
-        const typename Sequence::value_type* data = nullptr;
-        universal_host_pinned_vector<typename Sequence::value_type>
-            pinned_seq(std::size(seq));
+
+        ++_serial;
+
+        auto write_sequence_and_quality = [&](auto& s)
+        {   std::copy_n(s.begin(), std::size(s), std::back_inserter(_buffer));
+            fmt::format_to
+            (   std::back_inserter(_buffer)
+            ,   "\n+\n{}\n"
+            ,   seq.has("_qs")
+                ?   std::any_cast<std::string>(seq["_qs"])
+                :   std::string(std::size(seq), 'I') // dummy quality string
+            );
+        };
+
 #if defined(__CUDACC__) || defined(__HIPCC__) // handle device_vector
-        thrust::copy(seq.begin(), seq.end(), pinned_seq.begin());
-        data = thrust::raw_pointer_cast(pinned_seq.data());
+        if constexpr
+        (   std::is_same_v<typename Sequence::container_type, thrust::device_vector<typename Sequence::value_type>>
+        )
+        {   universal_host_pinned_vector<typename Sequence::value_type> pinned_seq(std::size(seq));
+            thrust::copy(seq.begin(), seq.end(), pinned_seq.begin());
+            write_sequence_and_quality(pinned_seq);
+        }
+        else
+        {   write_sequence_and_quality(seq);
+        }
 #else
-        std::copy(seq.begin(), seq.end(), pinned_seq.begin());
-        data = static_cast<const typename Sequence::value_type*>
-            (pinned_seq.data());
+        write_sequence_and_quality(seq);
 #endif //__CUDACC__
-        if (_line_width)
-        {   for
-            (   typename Sequence::size_type i = 0
-            ;   i < std::size(seq)
-            ;   i += _line_width
-            )
-            {   std::string_view line
-                (   data + i
-                ,   std::min(_line_width, std::size(seq) - i)
-                );
-                fwrite
-                (   line.data()
-                ,   sizeof(typename Sequence::value_type)
-                ,   line.size()
-                ,   _fp
-                );
-                fwrite("\n", 1, 1, _fp);
-            }
-        }
-        else
-        {   fwrite
-            (   data
-            ,   sizeof(typename Sequence::value_type)
-            ,   std::size(seq)
-            ,   _fp
-            );
-            fwrite("\n", 1, 1, _fp);
-        }
-        fwrite("+\n", 1, 2, _fp);
-        std::string qs = seq.has("_qs")
-        ?   std::any_cast<std::string>(seq["_qs"])
-        :   std::string(std::size(seq), 'I'); // dummy quality string
-        if (_line_width)
-        {   for
-            (   typename Sequence::size_type i = 0
-            ;   i < qs.size()
-            ;   i += _line_width
-            )
-            {   std::string_view line
-                (   qs.data() + i
-                ,   std::min(_line_width, qs.size() - i)
-                );
-                fwrite
-                (   line.data()
-                ,   sizeof(std::string_view::value_type)
-                ,   line.size()
-                ,   _fp
-                );
-                fwrite("\n", 1, 1, _fp);
-            }
-        }
-        else
-        {   fwrite
-            (   qs.data()
-            ,   sizeof(std::string_view::value_type)
-            ,   qs.size()
-            ,   _fp
-            );
-            fwrite("\n", 1, 1, _fp);
+
+        if (!_faidx || _buffer.size() > 65536)
+        {   fwrite(_buffer.data(), sizeof(char), _buffer.size(), _fp);
+            _buffer.clear();
         }
     }
     template <class Sequence>
@@ -571,9 +546,12 @@ struct fastq
     }
 
 private:
+    std::string _filename;
+    size_t _serial;
     FILE *_fp, *_faidx_fp;
     bool _faidx;    /// whether to create a .fai index file
-    std::size_t _line_width;
+    fmt::memory_buffer _buffer;
+    // gnx::pinned_buffer _buffer;
 };
 
 /// @brief A function object for writing sequences to FASTQ files compressed
