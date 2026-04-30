@@ -114,22 +114,30 @@ namespace out {
 /// @brief A function object for writing sequences in FASTA format and
 /// optionally with .fai index file.
 struct fasta
-{   fasta(bool faidx = false, std::size_t line_width = 80)
+{   fasta
+    (   bool faidx = false
+    ,   std::size_t line_width = 80
+    ,   size_t buffer_size = 65536
+    )
     :   _fp(nullptr)
     ,   _faidx_fp(nullptr)
     ,   _faidx(faidx)
     ,   _line_width(line_width)
-    {}
+    ,   _serial(1)
+    ,   _buffer_size(buffer_size)
+    {   if (!_faidx) _buffer.reserve(_buffer_size);
+    }
     void open(std::string_view filename)
-    {   _fp = filename == "-"
+    {   _filename = filename;
+        _fp = _filename == "-"
         ?   stdout
-        :   fopen(std::string(filename).c_str(), "wb");
+        :   fopen(_filename.c_str(), "wb");
         if (nullptr == _fp)
             throw std::runtime_error
-            (   fmt::format("gnx::fasta: could not open file -> {}", filename)
+            (   fmt::format("gnx::fasta: could not open file -> {}", _filename)
             );
-        if (_faidx && filename != "-")
-        {   _faidx_fp = fopen((std::string(filename) + ".fai").c_str(), "wb");
+        if (_faidx && _filename != "-")
+        {   _faidx_fp = fopen((_filename + ".fai").c_str(), "wb");
             if (nullptr == _faidx_fp)
             {   fclose(_fp);
                 throw std::runtime_error
@@ -142,9 +150,16 @@ struct fasta
         }
         else
             _faidx = false; // disable faidx if output is stdout
+
+        _filename
+        =   filename == "-"
+        ?   "gnx_sq"
+        :   std::filesystem::path(filename).stem().string();
     }
     void close()
-    {   if (_fp && _fp != stdout)
+    {   if (_buffer.size() > 0)
+            fwrite(_buffer.data(), sizeof(char), _buffer.size(), _fp);
+        if (_fp && _fp != stdout)
             fclose(_fp);
         if (_faidx_fp)
             fclose(_faidx_fp);
@@ -153,71 +168,76 @@ struct fasta
     }
     template <class Sequence>
     void write(const Sequence& seq)
-    {   std::string id = seq.has("_id")
-        ?   std::any_cast<std::string>(seq["_id"])
-        :   "gnx_seq";
-        std::string header = ">" + id;
-        header += seq.has("_desc")
-        ?   " " + std::any_cast<std::string>(seq["_desc"]) + "\n"
-        :   "\n";
-        fwrite
-        (   header.c_str()
-        ,   sizeof(typename Sequence::value_type)
-        ,   header.size()
-        ,   _fp
+    {   fmt::format_to
+        (   std::back_inserter(_buffer)
+        ,   ">{}{}\n"
+        ,   seq.has("_id") 
+            ?   std::any_cast<std::string>(seq["_id"])
+            :   _filename + "." + std::to_string(_serial)
+        ,   seq.has("_desc")
+            ?   " " + std::any_cast<std::string>(seq["_desc"])
+            :   ""
         );
         if (_faidx)
-        {   std::size_t line_bases = _line_width ? _line_width : std::size(seq);
+        {   fwrite(_buffer.data(), sizeof(char), _buffer.size(), _fp);
+            _buffer.clear();
+            std::size_t line_bases = _line_width ? _line_width : std::size(seq);
             std::size_t line_bytes = line_bases * sizeof(char) + 1;
             std::int64_t offset = ftello(_fp);
             fmt::print
             (   _faidx_fp
             ,   "{}\t{}\t{}\t{}\t{}\n"
-            ,   id
+            ,   seq.has("_id") 
+                ?   std::any_cast<std::string>(seq["_id"])
+                :   _filename + "." + std::to_string(_serial)
             ,   std::size(seq)
             ,   offset
             ,   line_bases
             ,   line_bytes
             );
         }
-        const typename Sequence::value_type* data = nullptr;
-        universal_host_pinned_vector<typename Sequence::value_type>
-            pinned_seq(std::size(seq));
-#if defined(__CUDACC__) || defined(__HIPCC__) // handle device_vector
-        thrust::copy(seq.begin(), seq.end(), pinned_seq.begin());
-        data = thrust::raw_pointer_cast(pinned_seq.data());
-#else
-        std::copy(seq.begin(), seq.end(), pinned_seq.begin());
-        data = static_cast<const typename Sequence::value_type*>
-            (pinned_seq.data());
-#endif //__CUDACC__
-        if (_line_width)
-        {   for
-            (   typename Sequence::size_type i = 0
-            ;   i < std::size(seq)
-            ;   i += _line_width
-            )
-            {   std::string_view line
-                (   data + i
-                ,   std::min(_line_width, std::size(seq) - i)
-                );
-                fwrite
-                (   line.data()
-                ,   sizeof(typename Sequence::value_type)
-                ,   line.size()
-                ,   _fp
-                );
-                fwrite("\n", 1, 1, _fp);
+
+        ++_serial;
+
+        auto write_sequence = [&](auto& s)
+        {   if (_line_width)
+            {   for
+                (   typename Sequence::size_type i = 0
+                ;   i < std::size(s)
+                ;   i += _line_width
+                )
+                {   std::copy_n
+                    (   s.begin() + i
+                    ,   std::min(_line_width, std::size(s) - i)
+                    ,   std::back_inserter(_buffer)
+                    );
+                    fmt::format_to(std::back_inserter(_buffer), "\n");
+                }
             }
+            else
+            {   std::copy(s.begin(), s.end(), std::back_inserter(_buffer));
+                fmt::format_to(std::back_inserter(_buffer), "\n");
+            }
+        };
+
+#if defined(__CUDACC__) || defined(__HIPCC__) // handle device_vector
+        if constexpr
+        (   std::is_same_v<typename Sequence::container_type, thrust::device_vector<typename Sequence::value_type>>
+        )
+        {   universal_host_pinned_vector<typename Sequence::value_type> pinned_seq(std::size(seq));
+            thrust::copy(seq.begin(), seq.end(), pinned_seq.begin());
+            write_sequence(pinned_seq);
         }
         else
-        {   fwrite
-            (   data
-            ,   sizeof(typename Sequence::value_type)
-            ,   std::size(seq)
-            ,   _fp
-            );
-            fwrite("\n", 1, 1, _fp);
+        {   write_sequence(seq);
+        }
+#else
+        write_sequence(seq);
+#endif //__CUDACC__
+
+        if (!_faidx || _buffer.size() > _buffer_size)
+        {   fwrite(_buffer.data(), sizeof(char), _buffer.size(), _fp);
+            _buffer.clear();
         }
     }
     template <class Sequence>
@@ -232,22 +252,32 @@ struct fasta
     }
 
 private:
+    std::string _filename;
+    size_t _serial, _buffer_size;
     FILE *_fp, *_faidx_fp;
-    bool _faidx;    /// whether to create a .fai index file
+    bool _faidx;
     std::size_t _line_width;
+    fmt::memory_buffer _buffer;
 };
 
 /// @brief A function object for writing sequences to FASTA files compressed
 /// with blocked gzip (BGZF) format and optionally with both .fai and .gzi
 /// index files.
 struct fasta_gz
-{   fasta_gz(bool faidx = false, std::size_t line_width = 80)
+{   fasta_gz
+    (   bool faidx = false
+    ,   std::size_t line_width = 80
+    ,   int n_threads = 1
+    ,   int n_sub_blks = 256
+    )
     :   _fp(nullptr)
     ,   _faidx_fp(nullptr)
     ,   _gzi_fp(nullptr)
     ,   _faidx(faidx)
     ,   _line_width(line_width)
     ,   _cumul_upos(0)
+    ,   _threads(n_threads)
+    ,   _sub_blks(n_sub_blks)
     {}
     void open(std::string_view filename)
     {   _fp = filename == "-"
@@ -281,6 +311,11 @@ struct fasta_gz
         }
         else
             _faidx = false; // disable faidx if output is stdout
+
+        // MT mode makes bgzf_tell unreliable for block boundary detection,
+        // so only enable it when we are not tracking GZI index entries.
+        if (_threads > 1 && !_gzi_fp)
+            bgzf_mt(_fp, _threads, _sub_blks);
     }
     void close()
     {   if (_fp)
@@ -315,16 +350,8 @@ struct fasta_gz
         _cumul_upos = 0;
     }
     template <class Sequence>
-    void write
-    (   const Sequence& seq
-    ,   int n_threads = 1
-    ,   int n_sub_blks = 256
-    )
-    {   // MT mode makes bgzf_tell unreliable for block boundary detection,
-        // so only enable it when we are not tracking GZI index entries.
-        if (n_threads > 1 && !_gzi_fp)
-            bgzf_mt(_fp, n_threads, n_sub_blks);
-        // Lambda that wraps bgzf_write and tracks BGZF block boundaries for
+    void write(const Sequence& seq)
+    {   // Lambda that wraps bgzf_write and tracks BGZF block boundaries for
         // the .gzi index. When _gzi_fp is null it degrades to a plain write.
         auto tracked_write = [&](const void* buf, std::size_t n)
         {   auto voff_before = static_cast<std::uint64_t>(bgzf_tell(_fp));
@@ -409,6 +436,7 @@ private:
     std::size_t _line_width;
     std::vector<std::pair<std::uint64_t, std::uint64_t>> _gzi_entries;
     std::uint64_t _cumul_upos;
+    int _threads, _sub_blks;
 };
 
 /// @brief A function object for writing sequences in FASTQ format and
@@ -422,7 +450,8 @@ struct fastq
     ,   _faidx_fp(nullptr)
     ,   _faidx(faidx)
     ,   _serial(1)
-    {   if (!_faidx) _buffer.reserve(buffer_size);
+    ,   _buffer_size(buffer_size)
+    {   if (!_faidx) _buffer.reserve(_buffer_size);
     }
     void open(std::string_view filename)
     {   _filename = filename;
@@ -504,7 +533,7 @@ struct fastq
         ++_serial;
 
         auto write_sequence_and_quality = [&](auto& s)
-        {   std::copy_n(s.begin(), std::size(s), std::back_inserter(_buffer));
+        {   std::copy(s.begin(), s.end(), std::back_inserter(_buffer));
             fmt::format_to
             (   std::back_inserter(_buffer)
             ,   "\n+\n{}\n"
@@ -514,7 +543,7 @@ struct fastq
             );
         };
 
-#if defined(__CUDACC__) || defined(__HIPCC__) // handle device_vector
+#if defined(__CUDACC__) || defined(__HIPCC__)
         if constexpr
         (   std::is_same_v<typename Sequence::container_type, thrust::device_vector<typename Sequence::value_type>>
         )
@@ -529,7 +558,7 @@ struct fastq
         write_sequence_and_quality(seq);
 #endif //__CUDACC__
 
-        if (!_faidx || _buffer.size() > 65536)
+        if (!_faidx || _buffer.size() > _buffer_size)
         {   fwrite(_buffer.data(), sizeof(char), _buffer.size(), _fp);
             _buffer.clear();
         }
@@ -547,7 +576,7 @@ struct fastq
 
 private:
     std::string _filename;
-    size_t _serial;
+    size_t _serial, _buffer_size;
     FILE *_fp, *_faidx_fp;
     bool _faidx;    /// whether to create a .fai index file
     fmt::memory_buffer _buffer;
@@ -644,9 +673,7 @@ struct fastq_gz
         _cumul_upos = 0;
     }
     template <class Sequence>
-    void write
-    (   const Sequence& seq
-    )
+    void write(const Sequence& seq)
     {   // Lambda that wraps bgzf_write and tracks BGZF block boundaries for
         // the .gzi index. When _gzi_fp is null it degrades to a plain write.
         auto tracked_write = [&](const void* buf, std::size_t n)
