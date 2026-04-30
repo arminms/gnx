@@ -558,13 +558,20 @@ private:
 /// with blocked gzip (BGZF) format and optionally with both .fai and .gzi
 /// index files.
 struct fastq_gz
-{   fastq_gz(bool faidx = false, std::size_t line_width = 0)
+{   fastq_gz
+    (   bool faidx = false
+    ,   std::size_t line_width = 0
+    ,   int n_threads = 1
+    ,   int n_sub_blks = 256
+    )
     :   _fp(nullptr)
     ,   _faidx_fp(nullptr)
     ,   _gzi_fp(nullptr)
     ,   _faidx(faidx)
     ,   _line_width(line_width)
     ,   _cumul_upos(0)
+    ,   _threads(n_threads)
+    ,   _sub_blks(n_sub_blks)
     {}
     void open(std::string_view filename)
     {   _fp = filename == "-"
@@ -598,6 +605,11 @@ struct fastq_gz
         }
         else
             _faidx = false; // disable faidx if output is stdout
+
+        // MT mode makes bgzf_tell unreliable for block boundary detection,
+        // so only enable it when we are not tracking GZI index entries.
+        if (_threads > 1 && !_gzi_fp)
+            bgzf_mt(_fp, _threads, _sub_blks);
     }
     void close()
     {   if (_fp)
@@ -634,14 +646,8 @@ struct fastq_gz
     template <class Sequence>
     void write
     (   const Sequence& seq
-    ,   int n_threads = 1
-    ,   int n_sub_blks = 256
     )
-    {   // MT mode makes bgzf_tell unreliable for block boundary detection,
-        // so only enable it when we are not tracking GZI index entries.
-        if (n_threads > 1 && !_gzi_fp)
-            bgzf_mt(_fp, n_threads, n_sub_blks);
-        // Lambda that wraps bgzf_write and tracks BGZF block boundaries for
+    {   // Lambda that wraps bgzf_write and tracks BGZF block boundaries for
         // the .gzi index. When _gzi_fp is null it degrades to a plain write.
         auto tracked_write = [&](const void* buf, std::size_t n)
         {   auto voff_before = static_cast<std::uint64_t>(bgzf_tell(_fp));
@@ -751,6 +757,7 @@ private:
     std::size_t _line_width;
     std::vector<std::pair<std::uint64_t, std::uint64_t>> _gzi_entries;
     std::uint64_t _cumul_upos;
+    int _threads, _sub_blks;
 };
 
 }   // end gnx::out namespace
