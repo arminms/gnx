@@ -18,6 +18,7 @@
 
 #define BGZF_MT // enable multi-threading support in bgzf (only effective on writing)
 #include <gnx/io/bgzf.h>
+#include <gnx/utility/create_index.hpp>
 
 namespace gnx {
 
@@ -173,7 +174,7 @@ struct fasta
         ,   ">{}{}\n"
         ,   seq.has("_id") 
             ?   std::any_cast<std::string>(seq["_id"])
-            :   _filename + "." + std::to_string(_serial)
+            :   fmt::format("{}.{}", _filename, _serial)
         ,   seq.has("_desc")
             ?   " " + std::any_cast<std::string>(seq["_desc"])
             :   ""
@@ -189,7 +190,7 @@ struct fasta
             ,   "{}\t{}\t{}\t{}\t{}\n"
             ,   seq.has("_id") 
                 ?   std::any_cast<std::string>(seq["_id"])
-                :   _filename + "." + std::to_string(_serial)
+                :   fmt::format("{}.{}", _filename, _serial)
             ,   std::size(seq)
             ,   offset
             ,   line_bases
@@ -281,7 +282,8 @@ struct fasta_gz
     ,   _cumul_upos(0)
     ,   _threads(n_threads)
     ,   _sub_blks(n_sub_blks)
-    {}
+    {   if (!_faidx) _buffer.reserve(_buffer_size);
+    }
     void open(std::string_view filename)
     {   _filename = filename;
         _fp = _filename == "-"
@@ -302,28 +304,30 @@ struct fasta_gz
                     )
                 );
             }
-            _gzi_fp = fopen((_filename + ".gzi").c_str(), "wb");
-            if (nullptr == _gzi_fp)
-            {   bgzf_close(_fp); fclose(_faidx_fp);
-                throw std::runtime_error
-                (   fmt::format
-                    (   "gnx::fasta_gz: could not create GZI index file -> {}.gzi"
-                    ,   _filename
-                    )
-                );
+            // MT mode makes bgzf_tell unreliable for block boundary detection,
+            // so we'll generate .gzi after writing the .gz file.
+            if (_threads <= 1)
+            {   _gzi_fp = fopen((_filename + ".gzi").c_str(), "wb");
+                if (nullptr == _gzi_fp)
+                {   bgzf_close(_fp); fclose(_faidx_fp);
+                    throw std::runtime_error
+                    (   fmt::format
+                        (   "gnx::fasta_gz: could not create GZI index file -> {}.gzi"
+                        ,   _filename
+                        )
+                    );
+                }
             }
         }
         else
             _faidx = false; // disable faidx if output is stdout
 
-        _filename
+        _id
         =   filename == "-"
         ?   "gnx_sq"
         :   std::filesystem::path(filename).stem().string();
 
-        // MT mode makes bgzf_tell unreliable for block boundary detection,
-        // so only enable it when we are not tracking GZI index entries.
-        if (_threads > 1 && !_gzi_fp)
+        if (_threads > 1)
             bgzf_mt(_fp, _threads, _sub_blks);
     }
     void close()
@@ -331,6 +335,8 @@ struct fasta_gz
             bgzf_write(_fp, _buffer.data(), _buffer.size());
         if (_fp)
             bgzf_close(_fp);
+        if (_faidx_fp && !_gzi_fp)
+            create_gzi(_filename, _filename + ".gzi");
         if (_faidx_fp)
             fclose(_faidx_fp);
         if (_gzi_fp)
@@ -383,7 +389,7 @@ struct fasta_gz
         ,   ">{}{}\n"
         ,   seq.has("_id") 
             ?   std::any_cast<std::string>(seq["_id"])
-            :   _filename + "." + std::to_string(_serial)
+            :   fmt::format("{}.{}", _id, _serial)
         ,   seq.has("_desc")
             ?   " " + std::any_cast<std::string>(seq["_desc"])
             :   ""
@@ -400,7 +406,7 @@ struct fasta_gz
             ,   "{}\t{}\t{}\t{}\t{}\n"
             ,   seq.has("_id") 
                 ?   std::any_cast<std::string>(seq["_id"])
-                :   _filename + "." + std::to_string(_serial)
+                :   fmt::format("{}.{}", _id, _serial)
             ,   std::size(seq)
             ,   offset
             ,   line_bases
@@ -463,7 +469,7 @@ struct fasta_gz
     }
 
 private:
-    std::string _filename;
+    std::string _filename, _id;
     size_t _serial, _buffer_size;
     BGZF* _fp;
     FILE *_faidx_fp, *_gzi_fp;
@@ -535,7 +541,7 @@ struct fastq
         ,   "@{}{}\n"
         ,   seq.has("_id") 
             ?   std::any_cast<std::string>(seq["_id"])
-            :   _filename + "." + std::to_string(_serial)
+            :   fmt::format("{}.{}", _filename, _serial)
         ,   seq.has("_desc")
             ?   " " + std::any_cast<std::string>(seq["_desc"])
             :   ""
@@ -557,7 +563,7 @@ struct fastq
             ,   "{}\t{}\t{}\t{}\t{}\t{}\n"
             ,   seq.has("_id") 
                 ?   std::any_cast<std::string>(seq["_id"])
-                :   _filename + "." + std::to_string(_serial)
+                :   fmt::format("{}.{}", _filename, _serial)
             ,   std::size(seq)
             ,   offset
             ,   line_bases
@@ -659,28 +665,30 @@ struct fastq_gz
                     )
                 );
             }
-            _gzi_fp = fopen((_filename + ".gzi").c_str(), "wb");
-            if (nullptr == _gzi_fp)
-            {   bgzf_close(_fp); fclose(_faidx_fp);
-                throw std::runtime_error
-                (   fmt::format
-                    (   "gnx::fastq_gz: could not create GZI index file -> {}.gzi"
-                    ,   _filename
-                    )
-                );
+            // MT mode makes bgzf_tell unreliable for block boundary detection,
+            // so we'll generate .gzi after writing the .gz file.
+            if (_threads <= 1)
+            {   _gzi_fp = fopen((_filename + ".gzi").c_str(), "wb");
+                if (nullptr == _gzi_fp)
+                {   bgzf_close(_fp); fclose(_faidx_fp);
+                    throw std::runtime_error
+                    (   fmt::format
+                        (   "gnx::fastq_gz: could not create GZI index file -> {}.gzi"
+                        ,   _filename
+                        )
+                    );
+                }
             }
         }
         else
             _faidx = false; // disable faidx if output is stdout
 
-        _filename
+        _id
         =   filename == "-"
         ?   "gnx_sq"
         :   std::filesystem::path(filename).stem().string();
 
-        // MT mode makes bgzf_tell unreliable for block boundary detection,
-        // so only enable it when we are not tracking GZI index entries.
-        if (_threads > 1 && !_gzi_fp)
+        if (_threads > 1)
             bgzf_mt(_fp, _threads, _sub_blks);
     }
     void close()
@@ -688,6 +696,8 @@ struct fastq_gz
             bgzf_write(_fp, _buffer.data(), _buffer.size());
         if (_fp)
             bgzf_close(_fp);
+        if (_faidx_fp && !_gzi_fp)
+            create_gzi(_filename, _filename + ".gzi");
         if (_faidx_fp)
             fclose(_faidx_fp);
         if (_gzi_fp)
@@ -739,7 +749,7 @@ struct fastq_gz
         ,   "@{}{}\n"
         ,   seq.has("_id") 
             ?   std::any_cast<std::string>(seq["_id"])
-            :   _filename + "." + std::to_string(_serial)
+            :   fmt::format("{}.{}", _id, _serial)
         ,   seq.has("_desc")
             ?   " " + std::any_cast<std::string>(seq["_desc"])
             :   ""
@@ -778,7 +788,7 @@ struct fastq_gz
             ,   "{}\t{}\t{}\t{}\t{}\t{}\n"
             ,   seq.has("_id") 
                 ?   std::any_cast<std::string>(seq["_id"])
-                :   _filename + "." + std::to_string(_serial)
+                :   fmt::format("{}.{}", _id, _serial)
             ,   std::size(seq)
             ,   offset
             ,   line_bases
@@ -813,11 +823,11 @@ struct fastq_gz
         return 0;
     }
 private:
-    std::string _filename;
+    std::string _filename, _id;
     size_t _serial, _buffer_size;
     BGZF* _fp;
     FILE *_faidx_fp, *_gzi_fp;
-    bool _faidx;    /// whether to create .fai and .gzi index files
+    bool _faidx;
     std::vector<std::pair<std::uint64_t, std::uint64_t>> _gzi_entries;
     std::uint64_t _cumul_upos;
     int _threads, _sub_blks;
