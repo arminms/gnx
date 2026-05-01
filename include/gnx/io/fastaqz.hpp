@@ -156,6 +156,7 @@ struct fasta
         =   filename == "-"
         ?   "gnx_sq"
         :   std::filesystem::path(filename).stem().string();
+        _filename = _filename.substr(0, _filename.find('.'));
     }
     void close()
     {   if (_buffer.size() > 0)
@@ -333,6 +334,7 @@ struct fasta_gz
         =   filename == "-"
         ?   "gnx_sq"
         :   std::filesystem::path(filename).stem().string();
+        _id = _id.substr(0, _id.find('.'));
 
         if (_threads > 1)
             bgzf_mt(_fp, _threads, _sub_blks);
@@ -540,6 +542,7 @@ struct fastq
         =   filename == "-"
         ?   "gnx_sq"
         :   std::filesystem::path(filename).stem().string();
+        _filename = _filename.substr(0, _filename.find('.'));
     }
     void close()
     {   if (_buffer.size() > 0)
@@ -657,6 +660,7 @@ struct fastq_gz
     ,   _faidx_fp(nullptr)
     ,   _gzi_fp(nullptr)
     ,   _faidx(faidx)
+    ,   _serial(1)
     ,   _cumul_upos(0)
     ,   _threads(n_threads)
     ,   _compress_level(compress_level)
@@ -710,6 +714,7 @@ struct fastq_gz
         =   filename == "-"
         ?   "gnx_sq"
         :   std::filesystem::path(filename).stem().string();
+        _id = _id.substr(0, _id.find('.'));
 
         if (_threads > 1)
             bgzf_mt(_fp, _threads, _sub_blks);
