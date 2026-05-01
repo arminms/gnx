@@ -470,19 +470,31 @@ private:
 
     // wraps bgzf_write and tracks BGZF block boundaries for
     // the .gzi index. When _gzi_fp is null it degrades to a plain write.
+    // Splits large buffers into BGZF_BLOCK_SIZE chunks so that every
+    // block boundary crossing is detected even for genome-sized sequences.
     void tracked_write(const void* buf, std::size_t n)
-    {   auto voff_before = static_cast<std::uint64_t>(bgzf_tell(_fp));
-        bgzf_write(_fp, buf, n);
-        _buffer.clear();
-        _cumul_upos += n;
-        if (_gzi_fp)
-        {   auto voff_after = static_cast<std::uint64_t>(bgzf_tell(_fp));
-            if ((voff_after >> 16) != (voff_before >> 16))
-                _gzi_entries.emplace_back
-                (   voff_after >> 16
-                ,   _cumul_upos - (voff_after & 0xFFFFu)
-                );
+    {   const std::uint8_t* ptr = static_cast<const std::uint8_t*>(buf);
+        std::size_t remaining = n;
+        while (remaining > 0)
+        {   std::size_t chunk = std::min
+            (   remaining
+            ,   static_cast<std::size_t>(BGZF_BLOCK_SIZE)
+            );
+            auto voff_before = static_cast<std::uint64_t>(bgzf_tell(_fp));
+            bgzf_write(_fp, ptr, chunk);
+            _cumul_upos += chunk;
+            if (_gzi_fp)
+            {   auto voff_after = static_cast<std::uint64_t>(bgzf_tell(_fp));
+                if ((voff_after >> 16) != (voff_before >> 16))
+                    _gzi_entries.emplace_back
+                    (   voff_after >> 16
+                    ,   _cumul_upos - (voff_after & 0xFFFFu)
+                    );
+            }
+            ptr += chunk;
+            remaining -= chunk;
         }
+        _buffer.clear();
     }
 };
 
@@ -831,19 +843,31 @@ private:
 
     // wraps bgzf_write and tracks BGZF block boundaries for
     // the .gzi index. When _gzi_fp is null it degrades to a plain write.
+    // Splits large buffers into BGZF_BLOCK_SIZE chunks so that every
+    // block boundary crossing is detected even for genome-sized sequences.
     void tracked_write(const void* buf, std::size_t n)
-    {   auto voff_before = static_cast<std::uint64_t>(bgzf_tell(_fp));
-        bgzf_write(_fp, buf, n);
-        _buffer.clear();
-        _cumul_upos += n;
-        if (_gzi_fp)
-        {   auto voff_after = static_cast<std::uint64_t>(bgzf_tell(_fp));
-            if ((voff_after >> 16) != (voff_before >> 16))
-                _gzi_entries.emplace_back
-                (   voff_after >> 16
-                ,   _cumul_upos - (voff_after & 0xFFFFu)
-                );
+    {   const std::uint8_t* ptr = static_cast<const std::uint8_t*>(buf);
+        std::size_t remaining = n;
+        while (remaining > 0)
+        {   std::size_t chunk = std::min
+            (   remaining
+            ,   static_cast<std::size_t>(BGZF_BLOCK_SIZE)
+            );
+            auto voff_before = static_cast<std::uint64_t>(bgzf_tell(_fp));
+            bgzf_write(_fp, ptr, chunk);
+            _cumul_upos += chunk;
+            if (_gzi_fp)
+            {   auto voff_after = static_cast<std::uint64_t>(bgzf_tell(_fp));
+                if ((voff_after >> 16) != (voff_before >> 16))
+                    _gzi_entries.emplace_back
+                    (   voff_after >> 16
+                    ,   _cumul_upos - (voff_after & 0xFFFFu)
+                    );
+            }
+            ptr += chunk;
+            remaining -= chunk;
         }
+        _buffer.clear();
     }
 };
 
