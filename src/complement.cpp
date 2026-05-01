@@ -20,13 +20,13 @@ complement_cmd::complement_cmd
 ,  _force(false)
 {   auto* sub = app.add_subcommand
     (   "complement"
-    ,   "Complement all sequences in FASTA/FASTQ FILE(s) in-place, "
+    ,   "Complement all sequence(s) in FASTA/FASTQ FILE(s) in-place, "
         "preserving the original format (plain or gzipped)."
     );
     sub->footer
     (   fmt::format
         (   "{}With no FILE, or when FILE is -, read standard input and write "
-            "to standard output.\n\n"
+            "to standard output if no output file specified.\n\n"
             "Report bugs to <https://github.com/arminms/gnx/issues>.{}"
         ,   ansi::style::bold()
         ,   ansi::style::reset()
@@ -45,19 +45,33 @@ complement_cmd::complement_cmd
     sub->add_flag
     (   "-c,--stdout"
     ,   _use_stdout
-    ,   "Write to standard output, keep original file unchanged"
+    ,   "Write to standard output, keep original file(s) unchanged"
     )
     ;
     sub->add_flag
     (   "-f,--force"
     ,   _force
-    ,   "Overwrite output files without asking"
+    ,   "Overwrite output file(s) without asking"
     )
     ;
     sub->add_flag
     (   "-i,--faidx"
     ,   _faidx
-    ,   "Create .fai and .gzi (if gzipped) index files for the output (ignored if writing to stdout)"
+    ,   "Create .fai and .gzi (if gzipped) index file(s) for the output (ignored if writing to stdout)"
+    )
+    ->  default_val(false)
+    ;
+    sub->add_option
+    (   "-o,--out,--output"
+    ,   _output_file
+    ,   "Write to file instead of modifying FILE in-place"
+    )
+    ->  type_name("PATH")
+    ;
+    sub->add_flag
+    (   "-r,--reverse"
+    ,   _reverse
+    ,   "Reverse the sequence(s) in addition to complementing (ignored for FASTQ)"
     )
     ->  default_val(false)
     ;
@@ -67,13 +81,6 @@ complement_cmd::complement_cmd
     ,   "Line width for FASTA output (ignored for FASTQ)"
     )
     ->  default_val(80)
-    ;
-    sub->add_option
-    (   "-o,--out,--output"
-    ,   _output_file
-    ,   "Write to file instead of modifying FILE in-place"
-    )
-    ->  type_name("PATH")
     ;
 #if defined(__CUDACC__) || defined(__HIPCC__)
     if (opt.gpu_available)
@@ -213,17 +220,21 @@ void complement_cmd::run_complement(std::string const& file)
             for (; it != end_it; ++it)
             {   auto seq = stream();
                 gnx::complement(seq.begin(), seq.end());
+                if (_reverse)
+                    std::reverse(seq.begin(), seq.end());
                 writer.write(seq);
             }
             writer.close();
         };
 
         if (is_fastq && out_gz)
-        {   gnx::out::fastq_gz w(_faidx);
+        {   _reverse = false;
+            gnx::out::fastq_gz w(_faidx);
             process(w);
         }
         else if (is_fastq)
-        {   gnx::out::fastq w(_faidx);
+        {   _reverse = false;
+            gnx::out::fastq w(_faidx);
             process(w);
         }
         else if (out_gz)

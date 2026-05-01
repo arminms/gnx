@@ -17,6 +17,7 @@ private:
     bool _use_stdout;
     bool _force;
     bool _faidx;
+    bool _reverse;
 #if defined(__CUDACC__) || defined(__HIPCC__)
     bool _use_gpu{0};
 #endif // __CUDACC__ || __HIPCC__
