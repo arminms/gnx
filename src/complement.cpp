@@ -54,6 +54,20 @@ complement_cmd::complement_cmd
     ,   "Overwrite output files without asking"
     )
     ;
+    sub->add_flag
+    (   "-i,--faidx"
+    ,   _faidx
+    ,   "Create .fai and .gzi (if gzipped) index files for the output (ignored if writing to stdout)"
+    )
+    ->  default_val(false)
+    ;
+    sub->add_option
+    (   "-w,--width"
+    ,   _line_width
+    ,   "Line width for FASTA output (ignored for FASTQ)"
+    )
+    ->  default_val(80)
+    ;
     sub->add_option
     (   "-o,--out,--output"
     ,   _output_file
@@ -147,10 +161,12 @@ void complement_cmd::run_complement(std::string const& file)
     if (is_stdin && _output_file.empty())
     {   out_path = "-";
         out_gz   = false;
+        _faidx = false;
     }
     else if (_use_stdout)
     {   out_path = "-";
         out_gz   = false;
+        _faidx = false;
     }
     else if (!_output_file.empty())
     {   out_path = _output_file;
@@ -202,10 +218,22 @@ void complement_cmd::run_complement(std::string const& file)
             writer.close();
         };
 
-        if      (is_fastq && out_gz) { gnx::out::fastq_gz w(true); process(w); }
-        else if (is_fastq)           { gnx::out::fastq    w; process(w); }
-        else if (out_gz)             { gnx::out::fasta_gz w(true, 80, 12); process(w); }
-        else                         { gnx::out::fasta    w; process(w); }
+        if (is_fastq && out_gz)
+        {   gnx::out::fastq_gz w(_faidx);
+            process(w);
+        }
+        else if (is_fastq)
+        {   gnx::out::fastq w(_faidx);
+            process(w);
+        }
+        else if (out_gz)
+        {   gnx::out::fasta_gz w(_faidx, _line_width, 12);
+            process(w);
+        }
+        else
+        {   gnx::out::fasta w(_faidx, _line_width);
+            process(w);
+        }
 
         if (in_place)
             std::filesystem::rename(tmp_path, file);
