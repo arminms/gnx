@@ -269,6 +269,7 @@ struct fasta_gz
     (   bool faidx = false
     ,   std::size_t line_width = 80
     ,   int n_threads = 1
+    ,   int compress_level = -1 // -1 for default, 0-9 for gzip levels
     ,   int n_sub_blks = 256
     ,   size_t buffer_size = 65536
     )
@@ -281,14 +282,20 @@ struct fasta_gz
     ,   _buffer_size(buffer_size)
     ,   _cumul_upos(0)
     ,   _threads(n_threads)
+    ,   _compress_level(compress_level)
     ,   _sub_blks(n_sub_blks)
     {   if (!_faidx) _buffer.reserve(_buffer_size);
     }
     void open(std::string_view filename)
     {   _filename = filename;
-        _fp = _filename == "-"
-        ?   bgzf_dopen(fileno(stdout), "wb")
-        :   bgzf_open(_filename.c_str(), "wb");
+        std::string mode
+        =   _compress_level >= 0 && _compress_level <= 9
+        ?   fmt::format("wb{}", _compress_level)
+        :   "wb";
+        _fp
+        =   _filename == "-"
+        ?   bgzf_dopen(fileno(stdout), mode.c_str())
+        :   bgzf_open(_filename.c_str(), mode.c_str());
         if (nullptr == _fp)
             throw std::runtime_error
             (   fmt::format("gnx::fasta_gz: could not open file -> {}", _filename)
@@ -458,7 +465,7 @@ private:
     std::size_t _line_width;
     std::vector<std::pair<std::uint64_t, std::uint64_t>> _gzi_entries;
     std::uint64_t _cumul_upos;
-    int _threads, _sub_blks;
+    int _threads, _sub_blks, _compress_level;
     fmt::memory_buffer _buffer;
 
     // wraps bgzf_write and tracks BGZF block boundaries for
@@ -630,6 +637,7 @@ struct fastq_gz
 {   fastq_gz
     (   bool faidx = false
     ,   int n_threads = 1
+    ,   int compress_level = -1 // -1 for default, 0-9 for gzip levels
     ,   int n_sub_blks = 256
     ,   size_t buffer_size = 65536
     )
@@ -639,15 +647,20 @@ struct fastq_gz
     ,   _faidx(faidx)
     ,   _cumul_upos(0)
     ,   _threads(n_threads)
+    ,   _compress_level(compress_level)
     ,   _sub_blks(n_sub_blks)
     ,   _buffer_size(buffer_size)
     {   if (!_faidx) _buffer.reserve(_buffer_size);
     }
     void open(std::string_view filename)
     {   _filename = filename;
+        std::string mode
+        =   _compress_level >= 0 && _compress_level <= 9
+        ?   fmt::format("wb{}", _compress_level)
+        :   "wb";
         _fp = _filename == "-"
-        ?   bgzf_dopen(fileno(stdout), "wb")
-        :   bgzf_open(_filename.c_str(), "wb");
+        ?   bgzf_dopen(fileno(stdout), mode.c_str())
+        :   bgzf_open(_filename.c_str(), mode.c_str());
         if (nullptr == _fp)
             throw std::runtime_error
             (   fmt::format("gnx::fastq_gz: could not open file -> {}", _filename)
@@ -813,7 +826,7 @@ private:
     bool _faidx;
     std::vector<std::pair<std::uint64_t, std::uint64_t>> _gzi_entries;
     std::uint64_t _cumul_upos;
-    int _threads, _sub_blks;
+    int _threads, _sub_blks, _compress_level;
     fmt::memory_buffer _buffer;
 
     // wraps bgzf_write and tracks BGZF block boundaries for
