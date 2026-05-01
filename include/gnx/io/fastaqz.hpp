@@ -332,7 +332,7 @@ struct fasta_gz
     }
     void close()
     {   if (_buffer.size() > 0)
-            bgzf_write(_fp, _buffer.data(), _buffer.size());
+            tracked_write(_buffer.data(), _buffer.size());
         if (_fp)
             bgzf_close(_fp);
         if (_faidx_fp && !_gzi_fp)
@@ -368,23 +368,7 @@ struct fasta_gz
     }
     template <class Sequence>
     void write(const Sequence& seq)
-    {   // Lambda that wraps bgzf_write and tracks BGZF block boundaries for
-        // the .gzi index. When _gzi_fp is null it degrades to a plain write.
-        auto tracked_write = [&](const void* buf, std::size_t n)
-        {   auto voff_before = static_cast<std::uint64_t>(bgzf_tell(_fp));
-            bgzf_write(_fp, buf, n);
-            _cumul_upos += n;
-            if (_gzi_fp)
-            {   auto voff_after = static_cast<std::uint64_t>(bgzf_tell(_fp));
-                if ((voff_after >> 16) != (voff_before >> 16))
-                    _gzi_entries.emplace_back
-                    (   voff_after >> 16
-                    ,   _cumul_upos - (voff_after & 0xFFFFu)
-                    );
-            }
-        };
-
-        fmt::format_to
+    {   fmt::format_to
         (   std::back_inserter(_buffer)
         ,   ">{}{}\n"
         ,   seq.has("_id") 
@@ -397,7 +381,6 @@ struct fasta_gz
 
         if (_faidx)
         {   tracked_write(_buffer.data(), _buffer.size());
-            _buffer.clear();
             std::size_t line_bases = _line_width ? _line_width : std::size(seq);
             std::size_t line_bytes = line_bases * sizeof(typename Sequence::value_type) + 1;
             std::int64_t offset = _cumul_upos;
@@ -453,9 +436,7 @@ struct fasta_gz
 #endif //__CUDACC__
 
         if (!_faidx || _buffer.size() > _buffer_size)
-        {   tracked_write(_buffer.data(), _buffer.size());
-            _buffer.clear();
-        }
+            tracked_write(_buffer.data(), _buffer.size());
     }
     template <class Sequence>
     int operator()
@@ -479,6 +460,23 @@ private:
     std::uint64_t _cumul_upos;
     int _threads, _sub_blks;
     fmt::memory_buffer _buffer;
+
+    // wraps bgzf_write and tracks BGZF block boundaries for
+    // the .gzi index. When _gzi_fp is null it degrades to a plain write.
+    void tracked_write(const void* buf, std::size_t n)
+    {   auto voff_before = static_cast<std::uint64_t>(bgzf_tell(_fp));
+        bgzf_write(_fp, buf, n);
+        _buffer.clear();
+        _cumul_upos += n;
+        if (_gzi_fp)
+        {   auto voff_after = static_cast<std::uint64_t>(bgzf_tell(_fp));
+            if ((voff_after >> 16) != (voff_before >> 16))
+                _gzi_entries.emplace_back
+                (   voff_after >> 16
+                ,   _cumul_upos - (voff_after & 0xFFFFu)
+                );
+        }
+    }
 };
 
 /// @brief A function object for writing sequences in FASTQ format and
@@ -693,7 +691,7 @@ struct fastq_gz
     }
     void close()
     {   if (_buffer.size() > 0)
-            bgzf_write(_fp, _buffer.data(), _buffer.size());
+            tracked_write(_buffer.data(), _buffer.size());
         if (_fp)
             bgzf_close(_fp);
         if (_faidx_fp && !_gzi_fp)
@@ -729,22 +727,7 @@ struct fastq_gz
     }
     template <class Sequence>
     void write(const Sequence& seq)
-    {   // Lambda that wraps bgzf_write and tracks BGZF block boundaries for
-        // the .gzi index. When _gzi_fp is null it degrades to a plain write.
-        auto tracked_write = [&](const void* buf, std::size_t n)
-        {   auto voff_before = static_cast<std::uint64_t>(bgzf_tell(_fp));
-            bgzf_write(_fp, buf, n);
-            _cumul_upos += n;
-            if (_gzi_fp)
-            {   auto voff_after = static_cast<std::uint64_t>(bgzf_tell(_fp));
-                if ((voff_after >> 16) != (voff_before >> 16))
-                    _gzi_entries.emplace_back
-                    (   voff_after >> 16
-                    ,   _cumul_upos - (voff_after & 0xFFFFu)
-                    );
-            }
-        };
-        fmt::format_to
+    {   fmt::format_to
         (   std::back_inserter(_buffer)
         ,   "@{}{}\n"
         ,   seq.has("_id") 
@@ -832,6 +815,23 @@ private:
     std::uint64_t _cumul_upos;
     int _threads, _sub_blks;
     fmt::memory_buffer _buffer;
+
+    // wraps bgzf_write and tracks BGZF block boundaries for
+    // the .gzi index. When _gzi_fp is null it degrades to a plain write.
+    void tracked_write(const void* buf, std::size_t n)
+    {   auto voff_before = static_cast<std::uint64_t>(bgzf_tell(_fp));
+        bgzf_write(_fp, buf, n);
+        _buffer.clear();
+        _cumul_upos += n;
+        if (_gzi_fp)
+        {   auto voff_after = static_cast<std::uint64_t>(bgzf_tell(_fp));
+            if ((voff_after >> 16) != (voff_before >> 16))
+                _gzi_entries.emplace_back
+                (   voff_after >> 16
+                ,   _cumul_upos - (voff_after & 0xFFFFu)
+                );
+        }
+    }
 };
 
 }   // end gnx::out namespace
