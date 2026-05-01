@@ -144,7 +144,11 @@ void complement_cmd::run_complement(std::string const& file)
     std::string out_path;
     std::string tmp_path;
 
-    if (_use_stdout || is_stdin)
+    if (is_stdin && _output_file.empty())
+    {   out_path = "-";
+        out_gz   = false;
+    }
+    else if (_use_stdout)
     {   out_path = "-";
         out_gz   = false;
     }
@@ -198,9 +202,9 @@ void complement_cmd::run_complement(std::string const& file)
             writer.close();
         };
 
-        if      (is_fastq && out_gz) { gnx::out::fastq_gz w; process(w); }
+        if      (is_fastq && out_gz) { gnx::out::fastq_gz w(true); process(w); }
         else if (is_fastq)           { gnx::out::fastq    w; process(w); }
-        else if (out_gz)             { gnx::out::fasta_gz w; process(w); }
+        else if (out_gz)             { gnx::out::fasta_gz w(true, 80, 12); process(w); }
         else                         { gnx::out::fasta    w; process(w); }
 
         if (in_place)
