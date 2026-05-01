@@ -62,6 +62,13 @@ complement_cmd::complement_cmd
     ->  default_val(false)
     ;
     sub->add_option
+    (   "-n,--threads"
+    ,   _threads
+    ,   "Number of threads to use (-1 for auto-detect)"
+    )
+    ->  default_val(-1)
+    ;
+    sub->add_option
     (   "-o,--out,--output"
     ,   _output_file
     ,   "Write to file instead of modifying FILE in-place"
@@ -227,9 +234,21 @@ void complement_cmd::run_complement(std::string const& file)
             writer.close();
         };
 
+        int threads_4_compression{1};
+        if (out_gz)
+            threads_4_compression
+            =   !std::filesystem::exists(file)
+            ?   1
+            :   _threads == -1
+                ?   std::min
+                    (   int(std::log(double(std::filesystem::file_size(file)) / 1.0e4))
+                    ,   _opt.num_procs
+                    )
+                :   _threads;
+
         if (is_fastq && out_gz)
         {   _reverse = false;
-            gnx::out::fastq_gz w(_faidx);
+            gnx::out::fastq_gz w(_faidx, threads_4_compression);
             process(w);
         }
         else if (is_fastq)
@@ -238,7 +257,7 @@ void complement_cmd::run_complement(std::string const& file)
             process(w);
         }
         else if (out_gz)
-        {   gnx::out::fasta_gz w(_faidx, _line_width, 12);
+        {   gnx::out::fasta_gz w(_faidx, _line_width, threads_4_compression);
             process(w);
         }
         else
