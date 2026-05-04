@@ -1,0 +1,30 @@
+# See docs at: https://mystmd.org/guide/frontmatter
+version: 1
+project:
+  id: 821f86b0-68c3-4550-add9-445d87cae435
+  title: GNX Guide
+  subject: gnx Guide
+  description: GNX (Biological sequences for Modern C++)
+  keywords: [gnx, guide, documentation, c++, biological sequences, bioinformatics]
+  github: https://github.com/arminms/gnx
+  jupyter:
+    binder: true
+    kernelName: xcpp20-openmp
+  license:
+    code: MIT
+    content: CC-BY-4.0
+  toc:
+    - file: index.md
+    - file: quickstart.md
+    - file: psq.md
+    - title: Algorithms
+      children:
+        - file: algorithms/count.md
+        - file: algorithms/complement.md
+        - file: algorithms/local_align.md
+
+site:
+  template: book-theme
+  # options:
+  #   favicon: favicon.ico
+  #   logo: site_logo.png
