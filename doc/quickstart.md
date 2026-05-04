@@ -36,12 +36,14 @@ kernelspec:
 ```
 +++
 ```{code-cell} cpp
+:tags: [skip-execution]
 gnx::sequence_bank sb
 {   gnx::virtual_vector<gnx::sq>{"Chlamydia_psittaci_MN.fna.gz"}
 };
 ```
 +++
 ```{code-cell} cpp
+:tags: [skip-execution]
 for (const auto& s : sb)
     std::cout << std::any_cast<std::string>(s["_id"])
               << ' ' << s.size()
@@ -70,7 +72,7 @@ gnx::count(plasmid)
 ```
 +++
 ```{code-cell} cpp
-int w = 200;
+int w = 680;
 auto plot = plasmid(0, w);
 g3p::gnuplot gp;
 
@@ -82,12 +84,13 @@ gp  ("set term pngcairo size %d,%d", w, w)
     ("set size 1,1")
     ("set xrange [0:%d]", w)
     ("set yrange [0:%d]", w)
-    ("plot '-' u 1:2:3:4:5 w rgbimage");
+    ("set palette gray")
+    ("plot '-' u 1:2:3 w image");
 ;
 for (size_t i = 0; i < std::size(plot); ++i)
 {   for (size_t j = 0; j < std::size(plot); ++j)
     {   int c = ((plot[i] ^ plot[j]) & 0xFF) ? 0xFFFFFF : 0x000000;
-        gp << i << j << c << c << c << "\n";
+        gp << i << j << c << "\n";
     }
 }
 gp.end()
