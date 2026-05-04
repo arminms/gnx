@@ -1,6 +1,9 @@
 ---
 title: 2-Bit Packed Sequences
 description: Memory-efficient nucleotide storage with gnx::packed_generic_sequence_2bit
+kernelspec:
+  name: xcpp20-openmp
+  display_name: C++20-OpenMP
 ---
 
 # 2-Bit Packed Sequences
