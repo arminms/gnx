@@ -5,6 +5,7 @@
 
 #include <fmt/core.h>
 #include <fmt/format.h>
+#include <fmt/ranges.h>
 #include <concepts>
 #include <sstream>
 #include <iomanip>
@@ -444,7 +445,7 @@ public:
         else
 #endif  //__CUDACC__
             buf.append(_sq.data(), _sq.data() + _sq.size());
-            
+
         // Write tagged data
         if (_ptr_td)
             for (const auto& [tag, data] : *_ptr_td)
