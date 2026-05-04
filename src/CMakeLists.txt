@@ -43,6 +43,9 @@ if(CUDAToolkit_FOUND)
     $<$<COMPILE_LANGUAGE:CUDA>:--extended-lambda>
     $<$<AND:$<CONFIG:Debug>,$<COMPILE_LANGUAGE:CUDA>>:-G;-src-in-ptx>
   )
+  # ## Use fatbin to support all architectures
+  # #
+  # set_property(TARGET gnx_cli PROPERTY CUDA_ARCHITECTURES all)
 endif()
 
 if(hip_FOUND)
