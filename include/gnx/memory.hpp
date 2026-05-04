@@ -11,6 +11,8 @@
 #include <limits>
 #include <new>
 
+#include <fmt/format.h>
+
 #ifdef _WIN32
     #define NOMINMAX
     #include <windows.h>
@@ -167,6 +169,9 @@ template<class T>
     using universal_host_pinned_vector = std::vector<T, host_pinned_allocator<T>>;
 #endif
 
+/// @brief A host-pinned memory buffer for use with fmt formatting
+using pinned_buffer
+=   fmt::basic_memory_buffer<char, fmt::inline_buffer_size, host_pinned_allocator<char>>;
 
 // -- default_init_allocator ---------------------------------------------------
 
