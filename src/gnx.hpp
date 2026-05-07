@@ -17,6 +17,8 @@
 
 #include <omp.h>
 
+#include <gnx/sq.hpp>
+
 #include "ansi.hpp"
 
 /// @brief Prints an error message to stderr
@@ -28,65 +30,56 @@ void printerr(fmt::format_string<Args...> fmt, Args&&... args)
 {   fmt::print(stderr, fmt, std::forward<Args>(args)...);
 }
 
+enum command_type
+{   sequence_processor = 1,
+    sequence_processor_2bit,
+    sequence_processor_4bit,
+    in_place_sequence_processor = 50, // can modify the sequence in-place
+    sequence_analyzer = 100,
+    output_filename_modifier = 200,
+    format_convertor = 300,
+    // add more command types here as needed
+};
+
+template <typename T>
+struct analyzer
+{   analyzer() = default;
+    virtual ~analyzer() = default;
+    virtual void analyze(T s) = 0;
+};
+
 /// @brief A base class for subcommands of the gnx command-line tool
 struct command
 {   virtual ~command() = default;
-    virtual void run() = 0;
+    virtual command_type type() const = 0;
+    virtual void process(gnx::sq& s) const; // in-place sequence processor
+    // virtual void process(gnx::sq& in, gnx::sq& out) const; // sequence processor that writes to a separate output sequence
+
+    virtual std::unique_ptr<analyzer<std::string_view>> get_analyzer
+    (   std::string_view input
+    ,   std::string_view output
+    )   const
+    ;
+
+    virtual std::string modify(std::string_view filename) const;
 };
 
 /// @brief A struct to hold global options and state for the gnx command-line tool
 struct gnx_options
-{   gnx_options()
-    :   time_it(false)
-    ,   return_code(0)
-    ,   num_procs(0)
-    {   // Detect GPU availability and name (if applicable)
-#if defined(__CUDACC__)
-        int device_count{0}, version{0};
-        if (cudaGetDeviceCount(&device_count) == cudaSuccess && device_count > 0)
-        {   gpu_available = true;
-            cudaDeviceProp prop;
-            gpu_name
-            =   cudaGetDeviceProperties(&prop, 0) == cudaSuccess
-            ?   prop.name
-            :   "Not detected";
-        }
-        else gpu_available = false;
-        if (cudaSuccess == cudaRuntimeGetVersion(&version))
-        {   int major = version / 1000;
-            int minor = (version % 1000) / 10;
-            int patch = version % 10;
-            runtime_version = fmt::format("{}.{}.{}", major, minor, patch);
-        }
-        else runtime_version = "failed to get CUDA version";
-#elif defined(__HIPCC__)
-        int device_count{0}, version{0} ;
-        if (hipGetDeviceCount(&device_count) == hipSuccess && device_count > 0)
-        {   gpu_available = true;
-            hipDeviceProp_t prop;
-            gpu_name
-            =   hipGetDeviceProperties(&prop, 0) == hipSuccess
-            ?   prop.name
-            :   "Not detected";
-        }
-        else gpu_available = false;
-        if (hipSuccess == hipRuntimeGetVersion(&version))
-        {   int major = version / 10000000;
-            int minor = (version % 10000000) / 100000;
-            int patch = version % 100000;
-            runtime_version = fmt::format("{}.{}.{}", major, minor, patch);
-        }
-        else runtime_version = "failed to get HIP version";
-#endif //__CUDACC__ || __HIPCC__
-    }
+{   gnx_options();
+    void run();
 
     std::vector<command*> commands;
-    bool time_it;
-    int return_code;
-    int num_procs;
+    std::vector<std::string> input_files;
+    std::string output_file;
+    bool use_stdout, force, time_it;
+    int return_code, num_procs, threads;
 #if defined(__CUDACC__) || defined(__HIPCC__)
-    bool gpu_available;
-    std::string gpu_name;
-    std::string runtime_version;
+    bool gpu_available, use_gpu;
+    std::string gpu_name, runtime_version;
 #endif // __CUDACC__ || __HIPCC__
+
+private:
+    template <typename T>
+    void run(std::string const& filename);
 };
