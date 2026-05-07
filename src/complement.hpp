@@ -7,21 +7,18 @@
 
 struct complement_cmd : public command
 {   complement_cmd(CLI::App& app, gnx_options& opt);
-    void run() override;
+    void run();
+
+    // overrides
+    virtual command_type type() const override;
+    virtual void process(gnx::sq& s) const override;
 
 private:
     gnx_options& _opt;
     std::vector<std::string> _input_files;
-    std::string _output_file;
     std::size_t _line_width;
-    bool _use_stdout;
-    bool _force;
     bool _faidx;
     bool _reverse;
-    int _threads;
-#if defined(__CUDACC__) || defined(__HIPCC__)
-    bool _use_gpu{0};
-#endif // __CUDACC__ || __HIPCC__
 
     void run_complement();
     template <typename T>

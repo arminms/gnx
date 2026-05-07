@@ -15,15 +15,13 @@ complement_cmd::complement_cmd
 )
 :  _opt(opt)
 ,  _input_files()
-,  _output_file()
-,  _use_stdout(false)
-,  _force(false)
 {   auto* sub = app.add_subcommand
     (   "complement"
     ,   "Complement all sequence(s) in FASTA/FASTQ FILE(s) in-place, "
         "preserving the original format (plain or gzipped)."
     );
-    sub->footer
+    sub
+    ->  footer
     (   fmt::format
         (   "{}With no FILE, or when FILE is -, read standard input and write "
             "to standard output if no output file specified.\n\n"
@@ -31,28 +29,18 @@ complement_cmd::complement_cmd
         ,   ansi::style::bold()
         ,   ansi::style::reset()
         )
-    );
-
+    )
+    ->  group("ALGORITHMS")
+    ;
     sub->add_option
-    (   "FILE"
+    (   "INPUT"
     ,   _input_files
-    ,   "input FILEs, null or '-' for stdin"
+    ,   "input FILE(s), null or '-' for stdin"
     )
     ->  type_name("PATH")
     ->  allow_extra_args(true)
     ->  default_val("-")
-    ;
-    sub->add_flag
-    (   "-c,--stdout"
-    ,   _use_stdout
-    ,   "Write to standard output, keep original file(s) unchanged"
-    )
-    ;
-    sub->add_flag
-    (   "-f,--force"
-    ,   _force
-    ,   "Overwrite output file(s) without asking"
-    )
+    ->  group("")
     ;
     sub->add_flag
     (   "-i,--faidx"
@@ -60,20 +48,6 @@ complement_cmd::complement_cmd
     ,   "Create .fai and .gzi (if gzipped) index file(s) for the output (ignored if writing to stdout)"
     )
     ->  default_val(false)
-    ;
-    sub->add_option
-    (   "-n,--threads"
-    ,   _threads
-    ,   "Number of threads to use (-1 for auto-detect)"
-    )
-    ->  default_val(-1)
-    ;
-    sub->add_option
-    (   "-o,--out,--output"
-    ,   _output_file
-    ,   "Write to file instead of modifying FILE in-place"
-    )
-    ->  type_name("PATH")
     ;
     sub->add_flag
     (   "-r,--reverse"
@@ -89,23 +63,17 @@ complement_cmd::complement_cmd
     )
     ->  default_val(80)
     ;
-#if defined(__CUDACC__) || defined(__HIPCC__)
-    if (opt.gpu_available)
-    {   sub->add_flag
-        (   "-G,--gpu"
-        ,   _use_gpu
-        ,   fmt::format("Run on GPU ({})", opt.gpu_name)
-        )
-        ->  default_val(false)
-        ;
-    }
-#endif // __CUDACC__ || __HIPCC__
 
     sub->callback([this]() { run(); });
 }
 
 void complement_cmd::run()
-{   if (_opt.time_it)
+{   if (_opt.input_files.back() == ":")
+    {   _opt.commands.push_back(this);
+        return;
+    }
+
+    if (_opt.time_it)
     {   CLI::AutoTimer timer{"\nComplement runtime", CLI::Timer::Simple};
         run_complement();
     }
@@ -125,12 +93,12 @@ void complement_cmd::run_complement()
         run_complement<gnx::sq>("-");
 #endif // __CUDACC__ || __HIPCC__
     else
-    {   if (!_output_file.empty() && _input_files.size() > 1)
+    {   if (!_opt.output_file.empty() && _input_files.size() > 1)
         {   printerr
             (   "[complement]: output file {}{}{} cannot be specified for "
                 "multiple input files\n"
             ,   ansi::fg::yellow()
-            ,   _output_file
+            ,   _opt.output_file
             ,   ansi::fg::reset()
             );
             _opt.return_code = 1;
@@ -172,19 +140,19 @@ void complement_cmd::run_complement(std::string const& file)
     std::string out_path;
     std::string tmp_path;
 
-    if (is_stdin && _output_file.empty())
+    if (is_stdin && _opt.output_file.empty())
     {   out_path = "-";
         out_gz   = false;
         _faidx = false;
     }
-    else if (_use_stdout)
+    else if (_opt.use_stdout)
     {   out_path = "-";
         out_gz   = false;
         _faidx = false;
     }
-    else if (!_output_file.empty())
-    {   out_path = _output_file;
-        auto oext = std::filesystem::path(_output_file).extension().string();
+    else if (!_opt.output_file.empty())
+    {   out_path = _opt.output_file;
+        auto oext = std::filesystem::path(_opt.output_file).extension().string();
         out_gz = (oext == ".gz" || oext == ".bgz" || oext == ".gzip");
     }
     else
@@ -196,7 +164,7 @@ void complement_cmd::run_complement(std::string const& file)
     }
 
     if
-    (   !_force
+    (   !_opt.force
     &&  out_path != "-"
     &&  !in_place
     &&  std::filesystem::exists(out_path)
@@ -239,12 +207,12 @@ void complement_cmd::run_complement(std::string const& file)
             threads_4_compression
             =   !std::filesystem::exists(file)
             ?   1
-            :   _threads == -1
+            :   _opt.threads == -1
                 ?   std::min
                     (   int(std::log(double(std::filesystem::file_size(file)) / 1.0e4))
                     ,   _opt.num_procs
                     )
-                :   _threads;
+                :   _opt.threads;
 
         if (is_fastq && out_gz)
         {   _reverse = false;
@@ -274,4 +242,13 @@ void complement_cmd::run_complement(std::string const& file)
             std::filesystem::remove(tmp_path);
         _opt.return_code = 1;
     }
+}
+
+command_type complement_cmd::type() const
+{   return command_type::in_place_sequence_processor;
+}
+
+void complement_cmd::process(gnx::sq& s) const
+{   // fmt::print("[complement]: called with -w={}\n", _line_width);
+    gnx::complement(s);
 }
