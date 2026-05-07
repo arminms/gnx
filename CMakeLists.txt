@@ -22,7 +22,7 @@ option(GNX_ENABLE_HIP "Enable ROCm HIP support ?" ON)
 #
 project(
   gnx
-  VERSION 0.3.0
+  VERSION 0.4.0
   LANGUAGES CXX
   DESCRIPTION "Biological sequences for Modern C++"
 )
