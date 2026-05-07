@@ -15,15 +15,10 @@ bgzip::bgzip
 ,   gnx_options& opt
 )
 :  _opt(opt)
-,  _input_files()
-,  _output_file()
-,  _use_stdout(false)
 ,  _decompress(false)
-,  _force(false)
 ,  _with_index(false)
 ,  _keep_input(false)
 ,  _compression_level(-1)
-,  _threads(1)
 {   auto* bgzip = app.add_subcommand
     (   "bgzip"
     ,   "Compress/decompress FILEs with bgzip (blocked gzip). "
@@ -31,7 +26,6 @@ bgzip::bgzip
     );
     bgzip
     ->  alias("compress")
-    ->  alias("decompress")
     ->  footer
     (   fmt::format
         (   "{}With no FILE, or when FILE is -, read standard input.\n\n"
@@ -39,34 +33,25 @@ bgzip::bgzip
         ,   ansi::style::bold()
         ,   ansi::style::reset()
         )
-    );
+    )
+    ->  group("FORMAT CONVERTERS")
+    ;
 
     // options and flags for the bgzip subcommand
     bgzip->add_option
-    (   "FILE"
+    (   "INPUT"
     ,   _input_files
     ,   "input FILEs, null or '-' for stdin"
     )
     ->  type_name("PATH")
     ->  allow_extra_args(true)
     ->  default_val("-")
-    ;
-    bgzip->add_flag
-    (   "-c,--stdout"
-    ,   _use_stdout
-    ,   "Write to standard output, keep original file unchanged"
-    )
+    ->  group("")
     ;
     bgzip->add_flag
     (   "-d,--decompress"
     ,   _decompress
     ,   "Decompress input file(s) instead of compressing"
-    )
-    ;
-    bgzip->add_flag
-    (   "-f,--force"
-    ,   _force
-    ,   "Overwrite files without asking"
     )
     ;
     bgzip->add_flag
@@ -89,27 +74,17 @@ bgzip::bgzip
     ->  default_val("-1")
     ->  check(CLI::Range(-1, 9))
     ;
-    bgzip->add_option
-    (   "-n,--threads"
-    ,   _threads
-    ,   "Number of compression threads to use (-1 for auto-detect)"
-    )
-    ->  default_val("-1")
-    ->  check(CLI::Range(-1, std::numeric_limits<int>::max()))
-    ;
-    bgzip->add_option
-    (   "-o,--out,--output"
-    ,   _output_file
-    ,   "Write to file, keep original file unchanged"
-    )
-    ->  type_name("PATH")
-    ;
 
     bgzip->callback([this]() { run(); });
 }
 
 void bgzip::run()
-{   if (_opt.time_it)
+{   if (_opt.input_files.back() == ":")
+    {   _opt.commands.push_back(this);
+        return;
+    }
+
+    if (_opt.time_it)
     {   CLI::AutoTimer timer{"\nBGZIP runtime", CLI::Timer::Simple};
         run_bgzip();
     }
@@ -122,12 +97,12 @@ void bgzip::run_bgzip()
 {   if (_input_files.empty())
         run_bgzip("-");
     else
-    {   if (!_output_file.empty() && _input_files.size() > 1)
+    {   if (!_opt.output_file.empty() && _input_files.size() > 1)
         {   printerr
             (   "[bgzip]: output file {}{}{} cannot be specified for multiple "
                 "input files\n"
             ,   ansi::fg::yellow()
-            ,   _output_file
+            ,   _opt.output_file
             ,   ansi::fg::reset()
             );
             _opt.return_code = 1;
@@ -143,7 +118,7 @@ void bgzip::run_bgzip()
 
 void bgzip::run_bgzip(std::string const& file)
 {   // make a local copy since we will be modifying it
-    bool keep_input = _keep_input || _use_stdout || file == "-";
+    bool keep_input = _keep_input || _opt.use_stdout || file == "-";
 
     // input file checkings...
     if (std::filesystem::is_directory(file))
@@ -166,7 +141,7 @@ void bgzip::run_bgzip(std::string const& file)
     }
     // output file checkings...
     std::string out_file{};
-    if (_decompress && !_use_stdout && file != "-")
+    if (_decompress && !_opt.use_stdout && file != "-")
     {   if
         (   ext == ".gz"
         ||  ext == ".bgz"
@@ -183,17 +158,17 @@ void bgzip::run_bgzip(std::string const& file)
             return;
         }
     }
-    else if (_use_stdout)
+    else if (_opt.use_stdout)
     {   out_file = "standard output";
     }
-    else if (!(_output_file).empty())
-    {   out_file = _output_file;
+    else if (!(_opt.output_file).empty())
+    {   out_file = _opt.output_file;
         keep_input = true;
     }
     else
     {   out_file = file + ".gz";
     }
-    if (!(_force) && !(_use_stdout) && std::filesystem::exists(out_file))
+    if (!(_opt.force) && !(_opt.use_stdout) && std::filesystem::exists(out_file))
     {   printerr("[bgzip]: {} already exists -- "
             "ignored (use -f|--force to override)\n", out_file);
         _opt.return_code = 1;
@@ -267,7 +242,7 @@ void bgzip::run_bgzip(std::string const& file)
     }
     else
     {   gzFile in = file == "-"
-        ?   gzdopen(STDIN_FILENO, "rb")
+        ?   gzdopen(fileno(stdin), "rb")
         :   gzopen(file.c_str(), "rb");
         if (!in)
         {   printerr("[bgzip]: {} -- no such file or directory\n", file);
@@ -275,12 +250,12 @@ void bgzip::run_bgzip(std::string const& file)
         void* out
         =   _decompress
         ?   static_cast<void*>
-            (   _use_stdout
+            (   _opt.use_stdout
             ?   stdout
             :   fopen(out_file.c_str(), "wb")
             )
         :   static_cast<void*>
-            (   _use_stdout
+            (   _opt.use_stdout
             ?   bgzf_dopen(fileno(stdout), "wb")
             :   bgzf_open(out_file.c_str(), "wb")
             )
@@ -309,7 +284,7 @@ void bgzip::run_bgzip(std::string const& file)
                     _opt.return_code = 1;
                 }
             }
-            if (_use_stdout)
+            if (_opt.use_stdout)
                 std::fflush(out_fp);
             else
                 fclose(out_fp);
@@ -319,12 +294,12 @@ void bgzip::run_bgzip(std::string const& file)
             int threads_to_use
             =   !std::filesystem::exists(file)
             ?   1
-            :   _threads == -1
+            :   _opt.threads == -1
                 ?   std::min
                     (   int(std::log(double(std::filesystem::file_size(file)) / 1.0e4))
                     ,   _opt.num_procs
                     )
-                :   _threads;
+                :   _opt.threads;
             if (threads_to_use > 1)
                 bgzf_mt(out_bgzf, threads_to_use, 256);
             // fmt::print
@@ -364,4 +339,8 @@ void bgzip::run_bgzip(std::string const& file)
             _opt.return_code = 1;
         }
     }
+}
+
+command_type bgzip::type() const
+{   return command_type::format_convertor;
 }
