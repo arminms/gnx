@@ -30,6 +30,8 @@ add_executable(gnx_cli
   complement.cpp
   gnx.hpp
   gnx.cpp
+  prefix.hpp
+  prefix.cpp
 )
 set_target_properties(gnx_cli PROPERTIES OUTPUT_NAME gnx)
 
