@@ -8,7 +8,7 @@ kernelspec:
   display_name: C++20-OpenMP
 ---
 
-# Start using Gnx
+# Start using `gnx`
 
 ---
 
@@ -31,6 +31,7 @@ kernelspec:
 #include <gnx/algorithms/local_align.hpp>
 
 #include <gnx/sqb.hpp>
+#include <gnx/utility/describe.hpp>
 #include <gnx/backend/forward_stream.hpp>
 #include <gnx/backend/virtual_vector.hpp>
 ```
@@ -50,12 +51,12 @@ for (const auto& s : sb)
               << "\n";
 ```
 
-Making a biological sequence in Gnx is easy:
+Making a biological sequence in `gnx` is easy:
 
 ```{code-cell} cpp
 gnx::sq s{"ACGT"};
 ```
-Or even easier like this:
+Or even easier using string literals:
 ```{code-cell} cpp
 auto t = "ACGT"_sq;
 (s == t)
@@ -64,10 +65,28 @@ It's also easy to load from compressed/uncompressed fasta/fastq files. First let
 ```{code-cell} cpp
 !wget https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/204/255/GCF_000204255.1_ASM20425v1/GCF_000204255.1_ASM20425v1_genomic.fna.gz
 ```
-+++
+
+Now, let's get a gist of what's inside using `gnx::describe()` function:
+
+```{code-cell} cpp
+gnx::describe("GCF_000204255.1_ASM20425v1_genomic.fna.gz");
+```
+
+Turned out it's a bacterial whole genome of a *Chlamydia* species, including a 7.5 kb plasmid. To work with the smaller plasmid, we can instantiate a `gnx::sq` object to load the second sequence using zero-offset index of 1:
+
 ```{code-cell} cpp
 gnx::sq plasmid;
 plasmid.load("GCF_000204255.1_ASM20425v1_genomic.fna.gz", 1);
+```
+:::{hint} Using the sequence id
+You can also use the plasmid id (`NC_017288.1`) instead of the index for the same effect:
+```{code-block} cpp
+plasmid.load("GCF_000204255.1_ASM20425v1_genomic.fna.gz", "NC_017288.1");
+```
+:::
+
+Now that we've loaded the plasmid sequence, let's see what's its composition:
+```{code-cell} cpp
 gnx::count(plasmid)
 ```
 +++
