@@ -26,49 +26,54 @@ namespace ansi {
 
 using namespace std::string_view_literals;
 
+inline bool is_jupyter() noexcept
+{   static const bool jupyter = std::getenv("JPY_PARENT_PID") != nullptr;
+    return jupyter;
+}
+
 inline bool is_terminal() noexcept
 {   static const bool terminal = ISATTY(FILENO(stdout));
     return terminal;
 }
 
-    inline bool supports_color() noexcept
-    {
+inline bool supports_color() noexcept
+{
 #if defined(_WIN32)
-        // all windows versions support colors through native console methods
-        static constexpr bool result = true;
+    // all windows versions support colors through native console methods
+    static constexpr bool result = true;
 #else
-        static const bool result = []
-        {   const char *terms[] =
-            {   "ansi"
-            ,   "color"
-            ,   "console"
-            ,   "cygwin"
-            ,   "gnome"
-            ,   "konsole"
-            ,   "kterm"
-            ,   "linux"
-            ,   "msys"
-            ,   "putty"
-            ,   "rxvt"
-            ,   "screen"
-            ,   "vt100"
-            ,   "xterm"
-            };
+    static const bool result = []
+    {   const char *terms[] =
+        {   "ansi"
+        ,   "color"
+        ,   "console"
+        ,   "cygwin"
+        ,   "gnome"
+        ,   "konsole"
+        ,   "kterm"
+        ,   "linux"
+        ,   "msys"
+        ,   "putty"
+        ,   "rxvt"
+        ,   "screen"
+        ,   "vt100"
+        ,   "xterm"
+        };
 
-            const char *env_p = std::getenv("TERM");
-            if (nullptr == env_p)
-                return false;
-            return std::any_of
-            (   std::begin(terms)
-            ,   std::end(terms)
-            ,   [&](const char *term)
-                {   return std::strstr(env_p, term) != nullptr;
-                }
-            );
-        }   ();
+        const char *env_p = std::getenv("TERM");
+        if (nullptr == env_p)
+            return false;
+        return std::any_of
+        (   std::begin(terms)
+        ,   std::end(terms)
+        ,   [&](const char *term)
+            {   return std::strstr(env_p, term) != nullptr;
+            }
+        );
+    }   ();
 #endif // _WIN32
-        return result;
-    }
+    return result;
+}
 
 namespace fg {
 
