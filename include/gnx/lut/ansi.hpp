@@ -113,7 +113,7 @@ std::array<std::string, 40> create_ansi_table() noexcept
     return table;
 }
 
-static const auto escape = create_ansi_table();
+thread_local static const auto escape = create_ansi_table();
 
 } // namespace gnx::ansi
 
