@@ -74,7 +74,7 @@ inline void describe(std::string_view filename)
         fmt::format_to(std::back_inserter(buf)
         ,   "▼ {}{}{}\n"
         ,   gnx::ansi::escape[fg::bright_green]
-        ,   std::filesystem::path(filename).stem().string()
+        ,   std::filesystem::path(filename).filename().string()
         ,   gnx::ansi::escape[fg::reset]
         );
         for (; it != end_it; ++it, ++count)
@@ -147,7 +147,7 @@ inline void describe(std::string_view filename)
         fmt::format_to(std::back_inserter(buf)
         ,   "▼ {}{}{}\n"
         ,   gnx::ansi::escape[fg::bright_green]
-        ,   std::filesystem::path(filename).stem().string()
+        ,   std::filesystem::path(filename).filename().string()
         ,   gnx::ansi::escape[fg::reset]
         );
         for (; it != end_it; ++it, ++count)
