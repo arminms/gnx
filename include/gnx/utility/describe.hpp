@@ -10,12 +10,13 @@
 
 #include <gnx/sq.hpp>
 #include <gnx/lut/ansi.hpp>
+#include <gnx/lut/peptide.hpp>
 #include <gnx/backend/forward_stream.hpp>
 
 namespace gnx {
 
 inline void describe(std::string_view filename)
-{   gnx::forward_stream<gnx::sq> stream{filename};
+{   gnx::forward_stream<sq> stream{filename};
     auto it     = stream.begin();
     auto end_it = stream.end();
 
@@ -29,66 +30,44 @@ inline void describe(std::string_view filename)
     }
 
     // human-readable size formatter
-    auto hrs = [](std::size_t size) -> std::string
-    {   int suffix_index{0};
-        double human_size = static_cast<double>(size);
-        while (human_size >= 1000 && suffix_index < 4)
-        {   human_size /= 1000;
-            ++suffix_index;
+    auto hrs = [](std::size_t size, bool peptide) -> std::string
+    {   if (size < 1000)
+        {   return fmt::format
+            (   "{} {}"
+            ,   size
+            ,   peptide ? "aa" : "bp"
+            );
         }
-        return fmt::format("{:.1f} {}bp", human_size, " KMGT"[suffix_index]);
+        else
+        {   int suffix_index{0};
+            double human_size = static_cast<double>(size);
+            while (human_size >= 1000 && suffix_index < 4)
+            {   human_size /= 1000;
+                ++suffix_index;
+            }
+            return fmt::format
+            (   "{:.1f} {}{} ({:L})"
+            ,   human_size
+            ,   " KMGT"[suffix_index]
+            ,   peptide ? "aa" : "bp"
+            ,   size
+            );
+        }
     };
 
-    if (stream.quality().empty())
-    {   std::size_t count{0}, total_length{0};
-        fmt::memory_buffer buf;
-        fmt::format_to(std::back_inserter(buf)
-        ,   "▼ {}{}{}\n"
-        ,   gnx::ansi::escape[fg::bright_green]
-        ,   std::filesystem::path(filename).stem().string()
-        ,   gnx::ansi::escape[fg::reset]
+    bool is_fastq = !stream.quality().empty();
+    bool is_peptide
+    =   is_fastq
+    ?   false
+    :   std::any_of
+        (   it->sequence().begin()
+        ,   it->sequence().end()
+        ,   [](char c)
+            {   return gnx::lut::is_peptide[static_cast<uint8_t>(c)];
+            }
         );
-        for (; it != end_it; ++it, ++count)
-        {   fmt::format_to(std::back_inserter(buf)
-            ,   "├── ▼ {}{}{}\n"
-            ,   gnx::ansi::escape[fg::bright_magenta]
-            ,   it->id()
-            ,   gnx::ansi::escape[fg::reset]
-            );
-            if (it->description().size() > 0)
-                fmt::format_to
-                (   std::back_inserter(buf)
-                ,   "│   ├── {}{}{}\n"
-                ,   gnx::ansi::escape[fg::bright_cyan]
-                +   gnx::ansi::escape[style::italic]
-                ,   it->description()
-                ,   gnx::ansi::escape[style::reset]
-                );
-            fmt::format_to
-            (   std::back_inserter(buf)
-            ,   "│   └── {}{} ({}){}\n"
-            ,   gnx::ansi::escape[fg::bright_yellow]
-            ,   hrs(it->sequence().size())
-            ,   it->sequence().size()
-            ,   gnx::ansi::escape[fg::reset]
-            );
-            total_length += it->sequence().size();
-        }
-        fmt::format_to
-        (   std::back_inserter(buf)
-        ,   "└── {}{}{} {}, {}{} ({}){}\n"
-        ,   gnx::ansi::escape[fg::bright_yellow]
-        ,   count
-        ,   gnx::ansi::escape[fg::reset]
-        ,   (count > 1) ? "sequences" : "sequence"
-        ,   gnx::ansi::escape[fg::bright_yellow]
-        ,   hrs(total_length)
-        ,   total_length
-        ,   gnx::ansi::escape[fg::reset]
-        );
-        std::cout.write(buf.data(), buf.size());
-    }
-    else  // fastq format containing reads
+
+    if (is_fastq)
     {   std::size_t count{0}, total_length{0}, min_length{0}, max_length{0};
         bool phred33{false};
         fmt::memory_buffer buf;
@@ -138,10 +117,9 @@ inline void describe(std::string_view filename)
         );
         fmt::format_to
         (   std::back_inserter(buf)
-        ,   "├── Total bases: {}{} ({}){}\n"
+        ,   "├── Total bases: {}{}{}\n"
         ,   gnx::ansi::escape[fg::bright_yellow]
-        ,   hrs(total_length)
-        ,   total_length
+        ,   hrs(total_length, is_peptide)
         ,   gnx::ansi::escape[fg::reset]
         );
         if (max_length > min_length)
@@ -161,6 +139,53 @@ inline void describe(std::string_view filename)
             ,   min_length
             ,   gnx::ansi::escape[fg::reset]
             );
+        std::cout.write(buf.data(), buf.size());
+    }
+    else  // fastq format containing reads
+    {   std::size_t count{0}, total_length{0};
+        fmt::memory_buffer buf;
+        fmt::format_to(std::back_inserter(buf)
+        ,   "▼ {}{}{}\n"
+        ,   gnx::ansi::escape[fg::bright_green]
+        ,   std::filesystem::path(filename).stem().string()
+        ,   gnx::ansi::escape[fg::reset]
+        );
+        for (; it != end_it; ++it, ++count)
+        {   fmt::format_to(std::back_inserter(buf)
+            ,   "├── ▼ {}{}{}\n"
+            ,   gnx::ansi::escape[fg::bright_magenta]
+            ,   it->id()
+            ,   gnx::ansi::escape[fg::reset]
+            );
+            if (it->description().size() > 0)
+                fmt::format_to
+                (   std::back_inserter(buf)
+                ,   "│   ├── {}{}{}\n"
+                ,   gnx::ansi::escape[fg::bright_cyan]
+                +   gnx::ansi::escape[style::italic]
+                ,   it->description()
+                ,   gnx::ansi::escape[style::reset]
+                );
+            fmt::format_to
+            (   std::back_inserter(buf)
+            ,   "│   └── {}{}{}\n"
+            ,   gnx::ansi::escape[fg::bright_yellow]
+            ,   hrs(it->sequence().size(), is_peptide)
+            ,   gnx::ansi::escape[fg::reset]
+            );
+            total_length += it->sequence().size();
+        }
+        fmt::format_to
+        (   std::back_inserter(buf)
+        ,   "└── {}{}{} {}, {}{}{}\n"
+        ,   gnx::ansi::escape[fg::bright_yellow]
+        ,   count
+        ,   gnx::ansi::escape[fg::reset]
+        ,   (count > 1) ? "sequences" : "sequence"
+        ,   gnx::ansi::escape[fg::bright_yellow]
+        ,   hrs(total_length, is_peptide)
+        ,   gnx::ansi::escape[fg::reset]
+        );
         std::cout.write(buf.data(), buf.size());
     }
 }
