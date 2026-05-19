@@ -259,6 +259,19 @@ public:
         }
         return mem;
     }
+    ///
+    /// Reserves storage for at least @a new_cap residues. Does not change the
+    /// size of the sequence.
+    void reserve(size_type new_cap)
+    {   _sq.reserve(new_cap);
+    }
+
+// -- modifiers ----------------------------------------------------------------
+    ///
+    /// Appends residues in the range [s, s + count) to the end of the @a sq.
+    void append(const value_type* s, size_type count)
+    {   _sq.insert(_sq.end(), s, s + count);
+    }
 
 // -- subscript operator -------------------------------------------------------
     ///

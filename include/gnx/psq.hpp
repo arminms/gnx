@@ -517,6 +517,24 @@ public:
         }
         return mem;
     }
+    ///
+    /// Reserves enough memory to store at least @a new_cap bases. Does not
+    /// change the size of the sequence.
+    void reserve(size_type new_cap) noexcept
+    {   _bytes.reserve(num_bytes(new_cap));
+    }
+
+    // =========================================================================
+    // modifiers
+    // =========================================================================
+
+    void append(const value_type* seq, size_type count)
+    {   const size_type old_size = _size;
+        _size += count;
+        _bytes.resize(num_bytes(_size), uint8_t{0});
+        for (size_type i = 0; i < count; ++i)
+            _set_base(old_size + i, seq[i]);
+    }
 
     // =========================================================================
     // element access
