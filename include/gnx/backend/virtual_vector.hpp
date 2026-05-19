@@ -447,7 +447,7 @@ private:
                 )
             );
 
-        std::string seq;
+        SequenceType seq;
         seq.reserve(static_cast<std::size_t>(e.length));
 
         std::vector<char> buf(static_cast<std::size_t>(e.linebases));
@@ -474,9 +474,8 @@ private:
             }
         }
 
-        SequenceType s(seq.c_str());
-        s["_id"] = e.name;
-        return s;
+        seq["_id"] = e.name;
+        return seq;
     }
 
     /// @brief bgzip path: virtual-offset-seeks via bgzf_seek and reads via
@@ -494,7 +493,7 @@ private:
                 )
             );
 
-        std::string seq;
+        SequenceType seq;
         seq.reserve(static_cast<std::size_t>(e.length));
 
         // Reuse a per-call buffer for line-bases and newline skipping.
@@ -515,9 +514,8 @@ private:
                 bgzf_read(_bgzf_fp, buf.data(), nl_skip);  // discard newline(s)
         }
 
-        SequenceType s(seq.c_str());
-        s["_id"] = e.name;
-        return s;
+        seq["_id"] = e.name;
+        return seq;
     }
 };
 
