@@ -18,6 +18,9 @@
 #include <string>
 #include <algorithm>
 
+#include <fmt/base.h>
+#include <fmt/format.h>
+
 namespace gnx::ansi {
 
 std::array<std::string, 40> create_ansi_table() noexcept
@@ -171,3 +174,68 @@ namespace style
         reverse = 39
     };
 } // namespace style
+
+namespace gnx::ansi::vga {
+
+std::array<std::string, 256> create_vga_fg_table() noexcept
+{   std::array<std::string, 256> table{};
+#ifdef __CLING__
+    const bool jupyter = true;
+#else
+    const bool jupyter = std::getenv("JPY_PARENT_PID") != nullptr;
+#endif
+#if defined(_WIN32)
+    const bool terminal = _isatty(_fileno(stdout));
+    // all windows versions support colors through native console methods
+    const bool supports_vga = true;
+#else
+    const bool terminal = isatty(fileno(stdout));
+    const bool supports_vga = []
+    {   const char *env_p = std::getenv("TERM");
+        if (nullptr == env_p)
+            return false;
+        return std::strstr(env_p, "-256color") != nullptr;
+    }   ();
+#endif // _WIN32
+
+    if ((terminal || jupyter) && supports_vga)
+    {   for (int i = 0; i < 256; ++i)
+            table[i] = fmt::format("\033[38;5;{}m", i);
+    }
+
+    return table;
+}
+
+std::array<std::string, 256> create_vga_bg_table() noexcept
+{   std::array<std::string, 256> table{};
+#ifdef __CLING__
+    const bool jupyter = true;
+#else
+    const bool jupyter = std::getenv("JPY_PARENT_PID") != nullptr;
+#endif
+#if defined(_WIN32)
+    const bool terminal = _isatty(_fileno(stdout));
+    // all windows versions support colors through native console methods
+    const bool supports_vga = true;
+#else
+    const bool terminal = isatty(fileno(stdout));
+    const bool supports_vga = []
+    {   const char *env_p = std::getenv("TERM");
+        if (nullptr == env_p)
+            return false;
+        return std::strstr(env_p, "-256color") != nullptr;
+    }   ();
+#endif // _WIN32
+
+    if ((terminal || jupyter) && supports_vga)
+    {   for (int i = 0; i < 256; ++i)
+            table[i] = fmt::format("\033[48;5;{}m", i);
+    }
+
+    return table;
+}
+
+thread_local static const auto ESC_FG = create_vga_fg_table();
+thread_local static const auto ESC_BG = create_vga_bg_table();
+
+} // namespace gnx::ansi::vga
