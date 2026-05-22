@@ -15,30 +15,16 @@ description: GNX is a header-only Modern C++ library for biological sequence ana
 
 :::{grid-item}
 
-GNX (pronounced as jeenks) is a <wiki:header-only> Modern <wiki:C++> library for biological sequence analysis.
+GNX (pronounced as *jeenks* or /dʒɪŋks/) is a <wiki:header-only> Modern <wiki:C++> library for biological sequence analysis that provides efficient, composable types for representing <wiki:DNA>, <wiki:RNA>, and [protein](wiki:protein) sequences, together with various algorithms for their analysis — all with first-class support for [heterogeneous computing](wiki:Heterogeneous_computing) on CPUs and GPUs.
 
-It provides efficient, composable types for representing <wiki:DNA>, <wiki:RNA>, and protein sequences, together with algorithms for alignment, validation, complementation, and counting — all with first-class support for heterogeneous computing on CPUs and GPUs.
-
-Built on <wiki:C++20> features — Concepts, Ranges, and `std::span` — GNX is designed for zero-copy operations, SIMD acceleration, and seamless portability between <wiki:CUDA>, <wiki:ROCm>, and OpenMP backends.
+Built on <wiki:C++20> features, like [concepts/constrains](wiki::Concepts_(C%2B%2B)) and [ranges](wiki:Algorithm_(C%2B%2B)#Ranges), GNX is designed for zero-copy operations, SIMD acceleration, and seamless portability between <wiki:OpenMP>, <wiki:CUDA> and <wiki:ROCm> backends.
 
 :::
 
 :::{grid-item}
 
-```{code-block} cpp
-#include <gnx/sq.hpp>
-#include <gnx/algorithms/count.hpp>
-#include <gnx/algorithms/local_align.hpp>
-
-// Create sequences from literals
-auto s1 = "ACGTACGT"_sq;
-auto s2 = "ACGGACGT"_sq;
-
-// Count nucleotide composition
-auto counts = gnx::count(s1);
-
-// Smith-Waterman local alignment
-auto result = gnx::local_align(s1, s2);
+```{image} ./images/gnx_features.png
+:label: gnx-features
 ```
 
 :::
