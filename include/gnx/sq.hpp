@@ -3,7 +3,6 @@
 //
 #pragma once
 
-#include <fmt/core.h>
 #include <fmt/format.h>
 #include <fmt/ranges.h>
 #include <concepts>
@@ -591,6 +590,14 @@ public:
 #if defined(__CUDACC__) || defined(__HIPCC__)
     using dsq = generic_sequence<thrust::device_vector<char>>;
 #endif // __CUDACC__ || __HIPCC__
+
+// -- Jupyter integration ------------------------------------------------------
+#ifdef __CLING__
+    template<typename Container, typename Map>
+    nlohmann::json mime_bundle_repr(generic_sequence<Container, Map> const& s)
+    {   return detail::print_to_bundle(s);
+    }
+#endif //__CLING__
 
 }   // end gnx namespace
 
