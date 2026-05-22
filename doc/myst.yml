@@ -13,15 +13,14 @@ project:
   license:
     code: MIT
     content: CC-BY-4.0
+  references:
+    cling: https://cling.readthedocs.io/en/latest
+    cmake: https://cmake.org/cmake/help/latest
   toc:
     - file: index.md
-    - file: quickstart.md
-    - file: psq.md
-    - title: Algorithms
+    - title: Tutorials
       children:
-        - file: algorithms/count.md
-        - file: algorithms/complement.md
-        - file: algorithms/local_align.md
+        - file: 01_the_basics.md
 
 site:
   template: book-theme
