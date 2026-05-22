@@ -18,6 +18,10 @@
 #include <gnx/io/fastaqz.hpp>
 #include <gnx/memory.hpp>
 
+#ifdef __CLING__
+#   include <gnx/utility/print.hpp>
+#endif //__CLING__
+
 namespace gnx {
 //
 /// @brief A 2-bit packed sequence class template.
@@ -898,6 +902,16 @@ std::istream& operator>>
 
 /// @brief Default 2-bit packed sequence over @c std::vector<uint8_t>.
 using psq2 = packed_generic_sequence_2bit<>;
+
+// -- Jupyter integration ------------------------------------------------------
+#ifdef __CLING__
+    template<typename ByteContainer, typename Map>
+    nlohmann::json mime_bundle_repr
+    (   packed_generic_sequence_2bit<ByteContainer, Map> const& ps
+    )
+    {   return detail::print_to_bundle(ps);
+    }
+#endif //__CLING__
 
 }   // namespace gnx
 
