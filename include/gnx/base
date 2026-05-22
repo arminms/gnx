@@ -1,0 +1,31 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 Armin Sobhani
+//
+#pragma once
+
+#ifdef __CLING__
+    #define FMT_HEADER_ONLY
+#endif // __CLING__
+#include <fmt/core.h>
+#include <fmt/format.h>
+
+#include <g3p/gnuplot>
+
+#include <gnx/sq.hpp>
+#include <gnx/psq.hpp>
+#include <gnx/sqb.hpp>
+#include <gnx/views.hpp>
+
+#include <gnx/io/fastaqz.hpp>
+
+#include <gnx/utility/describe.hpp>
+
+#include <gnx/backend/forward_stream.hpp>
+#include <gnx/backend/virtual_vector.hpp>
+
+// #include <gnx/algorithms/compare.hpp>
+// #include <gnx/algorithms/valid.hpp>
+#include <gnx/algorithms/random.hpp>
+// #include <gnx/algorithms/count.hpp>
+// #include <gnx/algorithms/local_align.hpp>
+
