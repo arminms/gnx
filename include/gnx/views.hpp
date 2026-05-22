@@ -15,6 +15,10 @@
 
 #include <gnx/lut/pack2bit.hpp>
 
+#ifdef __CLING__
+#   include <gnx/utility/print.hpp>
+#endif //__CLING__
+
 namespace gnx {
 
 // forward declaration of generic_sequence
@@ -235,6 +239,14 @@ private:
 
 // -- aliases ------------------------------------------------------------------
     using sq_view = generic_sequence_view<std::vector<char>>;
+
+// -- Jupyter integration ------------------------------------------------------
+#ifdef __CLING__
+    template <typename Container>
+    nlohmann::json mime_bundle_repr(generic_sequence_view<Container> const& sv)
+    {   return detail::print_to_bundle(sv);
+    }
+#endif //__CLING__
 
 // =============================================================================
 // packed_generic_sequence_2bit_view
@@ -616,6 +628,18 @@ private:
 
 // -- aliases ------------------------------------------------------------------
     using psq2_view = packed_generic_sequence_2bit_view<>;
+
+// -- Jupyter integration ------------------------------------------------------
+#ifdef __CLING__
+    template <typename ByteContainer>
+    nlohmann::json mime_bundle_repr
+    (   packed_generic_sequence_2bit_view<ByteContainer> const& psv
+    )
+    {   auto bundle = nlohmann::json::object();
+        bundle["text/plain"] = gnx::print(psv);
+        return bundle;
+    }
+#endif //__CLING__
 
 }   // end gnx namespace
 
