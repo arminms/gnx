@@ -9,61 +9,79 @@
 
 namespace gnx::color_scheme {
 
-std::array<std::string, 256> create_na_cs() noexcept
+std::array<std::string, 256> create_na_cs_256() noexcept
 {   std::array<std::string, 256> table{};
     for (size_t i = 0; i < 256; ++i)
     {   table[i]
-        =   gnx::ansi::vga::ESC_BG[196] + gnx::ansi::vga::ESC_FG[16]
-        +   static_cast<char>(i)
-        +   gnx::ansi::ESC[style::reset]
-        ;
+        =   fmt::format
+        (   "{}{}{}{}"
+        ,   gnx::ansi::vga::ESC_BG[196]
+        ,   gnx::ansi::vga::ESC_FG[16]
+        ,   static_cast<char>(i)
+        ,   gnx::ansi::ESC[style::reset]
+        );
     }
 
-    table['A'] = gnx::ansi::vga::ESC_FG[40] + "A" + gnx::ansi::ESC[fg::reset];
-    table['C'] = gnx::ansi::vga::ESC_FG[33] + "C" + gnx::ansi::ESC[fg::reset];
+    table['A'] = fmt::format("{}A", gnx::ansi::vga::ESC_FG[40]);
+    table['C'] = fmt::format("{}C", gnx::ansi::vga::ESC_FG[33]);
     table['G'] = "G";
-    table['T'] = gnx::ansi::vga::ESC_FG[160] + "T" + gnx::ansi::ESC[fg::reset];
-    table['U'] = gnx::ansi::vga::ESC_FG[160] + "U" + gnx::ansi::ESC[fg::reset];
+    table['T'] = fmt::format("{}T", gnx::ansi::vga::ESC_FG[160]);
+    table['U'] = fmt::format("{}U", gnx::ansi::vga::ESC_FG[160]);
 
     table['N']
-    =   gnx::ansi::vga::ESC_BG[226] + gnx::ansi::vga::ESC_FG[16]
-    +   "N"
-    +   gnx::ansi::ESC[style::reset];
+    =   fmt::format
+    (   "{}{}N{}"
+    ,   gnx::ansi::vga::ESC_BG[226]
+    ,   gnx::ansi::vga::ESC_FG[16]
+    ,   gnx::ansi::ESC[style::reset]
+    );
 
-    table['a'] = gnx::ansi::vga::ESC_FG[40] + "a" + gnx::ansi::ESC[fg::reset];
-    table['c'] = gnx::ansi::vga::ESC_FG[33] + "c" + gnx::ansi::ESC[fg::reset];
+    table['a'] = fmt::format("{}a", gnx::ansi::vga::ESC_FG[40]);
+    table['c'] = fmt::format("{}c", gnx::ansi::vga::ESC_FG[33]);
     table['g'] = "g";
-    table['t'] = gnx::ansi::vga::ESC_FG[160] + "t" + gnx::ansi::ESC[fg::reset];
-    table['u'] = gnx::ansi::vga::ESC_FG[160] + "u" + gnx::ansi::ESC[fg::reset];
+    table['t'] = fmt::format("{}t", gnx::ansi::vga::ESC_FG[160]);
+    table['u'] = fmt::format("{}u", gnx::ansi::vga::ESC_FG[160]);
 
     table['n']
-    =   gnx::ansi::vga::ESC_BG[226] + gnx::ansi::vga::ESC_FG[16]
-    +   "n"
-    +   gnx::ansi::ESC[style::reset];
+    =   fmt::format
+    (   "{}{}n{}"
+    ,   gnx::ansi::vga::ESC_BG[226]
+    ,   gnx::ansi::vga::ESC_FG[16]
+    ,   gnx::ansi::ESC[style::reset]
+    );
 
     return table;
 }
 
-thread_local static const auto na = create_na_cs();
+thread_local static const auto na = create_na_cs_256();
 
 std::array<std::string, 256> create_na_warn_cs() noexcept
 {   std::array<std::string, 256> table{};
     for (size_t i = 0; i < 256; ++i)
     {   table[i]
-        =   gnx::ansi::vga::ESC_BG[196] + gnx::ansi::vga::ESC_FG[16]
-        +   static_cast<char>(i)
-        +   gnx::ansi::ESC[style::reset]
-        ;
+        =   fmt::format
+        (   "{}{}{}{}"
+        ,   gnx::ansi::vga::ESC_BG[196]
+        ,   gnx::ansi::vga::ESC_FG[16]
+        ,   static_cast<char>(i)
+        ,   gnx::ansi::ESC[style::reset]
+        );
     }
 
     table['N']
-    =   gnx::ansi::vga::ESC_BG[226] + gnx::ansi::vga::ESC_FG[16]
-    +   "N"
-    +   gnx::ansi::ESC[style::reset];
+    =   fmt::format
+    (   "{}{}N{}"
+    ,   gnx::ansi::vga::ESC_BG[226]
+    ,   gnx::ansi::vga::ESC_FG[16]
+    ,   gnx::ansi::ESC[style::reset]
+    );
     table['n']
-    =   gnx::ansi::vga::ESC_BG[226] + gnx::ansi::vga::ESC_FG[16]
-    +   "n"
-    +   gnx::ansi::ESC[style::reset];
+    =   fmt::format
+    (   "{}{}n{}"
+    ,   gnx::ansi::vga::ESC_BG[226]
+    ,   gnx::ansi::vga::ESC_FG[16]
+    ,   gnx::ansi::ESC[style::reset]
+    );
 
     table['A'] = "A";
     table['C'] = "C";
@@ -86,127 +104,32 @@ std::array<std::string, 256> create_aa_clustal_cs() noexcept
 {   std::array<std::string, 256> table{};
     for (size_t i = 0; i < 256; ++i)
     {   table[i]
-        =   gnx::ansi::vga::ESC_BG[160] + gnx::ansi::vga::ESC_FG[226]
-        +   static_cast<char>(i)
-        +   gnx::ansi::ESC[bg::reset]
-        ;
+        =   fmt::format
+        (   "{}{}{}{}"
+        ,   gnx::ansi::vga::ESC_BG[160]
+        ,   gnx::ansi::vga::ESC_FG[226]
+        ,   static_cast<char>(i)
+        ,   gnx::ansi::ESC[style::reset]
+        );
     }
 
-    // hydrophobic
-    table['A']
-    =   gnx::ansi::vga::ESC_FG[33] //+ gnx::ansi::vga::ESC_FG[16]
-    +   "A"
-    +   gnx::ansi::ESC[style::reset]
-    ;
-    table['I']
-    =   gnx::ansi::vga::ESC_FG[33] //+ gnx::ansi::vga::ESC_FG[16]
-    +   "I"
-    +   gnx::ansi::ESC[style::reset]
-    ;
-    table['L']
-    =   gnx::ansi::vga::ESC_FG[33] //+ gnx::ansi::vga::ESC_FG[16]
-    +   "L"
-    +   gnx::ansi::ESC[style::reset]
-    ;
-    table['M']
-    =   gnx::ansi::vga::ESC_FG[33] //+ gnx::ansi::vga::ESC_FG[16]
-    +   "M"
-    +   gnx::ansi::ESC[style::reset]
-    ;
-    table['V']
-    =   gnx::ansi::vga::ESC_FG[33] //+ gnx::ansi::vga::ESC_FG[16]
-    +   "V"
-    +   gnx::ansi::ESC[style::reset]
-    ;
+    auto assign = [&table](std::string_view chars, std::string_view color)
+    {   for (char c : chars)
+        {   table[static_cast<uint8_t>(std::toupper(c))]
+            =   fmt::format("{}{}", color, c);
+            table[static_cast<uint8_t>(std::tolower(c))]
+            =   fmt::format("{}{}", color, c);
+        }
+    };
 
-    // Basic (Positive)
-    table['K']
-    =   gnx::ansi::vga::ESC_FG[196] //+ gnx::ansi::vga::ESC_FG[16]
-    +   "K"
-    +   gnx::ansi::ESC[style::reset]
-    ;
-    table['R']
-    =   gnx::ansi::vga::ESC_FG[196] //+ gnx::ansi::vga::ESC_FG[16]
-    +   "R"
-    +   gnx::ansi::ESC[style::reset]
-    ;
-
-    // Acidic (Negative)
-    table['D']
-    =   gnx::ansi::vga::ESC_FG[201] //+ gnx::ansi::vga::ESC_FG[16]
-    +   "D"
-    +   gnx::ansi::ESC[style::reset]
-    ;
-    table['E']
-    =   gnx::ansi::vga::ESC_FG[201] //+ gnx::ansi::vga::ESC_FG[16]
-    +   "E"
-    +   gnx::ansi::ESC[style::reset]
-    ;
-
-    // Polar
-    table['N']
-    =   gnx::ansi::vga::ESC_FG[46] //+ gnx::ansi::vga::ESC_FG[16]
-    +   "N"
-    +   gnx::ansi::ESC[style::reset]
-    ;
-    table['Q']
-    =   gnx::ansi::vga::ESC_FG[46] //+ gnx::ansi::vga::ESC_FG[16]
-    +   "Q"
-    +   gnx::ansi::ESC[style::reset]
-    ;
-    table['S']
-    =   gnx::ansi::vga::ESC_FG[46] //+ gnx::ansi::vga::ESC_FG[16]
-    +   "S"
-    +   gnx::ansi::ESC[style::reset]
-    ;
-    table['T']
-    =   gnx::ansi::vga::ESC_FG[46] //+ gnx::ansi::vga::ESC_FG[16]
-    +   "T"
-    +   gnx::ansi::ESC[style::reset]
-    ;
-
-    // Cysteine
-    table['C']
-    =   gnx::ansi::vga::ESC_FG[213] //+ gnx::ansi::vga::ESC_FG[16]
-    +   "C"
-    +   gnx::ansi::ESC[style::reset]
-    ;
-
-    // Glycine
-    table['G']
-    =   gnx::ansi::vga::ESC_FG[214] //+ gnx::ansi::vga::ESC_FG[16]
-    +   "G"
-    +   gnx::ansi::ESC[style::reset]
-    ;
-
-    // Proline
-    table['P']
-    =   gnx::ansi::vga::ESC_FG[226] //+ gnx::ansi::vga::ESC_FG[16]
-    +   "P"
-    +   gnx::ansi::ESC[style::reset]
-    ;
-
-    // Aromatic
-    table['F']
-    =   gnx::ansi::vga::ESC_FG[51] //+ gnx::ansi::vga::ESC_FG[16]
-    +   "F"
-    +   gnx::ansi::ESC[style::reset]
-    ;
-    table['H']
-    =   gnx::ansi::vga::ESC_FG[51] //+ gnx::ansi::vga::ESC_FG[16]
-    +   "H"
-    +   gnx::ansi::ESC[style::reset]
-    ;
-    table['W']
-    =   gnx::ansi::vga::ESC_FG[51] //+ gnx::ansi::vga::ESC_FG[16]
-    +   "W"
-    +   gnx::ansi::ESC[style::reset]
-    ;
-    table['Y']
-    =   gnx::ansi::vga::ESC_FG[51] //+ gnx::ansi::vga::ESC_FG[16]
-    +   "Y"
-    +   gnx::ansi::ESC[style::reset]
-    ;
+    assign("AILMV", gnx::ansi::vga::ESC_FG[33]); // hydrophobic
+    assign("KR", gnx::ansi::vga::ESC_FG[196]);   // basic
+    assign("DE", gnx::ansi::vga::ESC_FG[201]);   // acidic
+    assign("NQST", gnx::ansi::vga::ESC_FG[46]);  // polar
+    assign("C", gnx::ansi::vga::ESC_FG[213]);    // cysteine
+    assign("G", gnx::ansi::vga::ESC_FG[214]);    // glycine
+    assign("P", gnx::ansi::vga::ESC_FG[226]);    // proline
+    assign("FHWY", gnx::ansi::vga::ESC_FG[51]);  // aromatic
 
     return table;
 }
