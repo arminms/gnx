@@ -64,8 +64,9 @@ inline std::string print
     auto size = std::distance(first, last);
     fmt::format_to
     (   std::back_inserter(buf)
-    ,   "{}          # │"
-    ,   gnx::ansi::ESC[style::bold] + gnx::ansi::vga::ESC_FG[250]
+    ,   "{}{}          # │"
+    ,   gnx::ansi::ESC[style::bold]
+    ,   gnx::ansi::vga::ESC_FG[250]
     );
     for (std::size_t i = separator; i <= line_width; i += separator)
         fmt::format_to
@@ -76,8 +77,9 @@ inline std::string print
         );
     fmt::format_to
     (   std::back_inserter(buf)
-    ,   "\n{}════════════╪"
-    ,   gnx::ansi::ESC[style::bold] + gnx::ansi::vga::ESC_FG[250]
+    ,   "\n{}{}════════════╪"
+    ,   gnx::ansi::ESC[style::bold]
+    ,   gnx::ansi::vga::ESC_FG[250]
     );
     for (std::size_t i = separator; i <= line_width; i += separator)
         fmt::format_to
@@ -100,8 +102,9 @@ inline std::string print
     )
     {   fmt::format_to
         (   std::back_inserter(buf)
-        ,   "{}{:11} │{} "
-        ,   gnx::ansi::ESC[style::bold] + gnx::ansi::vga::ESC_FG[250]
+        ,   "{}{}{:11} │{} "
+        ,   gnx::ansi::ESC[style::bold]
+        ,   gnx::ansi::vga::ESC_FG[250]
         ,   start_index
         ,   gnx::ansi::ESC[style::reset]
         );
@@ -116,9 +119,17 @@ inline std::string print
             ,   color_scheme[static_cast<uint8_t>(*(first + i + j))]
             );
             if ((j + 1) % separator == 0)
-                fmt::format_to(std::back_inserter(buf), " ");
+                fmt::format_to
+                (   std::back_inserter(buf)
+                ,   "{} "
+                ,   gnx::ansi::ESC[style::reset]
+                );
         }
-        fmt::format_to(std::back_inserter(buf), "\n");
+        fmt::format_to
+        (   std::back_inserter(buf)
+        ,   "{}\n"
+        ,   gnx::ansi::ESC[style::reset]
+        );
     }
 
     return fmt::to_string(buf);
