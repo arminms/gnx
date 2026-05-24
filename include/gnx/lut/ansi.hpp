@@ -15,6 +15,7 @@
 #include <cstdio>
 #include <cstring>
 #include <cstddef>
+#include <charconv>
 #include <string>
 #include <algorithm>
 
@@ -116,7 +117,7 @@ std::array<std::string, 40> create_ansi_table() noexcept
     return table;
 }
 
-thread_local static const auto escape = create_ansi_table();
+thread_local static const auto ESC = create_ansi_table();
 
 } // namespace gnx::ansi
 
@@ -234,6 +235,88 @@ std::array<std::string, 256> create_vga_bg_table() noexcept
 
     return table;
 }
+
+// consteval std::array<std::string_view, 256> vga_empty_map()
+// {   std::array<std::string_view, 256> table{}; // default to empty
+//     return table;
+// }
+
+// std::array<std::string_view, 256> vga_fg_map()
+// {   std::array<std::string_view, 256> table;
+//     for (int i = 0; i < 256; ++i)
+//         table[i] = fmt::format("\033[38;5;{}m", i);
+//     return table;
+// }
+
+// std::array<std::string_view, 256> vga_bg_map()
+// {   std::array<std::string_view, 256> table;
+//     for (int i = 0; i < 256; ++i)
+//         table[i] = fmt::format("\033[48;5;{}m", i);
+//     return table;
+// }
+
+// // C++23 consteval versions
+//
+// consteval std::array<std::string_view, 256> vga_fg_map()
+// {   std::array<std::string_view, 256> table;
+//     const size_t buf_size = 13;
+//     char buf[buf_size]{"\033[38;5;"};
+//     for (size_t i = 0; i < 256; ++i)
+//     {   std::to_chars_result result = std::to_chars(buf + 9, buf + buf_size, i);
+//         buf[result.ptr - buf] = 'm';
+//         std::string_view code(buf, result.ptr - buf + 1);
+//         table[i] = code;
+//     }
+//     return table;
+// }
+
+// consteval std::array<std::string_view, 256> vga_bg_map()
+// {   std::array<std::string_view, 256> table;
+//     const size_t buf_size = 13;
+//     char buf[buf_size]{"\033[38;5;"};
+//     for (size_t i = 0; i < 256; ++i)
+//     {   std::to_chars_result result = std::to_chars(buf + 9, buf + buf_size, i);
+//         buf[result.ptr - buf] = 'm';
+//         std::string_view code(buf, result.ptr - buf + 1);
+//         table[i] = code;
+//     }
+//     return table;
+// }
+
+// bool supports_vga_color() noexcept
+// {
+// #ifdef __CLING__
+//     const bool jupyter = true;
+// #else
+//     const bool jupyter = std::getenv("JPY_PARENT_PID") != nullptr;
+// #endif
+// #if defined(_WIN32)
+//     const bool terminal = _isatty(_fileno(stdout));
+//     // all windows versions support colors through native console methods
+//     const bool supports_vga = true;
+// #else
+//     const bool terminal = isatty(fileno(stdout));
+//     const bool supports_vga = []
+//     {   const char *env_p = std::getenv("TERM");
+//         if (nullptr == env_p)
+//             return false;
+//         return std::strstr(env_p, "-256color") != nullptr;
+//     }   ();
+// #endif // _WIN32
+//     return (terminal || jupyter) && supports_vga;
+// }
+
+// std::array<std::string_view, 256> create_vga_fg_table() noexcept
+// {   return supports_vga_color()
+//     ?   vga_fg_map()
+//     :   vga_empty_map();
+// }
+
+// std::array<std::string_view, 256> create_vga_bg_table() noexcept
+// {   return supports_vga_color()
+//     ?   vga_bg_map()
+//     :   vga_empty_map();
+// }
 
 thread_local static const auto ESC_FG = create_vga_fg_table();
 thread_local static const auto ESC_BG = create_vga_bg_table();

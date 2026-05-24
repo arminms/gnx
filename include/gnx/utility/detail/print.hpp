@@ -65,7 +65,7 @@ inline std::string print
     fmt::format_to
     (   std::back_inserter(buf)
     ,   "{}          # │"
-    ,   gnx::ansi::escape[style::bold] + gnx::ansi::vga::ESC_FG[250]
+    ,   gnx::ansi::ESC[style::bold] + gnx::ansi::vga::ESC_FG[250]
     );
     for (std::size_t i = separator; i <= line_width; i += separator)
         fmt::format_to
@@ -77,7 +77,7 @@ inline std::string print
     fmt::format_to
     (   std::back_inserter(buf)
     ,   "\n{}════════════╪"
-    ,   gnx::ansi::escape[style::bold] + gnx::ansi::vga::ESC_FG[250]
+    ,   gnx::ansi::ESC[style::bold] + gnx::ansi::vga::ESC_FG[250]
     );
     for (std::size_t i = separator; i <= line_width; i += separator)
         fmt::format_to
@@ -89,7 +89,7 @@ inline std::string print
     fmt::format_to
     (   std::back_inserter(buf)
     ,   "{}\n"
-    ,   gnx::ansi::escape[style::reset]
+    ,   gnx::ansi::ESC[style::reset]
     );
 
     for
@@ -101,9 +101,9 @@ inline std::string print
     {   fmt::format_to
         (   std::back_inserter(buf)
         ,   "{}{:11} │{} "
-        ,   gnx::ansi::escape[style::bold] + gnx::ansi::vga::ESC_FG[250]
+        ,   gnx::ansi::ESC[style::bold] + gnx::ansi::vga::ESC_FG[250]
         ,   start_index
-        ,   gnx::ansi::escape[style::reset]
+        ,   gnx::ansi::ESC[style::reset]
         );
         for 
         (   std::size_t j = 0
@@ -138,23 +138,23 @@ inline std::string print_to_string
             fmt::format_to
             (   std::back_inserter(buf)
             ,   "{}ID          {}│{} {}{}{}\n"
-            ,   gnx::ansi::escape[style::bold]
+            ,   gnx::ansi::ESC[style::bold]
             ,   gnx::ansi::vga::ESC_FG[250]
-            ,   gnx::ansi::escape[style::reset]
-            ,   gnx::ansi::escape[style::italic]
+            ,   gnx::ansi::ESC[style::reset]
+            ,   gnx::ansi::ESC[style::italic]
             ,   std::any_cast<std::string>(range["_id"])
-            ,   gnx::ansi::escape[style::reset]
+            ,   gnx::ansi::ESC[style::reset]
             );
         if (range.has("_desc"))
             fmt::format_to
             (   std::back_inserter(buf)
             ,   "{}DESCRIPTION {}│{} {}{}{}\n"
-            ,   gnx::ansi::escape[style::bold]
+            ,   gnx::ansi::ESC[style::bold]
             ,   gnx::ansi::vga::ESC_FG[250]
-            ,   gnx::ansi::escape[style::reset]
-            ,   gnx::ansi::escape[style::italic]
+            ,   gnx::ansi::ESC[style::reset]
+            ,   gnx::ansi::ESC[style::italic]
             ,   std::any_cast<std::string>(range["_desc"])
-            ,   gnx::ansi::escape[style::reset]
+            ,   gnx::ansi::ESC[style::reset]
             );
     }
 #ifdef __CLING__
@@ -200,23 +200,23 @@ inline nlohmann::json print_to_bundle
             fmt::format_to
             (   std::back_inserter(buf)
             ,   "{}ID          {}│{} {}{}{}\n"
-            ,   gnx::ansi::escape[style::bold]
+            ,   gnx::ansi::ESC[style::bold]
             ,   gnx::ansi::vga::ESC_FG[250]
-            ,   gnx::ansi::escape[style::reset]
-            ,   gnx::ansi::escape[style::italic]
+            ,   gnx::ansi::ESC[style::reset]
+            ,   gnx::ansi::ESC[style::italic]
             ,   std::any_cast<std::string>(range["_id"])
-            ,   gnx::ansi::escape[style::reset]
+            ,   gnx::ansi::ESC[style::reset]
             );
         if (range.has("_desc"))
             fmt::format_to
             (   std::back_inserter(buf)
             ,   "{}DESCRIPTION {}│{} {}{}{}\n"
-            ,   gnx::ansi::escape[style::bold]
+            ,   gnx::ansi::ESC[style::bold]
             ,   gnx::ansi::vga::ESC_FG[250]
-            ,   gnx::ansi::escape[style::reset]
-            ,   gnx::ansi::escape[style::italic]
+            ,   gnx::ansi::ESC[style::reset]
+            ,   gnx::ansi::ESC[style::italic]
             ,   std::any_cast<std::string>(range["_desc"])
-            ,   gnx::ansi::escape[style::reset]
+            ,   gnx::ansi::ESC[style::reset]
             );
     }
     auto bundle = nlohmann::json::object();
