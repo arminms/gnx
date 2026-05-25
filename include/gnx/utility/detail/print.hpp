@@ -66,7 +66,7 @@ inline std::string print
     (   std::back_inserter(buf)
     ,   "{}{}          # │"
     ,   gnx::ansi::ESC[style::bold]
-    ,   gnx::ansi::vga::ESC_FG[250]
+    ,   gnx::ansi::vga::fg::ESC[250]
     );
     for (std::size_t i = separator; i <= line_width; i += separator)
         fmt::format_to
@@ -79,7 +79,7 @@ inline std::string print
     (   std::back_inserter(buf)
     ,   "\n{}{}════════════╪"
     ,   gnx::ansi::ESC[style::bold]
-    ,   gnx::ansi::vga::ESC_FG[250]
+    ,   gnx::ansi::vga::fg::ESC[250]
     );
     for (std::size_t i = separator; i <= line_width; i += separator)
         fmt::format_to
@@ -104,7 +104,7 @@ inline std::string print
         (   std::back_inserter(buf)
         ,   "{}{}{:11} │{} "
         ,   gnx::ansi::ESC[style::bold]
-        ,   gnx::ansi::vga::ESC_FG[250]
+        ,   gnx::ansi::vga::fg::ESC[250]
         ,   start_index
         ,   gnx::ansi::ESC[style::reset]
         );
@@ -150,7 +150,7 @@ inline std::string print_to_string
             (   std::back_inserter(buf)
             ,   "{}ID          {}│{} {}{}{}\n"
             ,   gnx::ansi::ESC[style::bold]
-            ,   gnx::ansi::vga::ESC_FG[250]
+            ,   gnx::ansi::vga::fg::ESC[250]
             ,   gnx::ansi::ESC[style::reset]
             ,   gnx::ansi::ESC[style::italic]
             ,   std::any_cast<std::string>(range["_id"])
@@ -161,7 +161,7 @@ inline std::string print_to_string
             (   std::back_inserter(buf)
             ,   "{}DESCRIPTION {}│{} {}{}{}\n"
             ,   gnx::ansi::ESC[style::bold]
-            ,   gnx::ansi::vga::ESC_FG[250]
+            ,   gnx::ansi::vga::fg::ESC[250]
             ,   gnx::ansi::ESC[style::reset]
             ,   gnx::ansi::ESC[style::italic]
             ,   std::any_cast<std::string>(range["_desc"])
@@ -212,7 +212,7 @@ inline nlohmann::json print_to_bundle
             (   std::back_inserter(buf)
             ,   "{}ID          {}│{} {}{}{}\n"
             ,   gnx::ansi::ESC[style::bold]
-            ,   gnx::ansi::vga::ESC_FG[250]
+            ,   gnx::ansi::vga::fg::ESC[250]
             ,   gnx::ansi::ESC[style::reset]
             ,   gnx::ansi::ESC[style::italic]
             ,   std::any_cast<std::string>(range["_id"])
@@ -223,7 +223,7 @@ inline nlohmann::json print_to_bundle
             (   std::back_inserter(buf)
             ,   "{}DESCRIPTION {}│{} {}{}{}\n"
             ,   gnx::ansi::ESC[style::bold]
-            ,   gnx::ansi::vga::ESC_FG[250]
+            ,   gnx::ansi::vga::fg::ESC[250]
             ,   gnx::ansi::ESC[style::reset]
             ,   gnx::ansi::ESC[style::italic]
             ,   std::any_cast<std::string>(range["_desc"])
