@@ -62,37 +62,40 @@ inline std::string print
         separator = line_width;
     fmt::memory_buffer buf;
     auto size = std::distance(first, last);
-    fmt::format_to
-    (   std::back_inserter(buf)
-    ,   "{}{}          # │"
-    ,   gnx::ansi::ESC[style::bold]
-    ,   gnx::ansi::vga::fg::ESC[250]
-    );
-    for (std::size_t i = separator; i <= line_width; i += separator)
+
+    if (separator != line_width)
+    {   fmt::format_to
+        (   std::back_inserter(buf)
+        ,   "{}{}          # │"
+        ,   gnx::ansi::ESC[style::bold]
+        ,   gnx::ansi::vga::fg::ESC[250]
+        );
+        for (std::size_t i = separator; i <= line_width; i += separator)
+            fmt::format_to
+            (   std::back_inserter(buf)
+            ,   "{:{}}"
+            ,   i
+            ,   separator + 1
+            );
         fmt::format_to
         (   std::back_inserter(buf)
-        ,   "{:{}}"
-        ,   i
-        ,   separator + 1
+        ,   "\n{}{}════════════╪"
+        ,   gnx::ansi::ESC[style::bold]
+        ,   gnx::ansi::vga::fg::ESC[250]
         );
-    fmt::format_to
-    (   std::back_inserter(buf)
-    ,   "\n{}{}════════════╪"
-    ,   gnx::ansi::ESC[style::bold]
-    ,   gnx::ansi::vga::fg::ESC[250]
-    );
-    for (std::size_t i = separator; i <= line_width; i += separator)
+        for (std::size_t i = separator; i <= line_width; i += separator)
+            fmt::format_to
+            (   std::back_inserter(buf)
+            ,   "{:═>{}}"
+            ,   i == line_width ? "╛" : "╧"
+            ,   separator + 1
+            );
         fmt::format_to
         (   std::back_inserter(buf)
-        ,   "{:═>{}}"
-        ,   i == line_width ? "╛" : "╧"
-        ,   separator + 1
+        ,   "{}\n"
+        ,   gnx::ansi::ESC[style::reset]
         );
-    fmt::format_to
-    (   std::back_inserter(buf)
-    ,   "{}\n"
-    ,   gnx::ansi::ESC[style::reset]
-    );
+    }
 
     for
     (   std::size_t i = 0
