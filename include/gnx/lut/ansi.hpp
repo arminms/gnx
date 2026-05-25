@@ -318,7 +318,11 @@ std::array<std::string, 256> create_vga_bg_table() noexcept
     :   vga_empty_table();
 }
 
-thread_local static const auto ESC_FG = create_vga_fg_table();
-thread_local static const auto ESC_BG = create_vga_bg_table();
+namespace fg {
+    thread_local static const auto ESC = create_vga_fg_table();
+} // namespace fg
+namespace bg {
+    thread_local static const auto ESC = create_vga_bg_table();
+} // namespace bg
 
 } // namespace gnx::ansi::vga
