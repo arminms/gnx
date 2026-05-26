@@ -10,11 +10,45 @@
 
 #include <gnx/sq.hpp>
 #include <gnx/lut/ansi.hpp>
-#include <gnx/lut/peptide.hpp>
+#include <gnx/lut/color_schemes.hpp>
 #include <gnx/backend/forward_stream.hpp>
 #include <gnx/backend/virtual_vector.hpp>
+#include <gnx/algorithms/is_peptide.hpp>
+#include <gnx/algorithms/count.hpp>
 
 namespace gnx::detail {
+
+// human-readable size formatter
+std::string hrs(std::size_t size, bool peptide = false)
+{   if (size < 1000)
+    {   return fmt::format
+        (   "{}{:3}{} {}"
+        ,   gnx::ansi::ESC[style::bold]
+        ,   size
+        ,   gnx::ansi::ESC[style::reset]
+        ,   peptide ? "aa" : "bp"
+        );
+    }
+    else
+    {   int suffix_index{0};
+        double human_size = static_cast<double>(size);
+        while (human_size >= 1000 && suffix_index < 4)
+        {   human_size /= 1000;
+            ++suffix_index;
+        }
+        return fmt::format
+        (   "{}{:.1f}{} {}{} ({}{:L}{})"
+        ,   gnx::ansi::ESC[style::bold]
+        ,   human_size
+        ,   gnx::ansi::ESC[style::reset]
+        ,   " KMGT"[suffix_index]
+        ,   peptide ? "aa" : "bp"
+        ,   gnx::ansi::ESC[style::bold]
+        ,   size
+        ,   gnx::ansi::ESC[style::reset]
+        );
+    }
+};
 
 inline void describe_vv(std::string_view filename)
 {   gnx::virtual_vector<gnx::sq> vv{filename};
@@ -28,166 +62,47 @@ inline void describe_vv(std::string_view filename)
         return;
     }
 
-    // human-readable size formatter
-    auto hrs = [](std::size_t size, bool peptide) -> std::string
-    {   if (size < 1000)
-        {   return fmt::format
-            (   "{} {}"
-            ,   size
-            ,   peptide ? "aa" : "bp"
-            );
-        }
-        else
-        {   int suffix_index{0};
-            double human_size = static_cast<double>(size);
-            while (human_size >= 1000 && suffix_index < 4)
-            {   human_size /= 1000;
-                ++suffix_index;
-            }
-            return fmt::format
-            (   "{:.1f} {}{} ({:L})"
-            ,   human_size
-            ,   " KMGT"[suffix_index]
-            ,   peptide ? "aa" : "bp"
-            ,   size
-            );
-        }
-    };
-
-    // bool is_fastq = vv[0].has("_qs");
-    bool is_fastq = false;
-    bool is_peptide = false;
-    // =   is_fastq
-    // ?   false
-    // :   std::any_of
-    //     (   vv[0].begin()
-    //     ,   vv[0].end()
-    //     ,   [](char c)
-    //         {   return gnx::lut::is_peptide[static_cast<uint8_t>(c)];
-    //         }
-    //     );
-
-    if (is_fastq) // fastq format containing reads
-    {   std::size_t count{0}, total_length{0}, min_length{0}, max_length{0};
-        bool phred33{false};
-        fmt::memory_buffer buf;
-        fmt::format_to(std::back_inserter(buf)
-        ,   "▼ {}{}{}\n"
-        ,   gnx::ansi::ESC[fg::bright_green]
-        ,   std::filesystem::path(filename).filename().string()
+    std::size_t count{0}, total_length{0};
+    fmt::memory_buffer buf;
+    fmt::format_to(std::back_inserter(buf)
+    ,   "▼ {}{}{}\n"
+    ,   gnx::ansi::ESC[fg::bright_green]
+    ,   std::filesystem::path(filename).filename().string()
+    ,   gnx::ansi::ESC[fg::reset]
+    );
+    for (std::size_t i = 0; i < vv.size(); ++i)
+    {   fmt::format_to(std::back_inserter(buf)
+        ,   "{}├── ▼ {}{}{}\n"
+        ,   gnx::ansi::vga::fg::ESC[250]
+        ,   gnx::ansi::ESC[fg::bright_magenta]
+        ,   vv.entry(i).name
         ,   gnx::ansi::ESC[fg::reset]
         );
-        for (std::size_t i = 0; i < vv.size(); ++i)
-        {   min_length
-            =   (i == 0)
-            ?   vv[i].size()
-            :   std::min(min_length, vv[i].size());
-            max_length
-            =   (i == 0)
-            ?   vv[i].size()
-            :   std::max(max_length, vv[i].size());
-            if (phred33 == false && i < 10000)
-            {   for (char c : std::any_cast<std::string>(vv[i]["_qs"]))
-                {   if (c < 58 || c > 1)
-                    {   phred33 = true;
-                        break;
-                    }
-                }
-            }
-            total_length += vv[i].size();
-        }
         fmt::format_to
         (   std::back_inserter(buf)
-        ,   "├── Encoding: {}{}{}\n"
-        ,   gnx::ansi::ESC[fg::bright_cyan]
-        +   gnx::ansi::ESC[style::italic]
-        ,   phred33
-            ?   min_length > 1000
-                ?   "PacBio / Nanopore"
-                :   "Sanger / Illumina 1.8+"
-            :   "Illumina 1.3 - 1.7"
+        ,   "{}│   └──{} {}{}{}\n"
+        ,   gnx::ansi::vga::fg::ESC[250]
+        ,   gnx::ansi::ESC[fg::reset]
+        ,   gnx::ansi::ESC[style::bold]
+        ,   hrs(vv.entry(i).length)
         ,   gnx::ansi::ESC[style::reset]
         );
-        fmt::format_to
-        (   std::back_inserter(buf)
-        ,   "├── Total reads: {}{}{}\n"
-        ,   gnx::ansi::ESC[fg::bright_yellow]
-        ,   vv.size()
-        ,   gnx::ansi::ESC[fg::reset]
-        );
-        fmt::format_to
-        (   std::back_inserter(buf)
-        ,   "├── Total bases: {}{}{}\n"
-        ,   gnx::ansi::ESC[fg::bright_yellow]
-        ,   hrs(total_length, is_peptide)
-        ,   gnx::ansi::ESC[fg::reset]
-        );
-        if (max_length > min_length)
-            fmt::format_to
-            (   std::back_inserter(buf)
-            ,   "└── Read length: {}{}-{}{}\n"
-            ,   gnx::ansi::ESC[fg::bright_yellow]
-            ,   min_length
-            ,   max_length
-            ,   gnx::ansi::ESC[fg::reset]
-            );
-        else
-            fmt::format_to
-            (   std::back_inserter(buf)
-            ,   "└── Read length: {}{}{} bp\n"
-            ,   gnx::ansi::ESC[fg::bright_yellow]
-            ,   min_length
-            ,   gnx::ansi::ESC[fg::reset]
-            );
-        std::cout.write(buf.data(), buf.size());
+        total_length += vv.entry(i).length;
     }
-    else
-    {   std::size_t count{0}, total_length{0};
-        fmt::memory_buffer buf;
-        fmt::format_to(std::back_inserter(buf)
-        ,   "▼ {}{}{}\n"
-        ,   gnx::ansi::ESC[fg::bright_green]
-        ,   std::filesystem::path(filename).filename().string()
-        ,   gnx::ansi::ESC[fg::reset]
-        );
-        for (std::size_t i = 0; i < vv.size(); ++i)
-        {   fmt::format_to(std::back_inserter(buf)
-            ,   "├── ▼ {}{}{}\n"
-            ,   gnx::ansi::ESC[fg::bright_magenta]
-            ,   vv.entry(i).name
-            ,   gnx::ansi::ESC[fg::reset]
-            );
-            // if (vv[i].has("_desc"))
-            //     fmt::format_to
-            //     (   std::back_inserter(buf)
-            //     ,   "│   ├── {}{}{}\n"
-            //     ,   gnx::ansi::ESC[fg::bright_cyan]
-            //     +   gnx::ansi::ESC[style::italic]
-            //     ,   std::any_cast<std::string>(vv[i]["_desc"])
-            //     ,   gnx::ansi::ESC[style::reset]
-            //     );
-            fmt::format_to
-            (   std::back_inserter(buf)
-            ,   "│   └── {}{}{}\n"
-            ,   gnx::ansi::ESC[fg::bright_yellow]
-            ,   hrs(vv.entry(i).length, is_peptide)
-            ,   gnx::ansi::ESC[fg::reset]
-            );
-            total_length += vv.entry(i).length;
-        }
-        fmt::format_to
-        (   std::back_inserter(buf)
-        ,   "└── {}{}{} {}, {}{}{}\n"
-        ,   gnx::ansi::ESC[fg::bright_yellow]
-        ,   vv.size()
-        ,   gnx::ansi::ESC[fg::reset]
-        ,   (vv.size() > 1) ? "sequences" : "sequence"
-        ,   gnx::ansi::ESC[fg::bright_yellow]
-        ,   hrs(total_length, is_peptide)
-        ,   gnx::ansi::ESC[fg::reset]
-        );
-        std::cout.write(buf.data(), buf.size());
-    }
+    fmt::format_to
+    (   std::back_inserter(buf)
+    ,   "{}└──{} {}{}{} {}, {}{}{}\n"
+    ,   gnx::ansi::vga::fg::ESC[250]
+    ,   gnx::ansi::ESC[fg::reset]
+    ,   gnx::ansi::ESC[style::bold]
+    ,   vv.size()
+    ,   gnx::ansi::ESC[style::reset]
+    ,   (vv.size() > 1) ? "sequences" : "sequence"
+    ,   gnx::ansi::ESC[style::bold]
+    ,   hrs(total_length)
+    ,   gnx::ansi::ESC[style::reset]
+    );
+    std::cout.write(buf.data(), buf.size());
 }
 
 inline void describe_fs(std::string_view filename)
@@ -204,50 +119,19 @@ inline void describe_fs(std::string_view filename)
         return;
     }
 
-    // human-readable size formatter
-    auto hrs = [](std::size_t size, bool peptide) -> std::string
-    {   if (size < 1000)
-        {   return fmt::format
-            (   "{} {}"
-            ,   size
-            ,   peptide ? "aa" : "bp"
-            );
-        }
-        else
-        {   int suffix_index{0};
-            double human_size = static_cast<double>(size);
-            while (human_size >= 1000 && suffix_index < 4)
-            {   human_size /= 1000;
-                ++suffix_index;
-            }
-            return fmt::format
-            (   "{:.1f} {}{} ({:L})"
-            ,   human_size
-            ,   " KMGT"[suffix_index]
-            ,   peptide ? "aa" : "bp"
-            ,   size
-            );
-        }
-    };
-
     bool is_fastq = !stream.quality().empty();
-    bool is_peptide
+    bool peptide
     =   is_fastq
     ?   false
-    :   std::any_of
-        (   it->sequence().begin()
-        ,   it->sequence().end()
-        ,   [](char c)
-            {   return gnx::lut::is_peptide[static_cast<uint8_t>(c)];
-            }
-        );
+    :   is_peptide(std::begin(it->sequence()), std::end(it->sequence()));
 
     if (is_fastq)
     {   std::size_t count{0}, total_length{0}, min_length{0}, max_length{0};
         bool phred33{false};
         fmt::memory_buffer buf;
         fmt::format_to(std::back_inserter(buf)
-        ,   "▼ {}{}{}\n"
+        ,   "{}▼ {}{}{}\n"
+        ,   gnx::ansi::vga::fg::ESC[250]
         ,   gnx::ansi::ESC[fg::bright_green]
         ,   std::filesystem::path(filename).filename().string()
         ,   gnx::ansi::ESC[fg::reset]
@@ -273,7 +157,9 @@ inline void describe_fs(std::string_view filename)
         }
         fmt::format_to
         (   std::back_inserter(buf)
-        ,   "├── Encoding: {}{}{}\n"
+        ,   "{}├──{} Encoding: {}{}{}\n"
+        ,   gnx::ansi::vga::fg::ESC[250]
+        ,   gnx::ansi::ESC[fg::reset]
         ,   gnx::ansi::ESC[fg::bright_cyan]
         +   gnx::ansi::ESC[style::italic]
         ,   phred33
@@ -285,34 +171,42 @@ inline void describe_fs(std::string_view filename)
         );
         fmt::format_to
         (   std::back_inserter(buf)
-        ,   "├── Total reads: {}{}{}\n"
-        ,   gnx::ansi::ESC[fg::bright_yellow]
-        ,   count
+        ,   "{}├──{} Total reads: {}{}{}\n"
+        ,   gnx::ansi::vga::fg::ESC[250]
         ,   gnx::ansi::ESC[fg::reset]
+        ,   gnx::ansi::ESC[style::bold]
+        ,   count
+        ,   gnx::ansi::ESC[style::reset]
         );
         fmt::format_to
         (   std::back_inserter(buf)
-        ,   "├── Total bases: {}{}{}\n"
-        ,   gnx::ansi::ESC[fg::bright_yellow]
-        ,   hrs(total_length, is_peptide)
+        ,   "{}├──{} Total bases: {}{}{}\n"
+        ,   gnx::ansi::vga::fg::ESC[250]
         ,   gnx::ansi::ESC[fg::reset]
+        ,   gnx::ansi::ESC[style::bold]
+        ,   hrs(total_length, peptide)
+        ,   gnx::ansi::ESC[style::reset]
         );
         if (max_length > min_length)
             fmt::format_to
             (   std::back_inserter(buf)
-            ,   "└── Read length: {}{}-{}{}\n"
-            ,   gnx::ansi::ESC[fg::bright_yellow]
+            ,   "{}└──{} Read length: {}{}-{}{}\n"
+            ,   gnx::ansi::vga::fg::ESC[250]
+            ,   gnx::ansi::ESC[fg::reset]
+            ,   gnx::ansi::ESC[style::bold]
             ,   min_length
             ,   max_length
-            ,   gnx::ansi::ESC[fg::reset]
+            ,   gnx::ansi::ESC[style::reset]
             );
         else
             fmt::format_to
             (   std::back_inserter(buf)
-            ,   "└── Read length: {}{}{} bp\n"
-            ,   gnx::ansi::ESC[fg::bright_yellow]
-            ,   min_length
+            ,   "{}└──{} Read length: {}{}{} bp\n"
+            ,   gnx::ansi::vga::fg::ESC[250]
             ,   gnx::ansi::ESC[fg::reset]
+            ,   gnx::ansi::ESC[style::bold]
+            ,   min_length
+            ,   gnx::ansi::ESC[style::reset]
             );
         std::cout.write(buf.data(), buf.size());
     }
@@ -320,14 +214,16 @@ inline void describe_fs(std::string_view filename)
     {   std::size_t count{0}, total_length{0};
         fmt::memory_buffer buf;
         fmt::format_to(std::back_inserter(buf)
-        ,   "▼ {}{}{}\n"
+        ,   "{}▼ {}{}{}\n"
+        ,   gnx::ansi::vga::fg::ESC[250]
         ,   gnx::ansi::ESC[fg::bright_green]
         ,   std::filesystem::path(filename).filename().string()
         ,   gnx::ansi::ESC[fg::reset]
         );
         for (; it != end_it; ++it, ++count)
         {   fmt::format_to(std::back_inserter(buf)
-            ,   "├── ▼ {}{}{}\n"
+            ,   "{}├── ▼ {}{}{}\n"
+            ,   gnx::ansi::vga::fg::ESC[250]
             ,   gnx::ansi::ESC[fg::bright_magenta]
             ,   it->id()
             ,   gnx::ansi::ESC[fg::reset]
@@ -335,7 +231,8 @@ inline void describe_fs(std::string_view filename)
             if (it->description().size() > 0)
                 fmt::format_to
                 (   std::back_inserter(buf)
-                ,   "│   ├── {}{}{}\n"
+                ,   "{}│   ├── {}{}{}\n"
+                ,   gnx::ansi::vga::fg::ESC[250]
                 ,   gnx::ansi::ESC[fg::bright_cyan]
                 +   gnx::ansi::ESC[style::italic]
                 ,   it->description()
@@ -343,26 +240,58 @@ inline void describe_fs(std::string_view filename)
                 );
             fmt::format_to
             (   std::back_inserter(buf)
-            ,   "│   └── {}{}{}\n"
-            ,   gnx::ansi::ESC[fg::bright_yellow]
-            ,   hrs(it->sequence().size(), is_peptide)
+            ,   "{}│   └──{} {}{}{}\n"
+            ,   gnx::ansi::vga::fg::ESC[250]
             ,   gnx::ansi::ESC[fg::reset]
+            ,   gnx::ansi::ESC[style::bold]
+            ,   hrs(it->sequence().size(), peptide)
+            ,   gnx::ansi::ESC[style::reset]
             );
             total_length += it->sequence().size();
         }
         fmt::format_to
         (   std::back_inserter(buf)
-        ,   "└── {}{}{} {}, {}{}{}\n"
-        ,   gnx::ansi::ESC[fg::bright_yellow]
+        ,   "{}└──{} {}{}{} {}, {}{}{}\n"
+        ,   gnx::ansi::vga::fg::ESC[250]
+        ,   gnx::ansi::ESC[fg::reset]
+        ,   gnx::ansi::ESC[style::bold]
         ,   count
-        ,   gnx::ansi::ESC[fg::reset]
+        ,   gnx::ansi::ESC[style::reset]
         ,   (count > 1) ? "sequences" : "sequence"
-        ,   gnx::ansi::ESC[fg::bright_yellow]
-        ,   hrs(total_length, is_peptide)
-        ,   gnx::ansi::ESC[fg::reset]
+        ,   gnx::ansi::ESC[style::bold]
+        ,   hrs(total_length, peptide)
+        ,   gnx::ansi::ESC[style::reset]
         );
         std::cout.write(buf.data(), buf.size());
     }
+}
+
+template<typename Iterator>
+void describe(Iterator begin, Iterator end)
+{   bool peptide = is_peptide(begin, end);
+    auto total_length = std::distance(begin, end);
+    auto counts = gnx::count(begin, end);
+    fmt::memory_buffer buf;
+    for (const auto& [symbol, count] : counts)
+        fmt::format_to
+        (   std::back_inserter(buf)
+        ,   "{}├──{} [{}{}] {}\n"
+        ,   gnx::ansi::vga::fg::ESC[250]
+        ,   gnx::ansi::ESC[fg::reset]
+        ,   peptide
+            ?   color_scheme::aa_clustal[static_cast<uint8_t>(symbol)]
+            :   color_scheme::na[static_cast<uint8_t>(symbol)]
+        ,   gnx::ansi::ESC[style::reset]
+        ,   hrs(count, peptide)
+        );
+    fmt::format_to
+    (   std::back_inserter(buf)
+    ,   "{}└──{} [Σ] {}\n"
+    ,   gnx::ansi::vga::fg::ESC[250]
+    ,   gnx::ansi::ESC[fg::reset]
+    ,   hrs(total_length, peptide)
+    );
+    std::cout.write(buf.data(), buf.size());
 }
 
 }  // namespace gnx::detail
