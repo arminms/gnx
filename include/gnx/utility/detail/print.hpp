@@ -155,7 +155,7 @@ inline std::string print_to_string
             ,   gnx::ansi::ESC[style::bold]
             ,   gnx::ansi::vga::fg::ESC[250]
             ,   gnx::ansi::ESC[style::reset]
-            ,   gnx::ansi::ESC[style::italic]
+            ,   ansi::ESC[fg::bright_magenta]
             ,   std::any_cast<std::string>(range["_id"])
             ,   gnx::ansi::ESC[style::reset]
             );
@@ -166,7 +166,7 @@ inline std::string print_to_string
             ,   gnx::ansi::ESC[style::bold]
             ,   gnx::ansi::vga::fg::ESC[250]
             ,   gnx::ansi::ESC[style::reset]
-            ,   gnx::ansi::ESC[style::italic]
+            ,   ansi::ESC[fg::bright_cyan]
             ,   std::any_cast<std::string>(range["_desc"])
             ,   gnx::ansi::ESC[style::reset]
             );
@@ -217,7 +217,7 @@ inline nlohmann::json print_to_bundle
             ,   gnx::ansi::ESC[style::bold]
             ,   gnx::ansi::vga::fg::ESC[250]
             ,   gnx::ansi::ESC[style::reset]
-            ,   gnx::ansi::ESC[style::italic]
+            ,   ansi::ESC[fg::bright_magenta]
             ,   std::any_cast<std::string>(range["_id"])
             ,   gnx::ansi::ESC[style::reset]
             );
@@ -228,7 +228,7 @@ inline nlohmann::json print_to_bundle
             ,   gnx::ansi::ESC[style::bold]
             ,   gnx::ansi::vga::fg::ESC[250]
             ,   gnx::ansi::ESC[style::reset]
-            ,   gnx::ansi::ESC[style::italic]
+            ,   gnx::ansi::ESC[fg::bright_cyan]
             ,   std::any_cast<std::string>(range["_desc"])
             ,   gnx::ansi::ESC[style::reset]
             );
