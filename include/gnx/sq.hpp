@@ -3,13 +3,12 @@
 //
 #pragma once
 
-#include <fmt/format.h>
-#include <fmt/ranges.h>
 #include <concepts>
 #include <sstream>
 #include <iomanip>
 #include <algorithm>
 #include <initializer_list>
+#include <ranges>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -27,10 +26,12 @@
     #include <thrust/memory.h>
 #endif // __CUDACC__
 
+#include <gnx/commons.hpp>
 #include <gnx/concepts.hpp>
 #include <gnx/views.hpp>
 #include <gnx/visitor.hpp>
-#include <gnx/io/fastaqz.hpp>
+#include <gnx/backend/forward_stream.hpp>
+#include <gnx/backend/virtual_vector.hpp>
 #include <gnx/memory.hpp>
 
 namespace gnx {
@@ -58,6 +59,7 @@ public:
     using const_reverse_iterator = typename Container::const_reverse_iterator;
     using container_type = Container;
     using map_type = Map;
+    using self_type = generic_sequence<Container, Map>;
 
     static constexpr size_type npos = static_cast<size_type>(-1);
 
@@ -70,11 +72,32 @@ public:
     {}
     ///
     /// @brief Constructs a sequence from a string view.
-    /// @param sq The string view representing the sequence.
-    explicit generic_sequence(std::string_view sq)
-    :   _sq(std::begin(sq), std::end(sq))
-    ,   _ptr_td()
-    {}
+    /// @param sv The string view representing the sequence or a file path.
+    explicit generic_sequence(std::string_view sv, size_type ndx = 0)
+    {   if  // if the sv is a view over a filename, attempt to read it as such
+        (std::filesystem::path(std::string(sv)).has_extension())
+        {   if (std::filesystem::exists(std::string(sv) + ".fai"))
+            {   gnx::virtual_vector<self_type> vv{sv};
+                if (ndx < vv.size())
+                    *this = vv[ndx];
+                else
+                    log_error("invalid sequence index");
+            }
+            else
+            {   size_t count = 0;
+                gnx::forward_stream<self_type> stream(sv);
+                auto it = stream.begin();
+                for (; it != stream.end() && count < ndx; ++it, ++count);
+                if (it != stream.end())
+                    *this = stream();
+                else
+                    log_error("invalid sequence index");
+            }
+        }
+        else // otherwise, treat it as a view over a sequence
+        {   _sq.assign(std::begin(sv), std::end(sv));
+        }
+    }
     ///
     /// Constructs a sequence with @a count residues.
     /// @param count The number of residues in the sequence.
@@ -102,6 +125,10 @@ public:
     ,   _ptr_td()
     {}
 #endif //__CUDACC__
+
+// test
+
+//<-------------------
     ///
     /// @brief Constructs a sequence from a sequence view.
     /// @param sv The sequence view to construct the sequence from.
@@ -117,6 +144,8 @@ public:
     ,   _ptr_td()
     {}
 #endif //__CUDACC__
+//<-------------------
+
     ///
     template<typename InputIt>
     requires std::input_iterator<InputIt> &&
