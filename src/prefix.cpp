@@ -22,8 +22,8 @@ prefix_cmd::prefix_cmd
         (   "{}With no FILE, or when FILE is -, read standard input and write "
             "to standard output if no output file specified.\n\n"
             "Report bugs to <https://github.com/arminms/gnx/issues>.{}"
-        ,   ansi::style::bold()
-        ,   ansi::style::reset()
+        ,   gnx::ansi::ESC[style::bold]
+        ,   gnx::ansi::ESC[style::reset]
         )
     )
     ->  group("OUTPUT FILENAME MODIFIERS")

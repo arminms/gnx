@@ -355,8 +355,8 @@ int main
     gnx_cli.footer
     (   fmt::format
         (   "{}Report bugs to <https://github.com/arminms/gnx/issues>.{}"
-        ,   ansi::style::bold()
-        ,   ansi::style::reset()
+        ,   gnx::ansi::ESC[style::bold]
+        ,   gnx::ansi::ESC[style::reset]
         )
     );
     // gnx_cli.usage("Usage:\n\tgnx <COMMAND> [OPTIONS]\n\tgnx [OPTIONS] <FILE>... : <COMMAND>...");

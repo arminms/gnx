@@ -30,8 +30,8 @@ bgzip::bgzip
     (   fmt::format
         (   "{}With no FILE, or when FILE is -, read standard input.\n\n"
             "Report bugs to <https://github.com/arminms/gnx/issues>.{}"
-        ,   ansi::style::bold()
-        ,   ansi::style::reset()
+        ,   gnx::ansi::ESC[style::bold]
+        ,   gnx::ansi::ESC[style::reset]
         )
     )
     ->  group("FORMAT CONVERTERS")
@@ -101,9 +101,9 @@ void bgzip::run_bgzip()
         {   printerr
             (   "[bgzip]: output file {}{}{} cannot be specified for multiple "
                 "input files\n"
-            ,   ansi::fg::yellow()
+            ,   gnx::ansi::ESC[fg::yellow]
             ,   _opt.output_file
-            ,   ansi::fg::reset()
+            ,   gnx::ansi::ESC[style::reset]
             );
             _opt.return_code = 1;
             return;

@@ -19,8 +19,6 @@
 
 #include <gnx/sq.hpp>
 
-#include "ansi.hpp"
-
 /// @brief Prints an error message to stderr
 /// @tparam ...Args format string arguments
 /// @param fmt format string

@@ -26,8 +26,8 @@ complement_cmd::complement_cmd
         (   "{}With no FILE, or when FILE is -, read standard input and write "
             "to standard output if no output file specified.\n\n"
             "Report bugs to <https://github.com/arminms/gnx/issues>.{}"
-        ,   ansi::style::bold()
-        ,   ansi::style::reset()
+        ,   gnx::ansi::ESC[style::bold]
+        ,   gnx::ansi::ESC[style::reset]
         )
     )
     ->  group("ALGORITHMS")
@@ -85,7 +85,7 @@ void complement_cmd::run()
 void complement_cmd::run_complement()
 {   if (_input_files.empty())
 #if defined(__CUDACC__) || defined(__HIPCC__)
-        if (_use_gpu)
+        if (_opt.use_gpu)
             run_complement<gnx::dsq>("-");
         else
             run_complement<gnx::sq>("-");
@@ -97,15 +97,15 @@ void complement_cmd::run_complement()
         {   printerr
             (   "[complement]: output file {}{}{} cannot be specified for "
                 "multiple input files\n"
-            ,   ansi::fg::yellow()
+            ,   gnx::ansi::ESC[fg::yellow]
             ,   _opt.output_file
-            ,   ansi::fg::reset()
+            ,   gnx::ansi::ESC[style::reset]
             );
             _opt.return_code = 1;
             return;
         }
 #if defined(__CUDACC__) || defined(__HIPCC__)
-        if (_use_gpu)
+        if (_opt.use_gpu)
             // #pragma omp parallel for schedule(dynamic) if(_input_files.size() > 1)
             for (std::size_t i = 0; i < _input_files.size(); ++i)
                 run_complement<gnx::dsq>(_input_files[i]);
