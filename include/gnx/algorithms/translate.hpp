@@ -337,11 +337,16 @@ requires gnx::is_execution_policy_v<std::decay_t<ExecPolicy>>
 /// for ensuring @p out has sufficient capacity.
 template<std::ranges::random_access_range InputRange, std::ranges::range OutputRange>
 [[nodiscard]] auto translate(const InputRange& seq, OutputRange& out)
-{   return translate
-    (   std::begin(seq)
-    ,   std::end(seq)
-    ,   std::begin(out)
-    );
+{   if constexpr
+    (   std::is_same_v<std::decay_t<InputRange>, gnx::psq2>
+    )
+    {   // For packed sequences, convert to generic_sequence and call the range overload
+        auto sq = seq.to_sq();
+        return translate(std::begin(sq), std::end(sq), std::begin(out));
+    }
+    else
+    {   return translate(std::begin(seq), std::end(seq), std::begin(out));
+    }
 }
 
 /// @brief Parallel-enabled translate of a sequence range.
@@ -362,12 +367,25 @@ template
 ,   const InputRange& seq
 ,   OutputRange& out
 )
-{   return translate
-    (   std::forward<ExecPolicy>(policy)
-    ,   std::begin(seq)
-    ,   std::end(seq)
-    ,   std::begin(out)
-    );
+{   if constexpr
+    (   std::is_same_v<std::decay_t<InputRange>, gnx::psq2>
+    )
+    {   auto sq = seq.to_sq();
+        return translate
+        (   std::forward<ExecPolicy>(policy)
+        ,   std::begin(sq)
+        ,   std::end(sq)
+        ,   std::begin(out)
+        );
+    }
+    else
+    {   return translate
+        (   std::forward<ExecPolicy>(policy)
+        ,   std::begin(seq)
+        ,   std::end(seq)
+        ,   std::begin(out)
+        );
+    }
 }
 
 } // namespace gnx
