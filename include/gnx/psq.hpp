@@ -57,6 +57,7 @@ public:
     using difference_type     = std::ptrdiff_t;
     using container_type      = ByteContainer;
     using map_type            = Map;
+    using self_type           = packed_generic_sequence_2bit<ByteContainer, Map>;
 
     static constexpr size_type npos = static_cast<size_type>(-1);
 
@@ -351,17 +352,82 @@ public:
     ,   _ptr_td()
     {}
     /// Constructs a packed sequence from a string view (only ACGT recognized).
-    explicit packed_generic_sequence_2bit(std::string_view sv)
+    explicit packed_generic_sequence_2bit
+    (   std::string_view sv
+    ,   size_type ndx = 0
+    )
     :   _bytes(num_bytes(sv.size()), uint8_t{0})
     ,   _size(sv.size())
     ,   _ptr_td()
-    {   for (size_type i = 0; i < _size; ++i)
-            _set_base(i, sv[i]);
+    {   if  // if the sv is a view over a filename, attempt to read it as such
+        (std::filesystem::path(std::string(sv)).has_extension())
+        {   if (std::filesystem::exists(std::string(sv) + ".fai"))
+            {   gnx::virtual_vector<self_type> vv{sv};
+                if (ndx < vv.size())
+                    *this = vv[ndx];
+                else
+                    log_error("invalid sequence index");
+            }
+            else
+            {   size_t count = 0;
+                gnx::forward_stream<self_type> stream(sv);
+                auto it = stream.begin();
+                for (; it != stream.end() && count < ndx; ++it, ++count);
+                if (it != stream.end())
+                    *this = stream();
+                else
+                    log_error("invalid sequence index");
+            }
+        }
+        else // otherwise, treat it as a view over a sequence
+        {   for (size_type i = 0; i < _size; ++i)
+                _set_base(i, sv[i]);
+        }
+    }
+    /// @brief Constructs a packed sequence from a string view and an ID (only
+    /// ACGT recognized). If the string view is a file path, the constructor
+    /// attempts to read the sequence with the matching ID from the file. If the
+    /// string view is not a file path, it is treated as a direct sequence input.
+    /// @param sv The string view representing the sequence or a file path.
+    /// @param id The ID of the sequence to read from the file if the string is
+    /// a file path.
+    packed_generic_sequence_2bit
+    (   std::string_view sv
+    ,   std::string_view id
+    )
+    :   _bytes(num_bytes(sv.size()), uint8_t{0})
+    ,   _size(sv.size())
+    ,   _ptr_td()
+    {   if  // if the sv is a view over a filename, attempt to read it as such
+        (std::filesystem::path(std::string(sv)).has_extension())
+        {   if (std::filesystem::exists(std::string(sv) + ".fai"))
+            {   gnx::virtual_vector<self_type> vv{sv};
+                for (size_type i = 0; i < vv.size(); ++i)
+                {   if (vv.entry(i).name == id)
+                    {   *this = vv[i];
+                        return;
+                    }
+                }
+                log_error("no sequence with matching ID found");
+            }
+            else
+            {   gnx::forward_stream<self_type> stream(sv);
+                auto it = stream.begin();
+                for (; it != stream.end() && stream.id() != id; ++it);
+                if (it != stream.end())
+                    *this = stream();
+                else
+                    log_error("no sequence with matching ID found");
+            }
+        }
+        else // otherwise, treat it as a view over a sequence
+        {   for (size_type i = 0; i < _size; ++i)
+                _set_base(i, sv[i]);
+        }
     }
     /// Constructs a packed sequence with @a count bases, all initialized to 'A'.
     explicit packed_generic_sequence_2bit(size_type count)
-    :   _bytes(num_bytes(count)
-    ,   uint8_t{0})
+    :   _bytes(num_bytes(count), uint8_t{0})
     ,   _size(count)
     ,   _ptr_td()
     {}
@@ -386,6 +452,7 @@ public:
     template<typename InputIt>
     requires std::input_iterator<InputIt>
     &&  std::is_convertible_v<typename std::iterator_traits<InputIt>::value_type, char>
+    &&  (!std::is_convertible_v<InputIt, std::string_view>)
     packed_generic_sequence_2bit(InputIt first, InputIt last)
     :   _bytes()
     ,   _size(0)
@@ -398,8 +465,15 @@ public:
     }
     /// Constructs a packed sequence from an initializer list.
     packed_generic_sequence_2bit(std::initializer_list<char> init)
-    :   packed_generic_sequence_2bit(init.begin(), init.end())
-    {}
+    :   _bytes()
+    ,   _size(0)
+    ,   _ptr_td()
+    {   for (auto it = init.begin(); it != init.end(); ++it, ++_size)
+        {   if (_size % 4 == 0)
+                _bytes.push_back(0);
+            _set_base(_size, *it);
+        }
+    }
     /// Constructs a packed sequence from a @a generic_sequence (any Container/Map).
     template<typename SqContainer, typename SqMap>
     explicit packed_generic_sequence_2bit(const generic_sequence<SqContainer, SqMap>& sq)
