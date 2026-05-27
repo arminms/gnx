@@ -14,7 +14,7 @@
 
 namespace gnx {
 
-void log_error
+inline void log_error
 (   std::string_view message
 ,   const std::source_location location = std::source_location::current()
 )
