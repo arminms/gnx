@@ -24,7 +24,7 @@
 
 namespace gnx::ansi {
 
-std::array<std::string, 40> create_ansi_table() noexcept
+inline std::array<std::string, 40> create_ansi_table() noexcept
 {   std::array<std::string, 40> table{};
 #ifdef __CLING__
     const bool jupyter = true;
@@ -236,19 +236,19 @@ namespace gnx::ansi::vga {
 //     return table;
 // }
 
-std::array<std::string, 256> vga_empty_table()
+inline std::array<std::string, 256> vga_empty_table()
 {   std::array<std::string, 256> table{}; // default to empty
     return table;
 }
 
-std::array<std::string, 256> vga_fg_table()
+inline std::array<std::string, 256> vga_fg_table()
 {   std::array<std::string, 256> table;
     for (int i = 0; i < 256; ++i)
         table[i] = fmt::format("\033[38;5;{}m", i);
     return table;
 }
 
-std::array<std::string, 256> vga_bg_table()
+inline std::array<std::string, 256> vga_bg_table()
 {   std::array<std::string, 256> table;
     for (int i = 0; i < 256; ++i)
         table[i] = fmt::format("\033[48;5;{}m", i);
@@ -283,7 +283,7 @@ std::array<std::string, 256> vga_bg_table()
 //     return table;
 // }
 
-bool supports_vga_color() noexcept
+inline bool supports_vga_color() noexcept
 {
 #ifdef __CLING__
     const bool jupyter = true;
@@ -306,13 +306,13 @@ bool supports_vga_color() noexcept
     return (terminal || jupyter) && supports_vga;
 }
 
-std::array<std::string, 256> create_vga_fg_table() noexcept
+inline std::array<std::string, 256> create_vga_fg_table() noexcept
 {   return supports_vga_color()
     ?   vga_fg_table()
     :   vga_empty_table();
 }
 
-std::array<std::string, 256> create_vga_bg_table() noexcept
+inline std::array<std::string, 256> create_vga_bg_table() noexcept
 {   return supports_vga_color()
     ?   vga_bg_table()
     :   vga_empty_table();
