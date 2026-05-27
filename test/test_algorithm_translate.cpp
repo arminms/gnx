@@ -478,9 +478,8 @@ TEMPLATE_TEST_CASE
 
     SECTION( "range overload on converted psq2" )
     {   Psq psq("ATGGCTTAA");
-        auto sq = psq.to_sq();
         std::string protein(3, '\0');
-(void) gnx::translate(sq, protein);
+(void) gnx::translate(psq, protein);
         CHECK(protein == "MA*");
     }
 
