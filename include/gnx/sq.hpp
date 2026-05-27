@@ -71,8 +71,13 @@ public:
     ,   _ptr_td()
     {}
     ///
-    /// @brief Constructs a sequence from a string view.
+    /// @brief Constructs a sequence from a string view. If the string view is a
+    /// file path, the constructor attempts to read the sequence from the file.
+    /// If the string view is not a file path, it is treated as a direct sequence
+    /// input.
     /// @param sv The string view representing the sequence or a file path.
+    /// @param ndx The index of the sequence to read from the file if the string
+    /// view is a file path. Default is 0 (the first sequence).
     explicit generic_sequence(std::string_view sv, size_type ndx = 0)
     {   if  // if the sv is a view over a filename, attempt to read it as such
         (std::filesystem::path(std::string(sv)).has_extension())
@@ -92,6 +97,41 @@ public:
                     *this = stream();
                 else
                     log_error("invalid sequence index");
+            }
+        }
+        else // otherwise, treat it as a view over a sequence
+        {   _sq.assign(std::begin(sv), std::end(sv));
+        }
+    }
+    ///
+    /// @brief Constructs a sequence from a string view and an ID. If the string
+    /// view is a file path, the constructor attempts to read the sequence with
+    /// the matching ID from the file. If the string view is not a file path, it
+    /// is treated as a direct sequence input.
+    /// @param sv The string view representing the sequence or a file path.
+    /// @param id The ID of the sequence to read from the file if the string is
+    /// a file path.
+    generic_sequence(std::string_view sv, std::string_view id)
+    {   if  // if the sv is a view over a filename, attempt to read it as such
+        (std::filesystem::path(std::string(sv)).has_extension())
+        {   if (std::filesystem::exists(std::string(sv) + ".fai"))
+            {   gnx::virtual_vector<self_type> vv{sv};
+                for (size_type i = 0; i < vv.size(); ++i)
+                {   if (vv.entry(i).name == id)
+                    {   *this = vv[i];
+                        return;
+                    }
+                }
+                log_error("no sequence with matching ID found");
+            }
+            else
+            {   gnx::forward_stream<self_type> stream(sv);
+                auto it = stream.begin();
+                for (; it != stream.end() && stream.id() != id; ++it);
+                if (it != stream.end())
+                    *this = stream();
+                else
+                    log_error("no sequence with matching ID found");
             }
         }
         else // otherwise, treat it as a view over a sequence
@@ -148,8 +188,9 @@ public:
 
     ///
     template<typename InputIt>
-    requires std::input_iterator<InputIt> &&
-        std::is_same_v<typename std::iterator_traits<InputIt>::value_type, value_type>
+    requires std::input_iterator<InputIt>
+    &&  std::is_same_v<typename std::iterator_traits<InputIt>::value_type, value_type>
+    &&  (!std::is_convertible_v<InputIt, std::string_view>)
     /// @brief Constructs a sequence from a pair of iterators.
     /// @tparam InputIt The type of the input iterators.
     /// @param first The beginning iterator of the sequence.
