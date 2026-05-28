@@ -390,18 +390,18 @@ template
 
 /// Convenience overload accepting any range types and returning the resulting
 /// protein sequence.
-template<sequence_container T, std::ranges::random_access_range InputRange>
-[[nodiscard]] T translate(const InputRange& seq)
+template<std::ranges::random_access_range InputRange>
+[[nodiscard]] gnx::sq translate(const InputRange& seq)
 {   if constexpr
     (   std::is_same_v<std::decay_t<InputRange>, gnx::psq2>
     )
     {   auto sq = seq.to_sq();
-        T result(sq.size() / 3);
+        gnx::sq result(sq.size() / 3);
 (void)  translate(std::begin(sq), std::end(sq), std::begin(result));
         return result;
     }
     else
-    {   T result(seq.size() / 3);
+    {   gnx::sq result(seq.size() / 3);
 (void)  translate(std::begin(seq), std::end(seq), std::begin(result));
         return result;
     }
