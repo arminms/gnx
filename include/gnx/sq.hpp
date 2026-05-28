@@ -316,7 +316,11 @@ public:
     /// Returns the size in memory (in bytes) used by the @a sq including its
     /// tagged data.
     size_type size_in_memory() const noexcept
-    {   size_type mem = sizeof(Container) + (_sq.capacity() * sizeof(value_type));
+    {   size_type mem
+        =   sizeof(Container)
+        +   (_sq.capacity() * sizeof(value_type))
+        +   sizeof(std::unique_ptr<Map>)
+        ;
         if (_ptr_td)
         {   mem += sizeof(Map);
             for (const auto& [tag, data] : *_ptr_td)

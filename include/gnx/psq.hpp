@@ -587,11 +587,17 @@ public:
     /// Returns the approximate size in memory (in bytes) of the packed sequence
     /// including its tagged data.
     [[nodiscard]] size_type size_in_memory() const noexcept
-    {   size_type mem = sizeof(ByteContainer) + _bytes.capacity();
+    {   size_type mem
+        =   sizeof(ByteContainer)
+        +   _bytes.capacity()
+        +   sizeof(std::unique_ptr<Map>)
+        ;
         if (_ptr_td)
         {   mem += sizeof(Map);
             for (const auto& [tag, data] : *_ptr_td)
-                mem += tag.capacity() * sizeof(char);
+            {   mem += tag.capacity() * sizeof(char);
+                mem += data.has_value() ? sizeof(data.type()) : 0;
+            }
         }
         return mem;
     }
