@@ -388,6 +388,11 @@ template
     }
 }
 
+/// @brief Translate a nucleotide range to a protein sequence.
+/// @tparam InputRange  Input range of nucleotides
+/// @param seq The nucleotide sequence to translate
+/// @return The resulting protein sequence
+///
 /// Convenience overload accepting any range types and returning the resulting
 /// protein sequence.
 template<std::ranges::random_access_range InputRange>
@@ -403,6 +408,45 @@ template<std::ranges::random_access_range InputRange>
     else
     {   gnx::sq result(seq.size() / 3);
 (void)  translate(std::begin(seq), std::end(seq), std::begin(result));
+        return result;
+    }
+}
+
+/// @brief Parallel-enabled translate of a sequence range.
+/// @tparam ExecPolicy Execution policy type (e.g., gnx::execution::par)
+/// @tparam InputRange  Input range of nucleotides
+/// @param policy Execution policy controlling algorithm execution
+/// @param seq The nucleotide sequence to translate
+/// @return The resulting protein sequence
+///
+/// Convenience overload accepting any range types and returning the resulting
+/// protein sequence.
+template<typename ExecPolicy, std::ranges::random_access_range InputRange>
+[[nodiscard]] gnx::sq translate
+(   ExecPolicy&& policy
+,   const InputRange& seq
+)
+{   if constexpr
+    (   std::is_same_v<std::decay_t<InputRange>, gnx::psq2>
+    )
+    {   auto sq = seq.to_sq();
+        gnx::sq result(sq.size() / 3);
+(void)  translate
+        (   std::forward<ExecPolicy>(policy)
+        ,   std::begin(sq)
+        ,   std::end(sq)
+        ,   std::begin(result)
+        );
+        return result;
+    }
+    else
+    {   gnx::sq result(seq.size() / 3);
+(void)  translate
+        (   std::forward<ExecPolicy>(policy)
+        ,   std::begin(seq)
+        ,   std::end(seq)
+        ,   std::begin(result)
+        );
         return result;
     }
 }
