@@ -42,9 +42,9 @@ inline void dotplot
     if (!filename.empty())
         gp("set output '%s'", filename.data());
     gp("set term %s size %d,%d", term.c_str(), width, width);
-    std::size(range) <= 500
-    ?   detail::dotplot_image(gp, range)
-    :   detail::dotplot_pm3d(gp, range)
+    std::size(range) > 500
+    ?   detail::dotplot_pm3d(gp, range)
+    :   detail::dotplot_image(gp, range)
     ;
 
 #if defined(__CLING__)
@@ -87,9 +87,9 @@ inline void dotplot
     if (!filename.empty())
         gp("set output '%s'", filename.data());
     gp("set term %s size %d,%d", term.c_str(), width, height);
-    std::size(range1) <= 500
-    ?   detail::dotplot_image(gp, range1, range2)
-    :   detail::dotplot_pm3d(gp, range1, range2)
+    (std::size(range1) > 500 || std::size(range2) > 500)
+    ?   detail::dotplot_pm3d(gp, range1, range2)
+    :   detail::dotplot_image(gp, range1, range2)
     ;
 
 #if defined(__CLING__)
