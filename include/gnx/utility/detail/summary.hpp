@@ -304,9 +304,9 @@ void summary_seq
         double gc_pct = 100.0 * static_cast<double>(gc) / static_cast<double>(total);
 
         // Build $data block
-        // cols: start_angle  span_angle  color  label  pct  count
+        // cols: start_angle  span_angle  color  label  pct  count  hrs_count
         std::string block;
-        block.reserve(sorted.size() * 60);
+        block.reserve(sorted.size() * 72);
         block += "$data <<EOD\n";
         double angle = 0.0;
         for (auto const& [ch, cnt] : sorted)
@@ -314,8 +314,8 @@ void summary_seq
             double span = 360.0 * static_cast<double>(cnt) / static_cast<double>(total);
             double pct  = 100.0 * static_cast<double>(cnt) / static_cast<double>(total);
             block += fmt::format
-            (   "{:.6f} {:.6f} 0x{:06X} {} {:.2f} {}\n"
-            ,   angle, span, na_plot_color(ch), uc, pct, cnt
+            (   "{:.6f} {:.6f} 0x{:06X} {} {:.2f} {} \"{}\"\n"
+            ,   angle, span, na_plot_color(ch), uc, pct, cnt, hrs_plain(cnt)
             );
             angle += span;
         }
@@ -327,8 +327,10 @@ void summary_seq
         //   middle prop. ring  (shared lw2.5 white dividers)   : r_mid_in → r_out_in
         //   mini donut centre                                   : r_mid (midpoint of middle ring)
         //   mini donut hole / ring width                        : r_d_in / r_d_w
+        //   inner count ring   (shared lw2.5 white dividers)   : r_cnt_in → r_mid_in
+        //   count label                                         : r_cnt (midpoint of count ring)
         //   letter label                                        : r_letter (centre of outer ring)
-        //   white centre disk (large enough for pct labels)     : r_center = r_mid_in
+        //   white centre disk                                   : r_center
         constexpr double r_out_in  = 9.2;
         constexpr double r_out_w   = 2.0;
         constexpr double r_mid_in  = 5.2;
@@ -336,8 +338,11 @@ void summary_seq
         constexpr double r_mid     = r_mid_in + r_mid_w / 2.0; // 7.2
         constexpr double r_d_in    = 0.9;
         constexpr double r_d_w     = 0.55;
+        constexpr double r_cnt_in  = 1.8;
+        constexpr double r_cnt_w   = r_mid_in - r_cnt_in;    // 3.4
+        constexpr double r_cnt     = r_cnt_in + r_cnt_w / 2.0; // 3.5
         constexpr double r_letter  = r_out_in + r_out_w / 2.0; // 10.2
-        constexpr double r_center  = 1.8;
+        constexpr double r_center  = 1.2;
         constexpr double r_max     = 12.5;
 
         // White centre disk (same radius as middle ring inner edge)
@@ -351,7 +356,7 @@ void summary_seq
         auto center_str = fmt::format
             ("TOTAL\\n{}\\nGC: {:.1f}%", hrs_plain(total), gc_pct);
         gp
-        (   "set label 1 \"%s\" at 0,0 center font 'sans,13' front"
+        (   "set label 1 \"%s\" at 0,0 center font 'sans,7' front"
         ,   center_str.c_str()
         );
 
@@ -362,8 +367,10 @@ void summary_seq
         //   2. Middle proportional lavender sectors (thin lw2.5 white borders)
         //   3. Mini donut background circles (full 361° per sector centre)
         //   4. Per-row coloured mini arcs (`every ::i::i` picks one row)
-        //   5. Nucleotide letter centred inside outer ring
-        //   6. Percentage label at mini donut centre (skip sectors < 5°)
+        //   5. Inner count ring proportional sectors (same dividers)
+        //   6. Nucleotide letter centred inside outer ring
+        //   7. Percentage label at mini donut centre (skip sectors < 5°)
+        //   8. Count label in inner count ring (skip sectors < 5°)
         std::string plot_cmd = fmt::format
         (   "plot "
             "$data using 1:({:.2f}):2:({:.2f}) "
@@ -396,11 +403,26 @@ void summary_seq
         ,   r_letter
         );
 
+        // Inner count ring proportional sectors
+        plot_cmd += fmt::format
+        (   ", $data using 1:({:.2f}):2:({:.2f}) "
+            "with sectors fc rgb '#BBA8D8' fill solid 0.35 "
+            "border lc 'white' lw 2.5 notitle"
+        ,   r_cnt_in, r_cnt_w
+        );
+
         // Percentage labels centred inside each mini donut (omit < 5°)
         plot_cmd += fmt::format
         (   ", $data using ($2>5.0?$1+$2/2:1/0):({:.2f}):(sprintf(\"%.1f%%\",$5)) "
             "with labels center font 'sans Bold,9' tc rgb '#333333' notitle"
         ,   r_mid
+        );
+
+        // Count labels in inner ring (omit < 5°)
+        plot_cmd += fmt::format
+        (   ", $data using ($2>5.0?$1+$2/2:1/0):({:.2f}):(stringcolumn(7)) "
+            "with labels center font 'sans Bold,9' tc rgb '#333333' notitle"
+        ,   r_cnt
         );
 
         gp("%s", plot_cmd.c_str());
