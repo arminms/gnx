@@ -20,8 +20,9 @@
 
 #include <gnx/utility/describe.hpp>
 #include <gnx/utility/dotplot.hpp>
-#include <gnx/utility/print.hpp>
 #include <gnx/utility/gc_content.hpp>
+#include <gnx/utility/print.hpp>
+#include <gnx/utility/summary.hpp>
 
 #include <gnx/backend/forward_stream.hpp>
 #include <gnx/backend/virtual_vector.hpp>
