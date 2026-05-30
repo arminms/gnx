@@ -294,20 +294,56 @@ inline std::string print_alignment_to_string
 
     fmt::format_to
     (   std::back_inserter(buf)
-    ,   "{}│{:^10}│{:^20}│{:^15}│{:^15}│\n"
+    ,   "{}{:15}{}{}│ {}{}\n"
     ,   gnx::ansi::ESC[style::bold]
     ,   "SCORE"
-    ,   "IDENTITIES"
-    ,   "GAPS"
-    ,   "SCORE/RESIDUE"
+    ,   gnx::ansi::ESC[style::reset]
+    ,   gnx::ansi::vga::fg::ESC[250]
+    ,   gnx::ansi::ESC[style::reset]
+    ,   result.score
     );
     fmt::format_to
     (   std::back_inserter(buf)
-    ,   "│{:^10}│{:^20}│{:^15}│{:^15.2f}│\n\n"
-    ,   result.score
-    ,   fmt::format("{}/{} ({:.2f}%)", identity_count, size, identity_percentage)
-    ,   fmt::format("{}/{} ({:.2f}%)", gap_count, size, gap_count > 0 ? static_cast<double>(gap_count) / size * 100.0 : 0.0)
+    ,   "{}{:15}{}{}│ {}{}/{} ({:.2f}%)\n"
+    ,   gnx::ansi::ESC[style::bold]
+    ,   "IDENTITIES"
+    ,   gnx::ansi::ESC[style::reset]
+    ,   gnx::ansi::vga::fg::ESC[250]
+    ,   gnx::ansi::ESC[style::reset]
+    ,   identity_count
+    ,   size
+    ,   identity_percentage
+    );
+    fmt::format_to
+    (   std::back_inserter(buf)
+    ,   "{}{:15}{}{}│ {}{}/{} ({:.2f}%)\n"
+    ,   gnx::ansi::ESC[style::bold]
+    ,   "GAPS"
+    ,   gnx::ansi::ESC[style::reset]
+    ,   gnx::ansi::vga::fg::ESC[250]
+    ,   gnx::ansi::ESC[style::reset]
+    ,   gap_count
+    ,   size
+    ,   gap_count > 0 ? static_cast<double>(gap_count) / size * 100.0 : 0.0
+    );
+    fmt::format_to
+    (   std::back_inserter(buf)
+    ,   "{}{:15}{}{}│ {}{:.2f}\n"
+    ,   gnx::ansi::ESC[style::bold]
+    ,   "SCORE/RESIDUE"
+    ,   gnx::ansi::ESC[style::reset]
+    ,   gnx::ansi::vga::fg::ESC[250]
+    ,   gnx::ansi::ESC[style::reset]
     ,   score_per_residue
+    );
+    fmt::format_to
+    (   std::back_inserter(buf)
+    ,   "{}{:═>{}}{:═>{}}\n"
+    ,   gnx::ansi::vga::fg::ESC[250]
+    ,   "╪"
+    ,   16
+    ,   "═"
+    ,   line_width + 3
     );
     for
     (   std::size_t i = 0
@@ -318,7 +354,7 @@ inline std::string print_alignment_to_string
         for (separator = 1; index_x10 % 10 != 0; ++separator, ++index_x10);
         fmt::format_to
         (   std::back_inserter(buf)
-        ,   "{:19}{}{:>{}}"
+        ,   "{:15}{}│ {:>{}}"
         ,   " "
         ,   gnx::ansi::vga::fg::ESC[250]
         ,   separator < std::to_string(index_x10).length()
@@ -351,7 +387,7 @@ inline std::string print_alignment_to_string
         );
         fmt::format_to
         (   std::back_inserter(buf)
-        ,   "{}Query{}{:11}   {}"
+        ,   "{}Query{}{:9} │ {}"
         ,   gnx::ansi::ESC[style::bold]
         ,   gnx::ansi::vga::fg::ESC[250]
         ,   start_index_q
@@ -383,7 +419,7 @@ inline std::string print_alignment_to_string
         index_x10 = start_index_s;
         fmt::format_to
         (   std::back_inserter(buf)
-        ,   "{}Sbjct{}{:11}   {}"
+        ,   "{}Sbjct{}{:9} │ {}"
         ,   gnx::ansi::ESC[style::bold]
         ,   gnx::ansi::vga::fg::ESC[250]
         ,   start_index_s
@@ -415,7 +451,7 @@ inline std::string print_alignment_to_string
         for (separator = 1; index_x10 % 10 != 0; ++separator, ++index_x10);
         fmt::format_to
         (   std::back_inserter(buf)
-        ,   "{:19}{}{:>{}}"
+        ,   "{:15}{}│ {:>{}}"
         ,   " "
         ,   gnx::ansi::vga::fg::ESC[250]
         ,   separator < std::to_string(index_x10).length()
@@ -443,7 +479,8 @@ inline std::string print_alignment_to_string
         }
         fmt::format_to
         (   std::back_inserter(buf)
-        ,   "{}\n\n"
+        ,   "\n{:15}│ {}\n"
+        ,   " "
         ,   gnx::ansi::ESC[style::reset]
         );
 }
