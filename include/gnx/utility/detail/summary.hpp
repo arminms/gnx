@@ -249,7 +249,7 @@ void summary_seq
 )
 {   if (!seq_id.empty())
         gp
-        (   "set label 2 '%s' at screen 0.5,0.02 center font 'sans,10' noenhanced"
+        (   "set label 2 '%s' at screen 0.5,0.02 center font 'sans,12' noenhanced"
         ,   std::string(seq_id).c_str()
         );
     bool peptide = gnx::is_peptide(first, last);
@@ -362,7 +362,7 @@ void summary_seq
         auto center_str = fmt::format
             ("TOTAL\\n{}\\nGC: {:.1f}%", hrs_plain(total), gc_pct);
         gp
-        (   "set label 1 \"%s\" at 0,0.75 center font 'sans,9' front"
+        (   "set label 1 \"%s\" at 0,0.75 center font 'sans,8' front"
         ,   center_str.c_str()
         );
 
@@ -420,14 +420,14 @@ void summary_seq
         // Percentage labels centred inside each mini donut (omit < 5°)
         plot_cmd += fmt::format
         (   ", $data using ($2>5.0?$1+$2/2:1/0):({:.2f}):(sprintf(\"%.1f%%\",$5)) "
-            "with labels center font 'sans Bold,8' tc rgb '#333333' notitle"
+            "with labels center font 'sans Bold,7' tc rgb '#333333' notitle"
         ,   r_mid
         );
 
         // Count labels in inner ring (omit < 5°)
         plot_cmd += fmt::format
         (   ", $data using ($2>5.0?$1+$2/2:1/0):({:.2f}):(stringcolumn(7)) "
-            "with labels center font 'sans Bold,8' tc rgb '#333333' notitle"
+            "with labels center font 'sans Bold,7' tc rgb '#333333' notitle"
         ,   r_cnt
         );
 

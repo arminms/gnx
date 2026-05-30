@@ -45,7 +45,7 @@ namespace gnx {
 template<std::ranges::input_range Range>
 inline void summary
 (   Range const& range
-,   std::size_t  size     = 600
+,   std::size_t  size     = 500
 ,   std::string_view filename = ""
 )
 {   // Choose gnuplot terminal from file extension
