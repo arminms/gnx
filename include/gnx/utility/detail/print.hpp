@@ -313,8 +313,6 @@ inline std::string print_alignment_to_string
     (   std::size_t i = 0
     ;   i < size
     ;   i += line_width
-    ,   start_index_q += line_width
-    ,   start_index_s += line_width
     )
     {   std::size_t index_x10{start_index_q}, separator{};
         for (separator = 0; index_x10 % 10 != 0; ++separator, ++index_x10);
@@ -358,12 +356,16 @@ inline std::string print_alignment_to_string
         ;   j < line_width && i + j < size
         ;   ++j
         )
-        {   fmt::format_to
+        {   auto qc = *(q_start + i + j);
+            auto sc = *(s_start + i + j);
+            if (qc != '-')
+                start_index_q++;
+            fmt::format_to
             (   std::back_inserter(buf)
             ,   "{}{}"
-            ,   *(q_start + i + j) == *(s_start + i + j)
-                ?   match_color[static_cast<uint8_t>(*(q_start + i + j))]
-                :   color[static_cast<uint8_t>(*(q_start + i + j))]
+            ,   qc == sc
+                ?   match_color[static_cast<uint8_t>(qc)]
+                :   color[static_cast<uint8_t>(qc)]
             ,   gnx::ansi::ESC[style::reset]
             );
         }
@@ -372,6 +374,7 @@ inline std::string print_alignment_to_string
         ,   "{}\n"
         ,   gnx::ansi::ESC[style::reset]
         );
+        index_x10 = start_index_s;
         fmt::format_to
         (   std::back_inserter(buf)
         ,   "{}Sbjct{}{:11}   {}"
@@ -385,12 +388,16 @@ inline std::string print_alignment_to_string
         ;   j < line_width && i + j < size
         ;   ++j
         )
-        {   fmt::format_to
+        {   auto qc = *(q_start + i + j);
+            auto sc = *(s_start + i + j);
+            if (sc != '-')
+                start_index_s++;
+            fmt::format_to
             (   std::back_inserter(buf)
             ,   "{}{}"
-            ,   *(q_start + i + j) == *(s_start + i + j)
-                ?   match_color[static_cast<uint8_t>(*(s_start + i + j))]
-                :   color[static_cast<uint8_t>(*(s_start + i + j))]
+            ,   qc == sc
+                ?   match_color[static_cast<uint8_t>(sc)]
+                :   color[static_cast<uint8_t>(sc)]
             ,   gnx::ansi::ESC[style::reset]
             );
         }
@@ -399,7 +406,6 @@ inline std::string print_alignment_to_string
         ,   "{}\n"
         ,   gnx::ansi::ESC[style::reset]
         );
-        index_x10 = start_index_s;
         for (separator = 0; index_x10 % 10 != 0; ++separator, ++index_x10);
         fmt::format_to
         (   std::back_inserter(buf)
