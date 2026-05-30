@@ -315,7 +315,7 @@ inline std::string print_alignment_to_string
     ;   i += line_width
     )
     {   std::size_t index_x10{start_index_q}, separator{};
-        for (separator = 0; index_x10 % 10 != 0; ++separator, ++index_x10);
+        for (separator = 1; index_x10 % 10 != 0; ++separator, ++index_x10);
         fmt::format_to
         (   std::back_inserter(buf)
         ,   "{:19}{}{:>{}}"
@@ -324,20 +324,26 @@ inline std::string print_alignment_to_string
         ,   separator < std::to_string(index_x10).length()
             ?   ""
             :   std::to_string(index_x10)
-        ,   separator + 1
+        ,   separator
         );
-        index_x10 += 10;
-        for
-        (   std::size_t i = 0
-        ;   i < line_width - 10 && index_x10 <= result.max_i + seq1_gaps
-        ;   i += 10, index_x10 += 10
+        for 
+        (   std::size_t j = 0, width = 1
+        ;   j < line_width && i + j < size
+        ;   ++j, ++width
         )
-            fmt::format_to
-            (   std::back_inserter(buf)
-            ,   "{:{}}"
-            ,   index_x10
-            ,   10
-            );
+        {   auto qc = *(q_start + i + j + separator);
+            if (qc != '-')
+                ++index_x10;
+            if (index_x10 % 10 == 0 && j < line_width - 1)
+            {   fmt::format_to
+                (   std::back_inserter(buf)
+                ,   "{:{}}"
+                ,   index_x10
+                ,   width
+                );
+                width = 0;
+            }
+        }
         fmt::format_to
         (   std::back_inserter(buf)
         ,   "{}\n"
@@ -406,7 +412,7 @@ inline std::string print_alignment_to_string
         ,   "{}\n"
         ,   gnx::ansi::ESC[style::reset]
         );
-        for (separator = 0; index_x10 % 10 != 0; ++separator, ++index_x10);
+        for (separator = 1; index_x10 % 10 != 0; ++separator, ++index_x10);
         fmt::format_to
         (   std::back_inserter(buf)
         ,   "{:19}{}{:>{}}"
@@ -415,20 +421,26 @@ inline std::string print_alignment_to_string
         ,   separator < std::to_string(index_x10).length()
             ?   ""
             :   std::to_string(index_x10)
-        ,   separator + 1
+        ,   separator
         );
-        index_x10 += 10;
-        for
-        (   std::size_t i = 0
-        ;   i < line_width - 10 && index_x10 <= result.max_j + seq2_gaps
-        ;   i += 10, index_x10 += 10
+        for 
+        (   std::size_t j = 0, width = 1
+        ;   j < line_width && i + j < size
+        ;   ++j, ++width
         )
-            fmt::format_to
-            (   std::back_inserter(buf)
-            ,   "{:{}}"
-            ,   index_x10
-            ,   10
-            );
+        {   auto sc = *(s_start + i + j + separator);
+            if (sc != '-')
+                ++index_x10;
+            if (index_x10 % 10 == 0 && j < line_width - 1)
+            {   fmt::format_to
+                (   std::back_inserter(buf)
+                ,   "{:{}}"
+                ,   index_x10
+                ,   width
+                );
+                width = 0;
+            }
+        }
         fmt::format_to
         (   std::back_inserter(buf)
         ,   "{}\n\n"
