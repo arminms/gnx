@@ -97,7 +97,10 @@ inline void summary
 
     if constexpr (requires { typename Range::map_type; })
     {   // generic_sequence: summarise residue composition
-        detail::summary_seq(gp, std::begin(range), std::end(range));
+        std::string seq_id;
+        if (range.has("_id"))
+            seq_id = std::any_cast<std::string>(const_cast<Range&>(range)["_id"]);
+        detail::summary_seq(gp, std::begin(range), std::end(range), seq_id);
     }
     else if constexpr (std::is_convertible_v<Range, std::filesystem::path>)
     {   // Filename: summarise sequence-length distribution

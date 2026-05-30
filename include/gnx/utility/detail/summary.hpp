@@ -245,8 +245,14 @@ void summary_seq
 (   g3p::gnuplot const& gp
 ,   Iterator first
 ,   Iterator last
+,   std::string_view seq_id = ""
 )
-{   bool peptide = gnx::is_peptide(first, last);
+{   if (!seq_id.empty())
+        gp
+        (   "set label 2 '%s' at screen 0.5,0.02 center font 'sans,10' noenhanced"
+        ,   std::string(seq_id).c_str()
+        );
+    bool peptide = gnx::is_peptide(first, last);
     auto counts  = gnx::count(first, last);
     auto total   = static_cast<std::size_t>(std::distance(first, last));
 
@@ -342,7 +348,7 @@ void summary_seq
         constexpr double r_cnt_w   = r_mid_in - r_cnt_in;    // 3.4
         constexpr double r_cnt     = r_cnt_in + r_cnt_w / 2.0; // 3.5
         constexpr double r_letter  = r_out_in + r_out_w / 2.0; // 10.2
-        constexpr double r_center  = 1.2;
+        constexpr double r_center  = 1.3;
         constexpr double r_max     = 12.5;
 
         // White centre disk (same radius as middle ring inner edge)
@@ -356,7 +362,7 @@ void summary_seq
         auto center_str = fmt::format
             ("TOTAL\\n{}\\nGC: {:.1f}%", hrs_plain(total), gc_pct);
         gp
-        (   "set label 1 \"%s\" at 0,0 center font 'sans,7' front"
+        (   "set label 1 \"%s\" at 0,0.75 center font 'sans,9' front"
         ,   center_str.c_str()
         );
 
@@ -374,7 +380,7 @@ void summary_seq
         std::string plot_cmd = fmt::format
         (   "plot "
             "$data using 1:({:.2f}):2:({:.2f}) "
-                "with sectors fc rgb '#AA99CC' fill solid 0.42 "
+                "with sectors fc rgb '#8877AA' fill solid 0.42 "
                 "border lc 'white' lw 2.5 notitle, "
             "$data using 1:({:.2f}):2:({:.2f}) "
                 "with sectors fc rgb '#AA99CC' fill solid 0.42 "
@@ -399,7 +405,7 @@ void summary_seq
         // Letter labels centred inside the outer ring
         plot_cmd += fmt::format
         (   ", $data using ($2>3.0?$1+$2/2:1/0):({:.2f}):(stringcolumn(4)) "
-            "with labels center font 'sans Bold,15' tc rgb '#443355' notitle"
+            "with labels center font 'sans Bold,16' tc rgb '#443355' notitle"
         ,   r_letter
         );
 
@@ -414,14 +420,14 @@ void summary_seq
         // Percentage labels centred inside each mini donut (omit < 5°)
         plot_cmd += fmt::format
         (   ", $data using ($2>5.0?$1+$2/2:1/0):({:.2f}):(sprintf(\"%.1f%%\",$5)) "
-            "with labels center font 'sans Bold,9' tc rgb '#333333' notitle"
+            "with labels center font 'sans Bold,8' tc rgb '#333333' notitle"
         ,   r_mid
         );
 
         // Count labels in inner ring (omit < 5°)
         plot_cmd += fmt::format
         (   ", $data using ($2>5.0?$1+$2/2:1/0):({:.2f}):(stringcolumn(7)) "
-            "with labels center font 'sans Bold,9' tc rgb '#333333' notitle"
+            "with labels center font 'sans Bold,8' tc rgb '#333333' notitle"
         ,   r_cnt
         );
 
