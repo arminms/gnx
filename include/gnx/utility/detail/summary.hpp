@@ -259,46 +259,116 @@ void summary_seq
     ,   [](auto const& a, auto const& b) { return a.second > b.second; }
     );
 
-    // GC content for DNA/RNA sequences
-    std::size_t gc_count{0};
-    if (!peptide)
+    if (peptide)
+    {   // --- Protein: single coloured ring (ClustalX colours) ---------------
+        std::vector<sector_entry> entries;
+        entries.reserve(sorted.size());
+        for (auto const& [ch, cnt] : sorted)
+            entries.push_back
+            ({  std::string(1, static_cast<char>(std::toupper(static_cast<unsigned char>(ch))))
+            ,   cnt
+            ,   aa_plot_color(ch)
+            });
+
+        constexpr double r_inner = 3.0;
+        constexpr double r_width = 3.5;
+        constexpr double r_label = 8.2;
+        constexpr double r_max   = 11.5;
+
+        auto data_block = make_sector_data_block
+            (entries, static_cast<double>(total), r_inner, r_width);
+        gp("%s", data_block.c_str());
+
+        auto center = fmt::format("Total\\n{}", hrs_plain(total, true));
+        gp("set label 1 \"%s\" at 0,0 center font ',11' front", center.c_str());
+
+        setup_polar_sector_plot(gp, r_max);
+        auto plot_cmd = make_sector_plot_cmd(r_label);
+        gp("%s", plot_cmd.c_str());
+    }
+    else
+    {   // --- Nucleic acid: two-ring layout inspired by sectors.3.gnu --------
+        // Outer ring  (lavender, proportional): nucleotide letter inside
+        // Inner ring  (standard NA colours)   : percentage label inside
+        // Center hole (white disk)             : total bp + GC%
+
+        // GC content
+        std::size_t gc{0};
         for (auto const& [ch, cnt] : sorted)
         {   char uc = static_cast<char>(std::toupper(static_cast<unsigned char>(ch)));
-            if (uc == 'G' || uc == 'C') gc_count += cnt;
+            if (uc == 'G' || uc == 'C') gc += cnt;
         }
-    double gc_pct = 100.0 * static_cast<double>(gc_count) / static_cast<double>(total);
+        double gc_pct = 100.0 * static_cast<double>(gc) / static_cast<double>(total);
 
-    // Build entries using standard nucleotide / ClustalX amino acid colours
-    std::vector<sector_entry> entries;
-    entries.reserve(sorted.size());
-    for (auto const& [ch, cnt] : sorted)
-    {   char uc = static_cast<char>(std::toupper(static_cast<unsigned char>(ch)));
-        uint32_t color = peptide ? aa_plot_color(ch) : na_plot_color(ch);
-        entries.push_back({ std::string(1, uc), cnt, color });
+        // Build $data block
+        // cols: start_angle  span_angle  color  label  pct  count
+        std::string block;
+        block.reserve(sorted.size() * 60);
+        block += "$data <<EOD\n";
+        double angle = 0.0;
+        for (auto const& [ch, cnt] : sorted)
+        {   char uc = static_cast<char>(std::toupper(static_cast<unsigned char>(ch)));
+            double span = 360.0 * static_cast<double>(cnt) / static_cast<double>(total);
+            double pct  = 100.0 * static_cast<double>(cnt) / static_cast<double>(total);
+            block += fmt::format
+            (   "{:.6f} {:.6f} 0x{:06X} {} {:.2f} {}\n"
+            ,   angle, span, na_plot_color(ch), uc, pct, cnt
+            );
+            angle += span;
+        }
+        block += "EOD";
+        gp("%s", block.c_str());
+
+        // Ring geometry
+        //   outer lavender ring : r 6.0 → 9.5  (width 3.5)
+        //   inner coloured ring : r 3.5 → 5.9  (width 2.4)
+        //   white center disk   : r 0   → 3.4
+        constexpr double r_out_in  = 6.0,  r_out_w  = 3.5;
+        constexpr double r_in_in   = 3.5,  r_in_w   = 2.4;
+        constexpr double r_out_lbl = 7.75, r_in_lbl  = 4.7;
+        constexpr double r_center  = 3.4,  r_max     = 11.0;
+
+        // White center disk sits in front of everything
+        gp
+        (   "set object 1 circle at 0,0 size %.2f "
+            "fillcolor rgb 'white' fillstyle solid 1.0 noborder front"
+        ,   r_center
+        );
+
+        // Center label: total + GC%
+        auto center_str = fmt::format
+            ("Total\\n{}\\nGC: {:.1f}%", hrs_plain(total), gc_pct);
+        gp
+        (   "set label 1 \"%s\" at 0,0 center font 'sans,11' front"
+        ,   center_str.c_str()
+        );
+
+        setup_polar_sector_plot(gp, r_max);
+
+        // Plot:
+        //   1. Outer lavender sectors (uniform colour, sector dividers)
+        //   2. Inner nucleotide-coloured sectors (col 3 = rgb variable)
+        //   3. Nucleotide letter centred inside outer ring (white, bold)
+        //   4. Percentage centred inside inner ring (dark, omit < 4 deg)
+        auto plot_cmd = fmt::format
+        (   "plot "
+            "$data using 1:({:.3f}):2:({:.3f}) "
+                "with sectors fc rgb '#AA99CC' fill solid 0.50 "
+                "border lc '#888899' lw 1.5 notitle, "
+            "$data using 1:({:.3f}):2:({:.3f}):3 "
+                "with sectors fc rgb variable fill solid 0.90 "
+                "border lc 'white' lw 1.5 notitle, "
+            "$data using ($2>3.0?$1+$2/2.0:1/0):({:.3f}):(stringcolumn(4)) "
+                "with labels center font 'sans Bold,13' tc rgb 'white' notitle, "
+            "$data using ($2>4.0?$1+$2/2.0:1/0):({:.3f}):(sprintf(\"%.1f%%\",$5)) "
+                "with labels center font 'sans,8' tc rgb '#222222' notitle"
+        ,   r_out_in, r_out_w
+        ,   r_in_in,  r_in_w
+        ,   r_out_lbl
+        ,   r_in_lbl
+        );
+        gp("%s", plot_cmd.c_str());
     }
-
-    // Ring geometry
-    constexpr double r_inner = 3.0;
-    constexpr double r_width = 3.5;
-    constexpr double r_label = 8.2;
-    constexpr double r_max   = 11.5;
-
-    // Define $data block
-    auto data_block = make_sector_data_block(entries, static_cast<double>(total), r_inner, r_width);
-    gp("%s", data_block.c_str());
-
-    // Center label: total length (+ GC% for DNA/RNA)
-    std::string center;
-    if (peptide)
-        center = fmt::format("Total\\n{}", hrs_plain(total, true));
-    else
-        center = fmt::format("Total\\n{}\\nGC: {:.1f}%", hrs_plain(total), gc_pct);
-    gp("set label 1 \"%s\" at 0,0 center font ',11' front", center.c_str());
-
-    // Plot
-    setup_polar_sector_plot(gp, r_max);
-    auto plot_cmd = make_sector_plot_cmd(r_label);
-    gp("%s", plot_cmd.c_str());
 }
 
 // -- filename summary: FASTA/FASTQ with FAI index -----------------------------
