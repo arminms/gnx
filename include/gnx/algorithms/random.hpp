@@ -385,7 +385,7 @@ namespace random {
 /// @param length Length of the sequence to generate
 /// @param seed Optional seed for the random number generator (default: current time)
 /// @return Randomly generated DNA sequence
-template <sequence_container Sequence>
+template <sequence_container Sequence = gnx::sq>
 inline Sequence dna
 (   std::size_t length
 ,   std::uint64_t seed = 0
@@ -400,7 +400,7 @@ inline Sequence dna
 /// @param length Length of the sequence to generate
 /// @param seed Optional seed for the random number generator (default: current time)
 /// @return Randomly generated RNA sequence
-template <sequence_container Sequence>
+template <sequence_container Sequence = gnx::sq>
 inline Sequence rna
 (   std::size_t length
 ,   std::uint64_t seed = 0
@@ -415,7 +415,7 @@ inline Sequence rna
 /// @param length Length of the sequence to generate
 /// @param seed Optional seed for the random number generator (default: current time)
 /// @return Randomly generated protein sequence
-template <sequence_container Sequence>
+template <sequence_container Sequence = gnx::sq>
 inline Sequence protein
 (   std::size_t length
 ,   std::uint64_t seed = 0
@@ -431,7 +431,7 @@ inline Sequence protein
 /// @param gc_content Desired GC content percentage (0-100)
 /// @param seed Optional seed for the random number generator (default: current time)
 /// @return Randomly generated DNA sequence with specified GC content
-template <sequence_container Sequence>
+template <sequence_container Sequence = gnx::sq>
 inline Sequence dna
 (   std::size_t length
 ,   double gc_content
@@ -498,7 +498,7 @@ inline void rand_packed
 
 namespace random::packed_2bit {
 
-template<sequence_container Sequence>
+template<sequence_container Sequence = gnx::psq2>
 inline Sequence dna
 (   std::size_t length
 ,   std::uint64_t seed = 0
