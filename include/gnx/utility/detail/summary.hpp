@@ -279,7 +279,7 @@ void summary_seq
             (entries, static_cast<double>(total), r_inner, r_width);
         gp("%s", data_block.c_str());
 
-        auto center = fmt::format("Total\\n{}", hrs_plain(total, true));
+        auto center = fmt::format("TOTAL\\n{}", hrs_plain(total, true));
         gp("set label 1 \"%s\" at 0,0 center font ',11' front", center.c_str());
 
         setup_polar_sector_plot(gp, r_max);
@@ -287,10 +287,13 @@ void summary_seq
         gp("%s", plot_cmd.c_str());
     }
     else
-    {   // --- Nucleic acid: two-ring layout inspired by sectors.3.gnu --------
-        // Outer ring  (lavender, proportional): nucleotide letter inside
-        // Inner ring  (standard NA colours)   : percentage label inside
-        // Center hole (white disk)             : total bp + GC%
+    {   // --- Nucleic acid: sectors.3.gnu-style three-ring layout -------------
+        //
+        //  Outermost ring (uniform lavender, no dividers) : nucleotide letter
+        //  Middle ring   (proportional lavender, thin white dividers)
+        //    └─ each sector contains a mini donut sized to the percentage
+        //       in the nucleotide's standard colour
+        //  Center hole   (white disk) : total bp + GC%
 
         // GC content
         std::size_t gc{0};
@@ -319,54 +322,87 @@ void summary_seq
         block += "EOD";
         gp("%s", block.c_str());
 
-        // Ring geometry
-        //   outer lavender ring : r 6.0 → 9.5  (width 3.5)
-        //   inner coloured ring : r 3.5 → 5.9  (width 2.4)
-        //   white center disk   : r 0   → 3.4
-        constexpr double r_out_in  = 6.0,  r_out_w  = 3.5;
-        constexpr double r_in_in   = 3.5,  r_in_w   = 2.4;
-        constexpr double r_out_lbl = 7.75, r_in_lbl  = 4.7;
-        constexpr double r_center  = 3.4,  r_max     = 11.0;
+        // Geometry (polar units)
+        //   outer letter ring  (proportional, shared dividers) : r_out_in → r_out_in + r_out_w
+        //   middle prop. ring  (shared lw2.5 white dividers)   : r_mid_in → r_out_in
+        //   mini donut centre                                   : r_mid (midpoint of middle ring)
+        //   mini donut hole / ring width                        : r_d_in / r_d_w
+        //   letter label                                        : r_letter (centre of outer ring)
+        //   white centre disk (large enough for pct labels)     : r_center = r_mid_in
+        constexpr double r_out_in  = 9.2;
+        constexpr double r_out_w   = 2.0;
+        constexpr double r_mid_in  = 5.2;
+        constexpr double r_mid_w   = r_out_in - r_mid_in;    // 4.0
+        constexpr double r_mid     = r_mid_in + r_mid_w / 2.0; // 7.2
+        constexpr double r_d_in    = 0.9;
+        constexpr double r_d_w     = 0.55;
+        constexpr double r_letter  = r_out_in + r_out_w / 2.0; // 10.2
+        constexpr double r_center  = 1.8;
+        constexpr double r_max     = 12.5;
 
-        // White center disk sits in front of everything
+        // White centre disk (same radius as middle ring inner edge)
         gp
         (   "set object 1 circle at 0,0 size %.2f "
             "fillcolor rgb 'white' fillstyle solid 1.0 noborder front"
         ,   r_center
         );
 
-        // Center label: total + GC%
+        // Centre label: total bp + GC%  (larger font so it fills the disk)
         auto center_str = fmt::format
-            ("Total\\n{}\\nGC: {:.1f}%", hrs_plain(total), gc_pct);
+            ("TOTAL\\n{}\\nGC: {:.1f}%", hrs_plain(total), gc_pct);
         gp
-        (   "set label 1 \"%s\" at 0,0 center font 'sans,11' front"
+        (   "set label 1 \"%s\" at 0,0 center font 'sans,13' front"
         ,   center_str.c_str()
         );
 
         setup_polar_sector_plot(gp, r_max);
 
-        // Plot:
-        //   1. Outer lavender sectors (uniform colour, sector dividers)
-        //   2. Inner nucleotide-coloured sectors (col 3 = rgb variable)
-        //   3. Nucleotide letter centred inside outer ring (white, bold)
-        //   4. Percentage centred inside inner ring (dark, omit < 4 deg)
-        auto plot_cmd = fmt::format
+        // Plot command:
+        //   1. Outer proportional lavender sectors — same dividers as middle ring
+        //   2. Middle proportional lavender sectors (thin lw2.5 white borders)
+        //   3. Mini donut background circles (full 361° per sector centre)
+        //   4. Per-row coloured mini arcs (`every ::i::i` picks one row)
+        //   5. Nucleotide letter centred inside outer ring
+        //   6. Percentage label at mini donut centre (skip sectors < 5°)
+        std::string plot_cmd = fmt::format
         (   "plot "
-            "$data using 1:({:.3f}):2:({:.3f}) "
-                "with sectors fc rgb '#AA99CC' fill solid 0.50 "
-                "border lc '#888899' lw 1.5 notitle, "
-            "$data using 1:({:.3f}):2:({:.3f}):3 "
-                "with sectors fc rgb variable fill solid 0.90 "
-                "border lc 'white' lw 1.5 notitle, "
-            "$data using ($2>3.0?$1+$2/2.0:1/0):({:.3f}):(stringcolumn(4)) "
-                "with labels center font 'sans Bold,13' tc rgb 'white' notitle, "
-            "$data using ($2>4.0?$1+$2/2.0:1/0):({:.3f}):(sprintf(\"%.1f%%\",$5)) "
-                "with labels center font 'sans,8' tc rgb '#222222' notitle"
+            "$data using 1:({:.2f}):2:({:.2f}) "
+                "with sectors fc rgb '#AA99CC' fill solid 0.42 "
+                "border lc 'white' lw 2.5 notitle, "
+            "$data using 1:({:.2f}):2:({:.2f}) "
+                "with sectors fc rgb '#AA99CC' fill solid 0.42 "
+                "border lc 'white' lw 2.5 notitle, "
+            "$data using (0):({:.2f}):(361):({:.2f}):($1+$2/2):({:.2f}) "
+                "with sectors fc rgb '#CCBBDD' fill solid 0.18 noborder notitle"
         ,   r_out_in, r_out_w
-        ,   r_in_in,  r_in_w
-        ,   r_out_lbl
-        ,   r_in_lbl
+        ,   r_mid_in, r_mid_w
+        ,   r_d_in, r_d_w, r_mid
         );
+
+        for (int i = 0; i < static_cast<int>(sorted.size()); ++i)
+        {   uint32_t color = na_plot_color(sorted[i].first);
+            plot_cmd += fmt::format
+            (   ", $data every ::{0}::{0} "
+                "using (0):({1:.2f}):($5/100.0*360):({2:.2f}):($1+$2/2):({3:.2f}) "
+                "with sectors fc rgb '#{4:06X}' fill solid 0.92 noborder notitle"
+            ,   i, r_d_in, r_d_w, r_mid, color
+            );
+        }
+
+        // Letter labels centred inside the outer ring
+        plot_cmd += fmt::format
+        (   ", $data using ($2>3.0?$1+$2/2:1/0):({:.2f}):(stringcolumn(4)) "
+            "with labels center font 'sans Bold,15' tc rgb '#443355' notitle"
+        ,   r_letter
+        );
+
+        // Percentage labels centred inside each mini donut (omit < 5°)
+        plot_cmd += fmt::format
+        (   ", $data using ($2>5.0?$1+$2/2:1/0):({:.2f}):(sprintf(\"%.1f%%\",$5)) "
+            "with labels center font 'sans Bold,9' tc rgb '#333333' notitle"
+        ,   r_mid
+        );
+
         gp("%s", plot_cmd.c_str());
     }
 }
