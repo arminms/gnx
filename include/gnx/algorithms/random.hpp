@@ -439,10 +439,10 @@ inline Sequence dna
 )
 {   const std::string_view alphabet = "ACGT";
     const std::initializer_list<double> weights =
-    {   100 - gc_content * 0.5
-    ,   gc_content * 0.5
-    ,   gc_content * 0.5
-    ,   100 - gc_content * 0.5
+    {   100 - gc_content + 0.5
+    ,   gc_content + 0.5
+    ,   gc_content + 0.5
+    ,   100 - gc_content + 0.5
     };
 
     Sequence seq(length);
