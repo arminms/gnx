@@ -5,6 +5,8 @@
 
 #include <string>
 #include <array>
+#include <ranges>
+#include <algorithm>
 
 #include <fmt/base.h>
 #include <fmt/format.h>
@@ -21,6 +23,7 @@
 #include <gnx/concepts.hpp>
 #include <gnx/lut/color_schemes.hpp>
 #include <gnx/algorithms/is_peptide.hpp>
+#include <gnx/algorithms/local_align.hpp>
 
 namespace gnx::detail {
 
@@ -247,5 +250,198 @@ inline nlohmann::json print_to_bundle
     return bundle;
 }
 #endif //__CLING__
+
+inline std::string print_alignment_to_string
+(   gnx::alignment_result const& result
+,   std::size_t line_width = 80
+)
+{   fmt::memory_buffer buf;
+    auto size = result.aligned_seq1.size();
+    auto seq1_gaps = std::count(result.aligned_seq1.begin(), result.aligned_seq1.end(), '-');
+    auto seq2_gaps = std::count(result.aligned_seq2.begin(), result.aligned_seq2.end(), '-');
+    std::size_t start_index_q = result.max_i - result.aligned_seq1.size() + seq1_gaps + 1;
+    std::size_t start_index_s = result.max_j - result.aligned_seq2.size() + seq2_gaps + 1;
+    auto gap_count = seq1_gaps + seq2_gaps;
+    auto identity_count = std::ranges::count_if
+    (   std::views::iota(0u, size)
+    ,   [&result](std::size_t i)
+        {   char a = result.aligned_seq1[i];
+            char b = result.aligned_seq2[i];
+            return a == b;
+        }
+    );
+    auto identity_percentage
+    =   size > 0
+    ?   static_cast<double>(identity_count) / size * 100.0
+    :   0.0
+    ;
+    auto score_per_residue
+    =   gap_count < size
+    ?   static_cast<double>(result.score) / (size - gap_count)
+    :   0.0
+    ;
+    bool peptide = gnx::is_peptide(result.aligned_seq1);
+    auto color = peptide
+    ?   gnx::color_scheme::aa_clustal
+    :   gnx::color_scheme::na
+    ;
+    auto match_color = peptide
+    ?   gnx::color_scheme::aa_clustal_inverted
+    :   gnx::color_scheme::na_inverted
+    ;
+    auto q_start = result.aligned_seq1.begin();
+    auto s_start = result.aligned_seq2.begin();
+
+    fmt::format_to
+    (   std::back_inserter(buf)
+    ,   "{}│{:^10}│{:^20}│{:^15}│{:^15}│\n"
+    ,   gnx::ansi::ESC[style::bold]
+    ,   "SCORE"
+    ,   "IDENTITIES"
+    ,   "GAPS"
+    ,   "SCORE/RESIDUE"
+    );
+    fmt::format_to
+    (   std::back_inserter(buf)
+    ,   "│{:^10}│{:^20}│{:^15}│{:^15.2f}│\n\n"
+    ,   result.score
+    ,   fmt::format("{}/{} ({:.2f}%)", identity_count, size, identity_percentage)
+    ,   fmt::format("{}/{} ({:.2f}%)", gap_count, size, gap_count > 0 ? static_cast<double>(gap_count) / size * 100.0 : 0.0)
+    ,   score_per_residue
+    );
+    for
+    (   std::size_t i = 0
+    ;   i < size
+    ;   i += line_width
+    ,   start_index_q += line_width
+    ,   start_index_s += line_width
+    )
+    {   std::size_t index_x10{start_index_q}, separator{};
+        for (separator = 0; index_x10 % 10 != 0; ++separator, ++index_x10);
+        fmt::format_to
+        (   std::back_inserter(buf)
+        ,   "{:19}{}{:>{}}"
+        ,   " "
+        ,   gnx::ansi::vga::fg::ESC[250]
+        ,   separator < std::to_string(index_x10).length()
+            ?   ""
+            :   std::to_string(index_x10)
+        ,   separator + 1
+        );
+        index_x10 += 10;
+        for
+        (   std::size_t i = 0
+        ;   i < line_width - 10 && index_x10 <= result.max_i + seq1_gaps
+        ;   i += 10, index_x10 += 10
+        )
+            fmt::format_to
+            (   std::back_inserter(buf)
+            ,   "{:{}}"
+            ,   index_x10
+            ,   10
+            );
+        fmt::format_to
+        (   std::back_inserter(buf)
+        ,   "{}\n"
+        ,   gnx::ansi::ESC[style::reset]
+        );
+        fmt::format_to
+        (   std::back_inserter(buf)
+        ,   "{}Query{}{:11}   {}"
+        ,   gnx::ansi::ESC[style::bold]
+        ,   gnx::ansi::vga::fg::ESC[250]
+        ,   start_index_q
+        ,   gnx::ansi::ESC[style::reset]
+        );
+        for 
+        (   std::size_t j = 0
+        ;   j < line_width && i + j < size
+        ;   ++j
+        )
+        {   fmt::format_to
+            (   std::back_inserter(buf)
+            ,   "{}{}"
+            ,   *(q_start + i + j) == *(s_start + i + j)
+                ?   match_color[static_cast<uint8_t>(*(q_start + i + j))]
+                :   color[static_cast<uint8_t>(*(q_start + i + j))]
+            ,   gnx::ansi::ESC[style::reset]
+            );
+        }
+        fmt::format_to
+        (   std::back_inserter(buf)
+        ,   "{}\n"
+        ,   gnx::ansi::ESC[style::reset]
+        );
+        fmt::format_to
+        (   std::back_inserter(buf)
+        ,   "{}Sbjct{}{:11}   {}"
+        ,   gnx::ansi::ESC[style::bold]
+        ,   gnx::ansi::vga::fg::ESC[250]
+        ,   start_index_s
+        ,   gnx::ansi::ESC[style::reset]
+        );
+        for 
+        (   std::size_t j = 0
+        ;   j < line_width && i + j < size
+        ;   ++j
+        )
+        {   fmt::format_to
+            (   std::back_inserter(buf)
+            ,   "{}{}"
+            ,   *(q_start + i + j) == *(s_start + i + j)
+                ?   match_color[static_cast<uint8_t>(*(s_start + i + j))]
+                :   color[static_cast<uint8_t>(*(s_start + i + j))]
+            ,   gnx::ansi::ESC[style::reset]
+            );
+        }
+        fmt::format_to
+        (   std::back_inserter(buf)
+        ,   "{}\n"
+        ,   gnx::ansi::ESC[style::reset]
+        );
+        index_x10 = start_index_s;
+        for (separator = 0; index_x10 % 10 != 0; ++separator, ++index_x10);
+        fmt::format_to
+        (   std::back_inserter(buf)
+        ,   "{:19}{}{:>{}}"
+        ,   " "
+        ,   gnx::ansi::vga::fg::ESC[250]
+        ,   separator < std::to_string(index_x10).length()
+            ?   ""
+            :   std::to_string(index_x10)
+        ,   separator + 1
+        );
+        index_x10 += 10;
+        for
+        (   std::size_t i = 0
+        ;   i < line_width - 10 && index_x10 <= result.max_j + seq2_gaps
+        ;   i += 10, index_x10 += 10
+        )
+            fmt::format_to
+            (   std::back_inserter(buf)
+            ,   "{:{}}"
+            ,   index_x10
+            ,   10
+            );
+        fmt::format_to
+        (   std::back_inserter(buf)
+        ,   "{}\n\n"
+        ,   gnx::ansi::ESC[style::reset]
+        );
+}
+#ifdef __CLING__
+    auto bundle = nlohmann::json::object();
+    bundle["text/plain"] = fmt::to_string(buf);
+    xeus::get_interpreter().clear_output(true);
+    xeus::get_interpreter().display_data
+    (   bundle
+    ,   nlohmann::json::object()
+    ,   nlohmann::json::object()
+    );
+    return std::string();
+#else
+    return fmt::to_string(buf);
+#endif //__CLING__
+}
 
 } // namespace gnx::detail

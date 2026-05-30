@@ -42,4 +42,11 @@ inline std::string print
     );
 }
 
+inline std::string print
+(   gnx::alignment_result const& result
+,   std::size_t line_width = 80
+)
+{   return detail::print_alignment_to_string(result, line_width);
+}
+
 }   // namespace gnx
