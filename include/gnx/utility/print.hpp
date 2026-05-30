@@ -44,9 +44,30 @@ inline std::string print
 
 inline std::string print
 (   gnx::alignment_result const& result
-,   std::size_t line_width = 80
+,   std::size_t line_width = 60
 )
-{   return detail::print_alignment_to_string(result, line_width);
+{
+#ifdef __CLING__
+    auto bundle = nlohmann::json::object();
+    bundle["text/plain"]
+    =   detail::print_alignment_to_string(result, line_width);;
+    xeus::get_interpreter().clear_output(true);
+    xeus::get_interpreter().display_data
+    (   bundle
+    ,   nlohmann::json::object()
+    ,   nlohmann::json::object()
+    );
+    return std::string();
+#else
+    return detail::print_alignment_to_string(result, line_width);
+#endif //__CLING__
 }
+
+#ifdef __CLING__
+    nlohmann::json mime_bundle_repr(alignment_result const& result)
+    {   return print(result);
+    }
+#endif //__CLING__
+
 
 }   // namespace gnx

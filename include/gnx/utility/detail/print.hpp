@@ -483,20 +483,8 @@ inline std::string print_alignment_to_string
         ,   " "
         ,   gnx::ansi::ESC[style::reset]
         );
-}
-#ifdef __CLING__
-    auto bundle = nlohmann::json::object();
-    bundle["text/plain"] = fmt::to_string(buf);
-    xeus::get_interpreter().clear_output(true);
-    xeus::get_interpreter().display_data
-    (   bundle
-    ,   nlohmann::json::object()
-    ,   nlohmann::json::object()
-    );
-    return std::string();
-#else
+    }
     return fmt::to_string(buf);
-#endif //__CLING__
 }
 
 } // namespace gnx::detail
