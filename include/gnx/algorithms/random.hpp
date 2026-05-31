@@ -28,6 +28,7 @@
 
 #include <gnx/concepts.hpp>
 #include <gnx/execution.hpp>
+#include <gnx/psq.hpp>
 
 namespace gnx {
 
