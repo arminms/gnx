@@ -19,6 +19,7 @@
 #include <gnx/concepts.hpp>
 #include <gnx/execution.hpp>
 #include <gnx/lut/codon.hpp>
+#include <gnx/psq.hpp>
 
 namespace gnx {
 
@@ -422,6 +423,7 @@ template<std::ranges::random_access_range InputRange>
 /// Convenience overload accepting any range types and returning the resulting
 /// protein sequence.
 template<typename ExecPolicy, std::ranges::random_access_range InputRange>
+requires gnx::is_execution_policy_v<std::decay_t<ExecPolicy>>
 [[nodiscard]] gnx::sq translate
 (   ExecPolicy&& policy
 ,   const InputRange& seq
