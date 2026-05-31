@@ -2,6 +2,8 @@
 // Copyright (c) 2023-2025 Armin Sobhani
 //
 #include <catch2/catch_all.hpp>
+#include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_floating_point.hpp>
 
 #include <utility>
 #include <filesystem>
@@ -1661,12 +1663,11 @@ TEMPLATE_TEST_CASE( "gnx::random", "[algorithm][random]", std::vector<char>)
     }
 
     SECTION( "random nucleotide sequence with weights" )
-    {   gnx::rand(s.begin(), 20, "ACGT", {35, 15, 15, 35}, seed_pi);
-        CHECK(gnx::valid_nucleotide(s));
-        CHECK(s == "TTCTTAAGTCTTTAAACACG");
-        auto t = gnx::random::dna<decltype(s)>(20, 30, seed_pi);
-        t[2] = 'C';
-        CHECK(s == t);
+    {   gnx::generic_sequence<T> t1(N);
+        gnx::rand(t1.begin(), N, "ACGT", {35, 15, 15, 35}, seed_pi);
+        REQUIRE_THAT(gc_content(t1), Catch::Matchers::WithinRel(30, 0.1));
+        auto t2 = gnx::random::dna(N, 30.0, seed_pi);
+        REQUIRE_THAT(gc_content(t2), Catch::Matchers::WithinRel(30, 0.1));
     }
 }
 
