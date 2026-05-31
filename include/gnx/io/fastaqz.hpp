@@ -11,6 +11,7 @@
 #include <utility>
 #include <vector>
 #include <filesystem>
+#include <variant>
 
 #include <zlib.h>
 #include <gnx/io/kseq.h>
@@ -877,5 +878,60 @@ private:
 };
 
 }   // end gnx::out namespace
+
+/// @brief A high-level file writer that dispatches to the appropriate output
+/// format handler based on the file extension.
+///
+/// Supports FASTA/FASTQ with optional gzip compression and .fai/.gzi indexing.
+/// Recognizes the following file extensions:
+/// - .fa, .fasta: FASTA format
+/// - .fa.gz, .fasta.gz: FASTA format compressed with BGZF
+/// - .fq, .fastq: FASTQ format
+/// - .fq.gz, .fastq.gz: FASTQ format compressed with BGZF
+struct file
+{   file
+    (   std::string_view filename
+    ,   bool faidx = false
+    ,   std::size_t line_width = 80
+    ,   int n_threads = 1
+    ,   int compress_level = -1
+    ,   int n_sub_blks = 256
+    ,   size_t buffer_size = 65536
+    )
+    {   if (filename == "-" || filename.ends_with(".fa") || filename.ends_with(".fasta"))
+            _handler.emplace<out::fasta>(faidx, line_width, buffer_size);
+        else if (filename.ends_with(".fa.gz") || filename.ends_with(".fasta.gz"))
+            _handler.emplace<out::fasta_gz>(faidx, line_width, n_threads, compress_level, n_sub_blks, buffer_size);
+        else if (filename.ends_with(".fq") || filename.ends_with(".fastq"))
+            _handler.emplace<out::fastq>(faidx, buffer_size);
+        else if (filename.ends_with(".fq.gz") || filename.ends_with(".fastq.gz"))
+            _handler.emplace<out::fastq_gz>(faidx, n_threads, compress_level, n_sub_blks, buffer_size);
+        else
+            throw std::runtime_error
+            (   fmt::format("gnx::file: unrecognized file extension for file -> {}", filename)
+            );
+        std::visit([&](auto& handler){ handler.open(filename); }, _handler);
+    }
+    ~file()
+    {   std::visit([](auto& handler){ handler.close(); }, _handler);
+    }
+    void close()
+    {   std::visit([](auto& handler){ handler.close(); }, _handler);
+    }
+    template <class Sequence>
+    void write(const Sequence& seq)
+    {   std::visit([&](auto& handler){ handler.write(seq); }, _handler);
+    }
+
+
+private:
+    std::variant
+    <   out::fasta
+    ,   out::fasta_gz
+    ,   out::fastq
+    ,   out::fastq_gz
+    > _handler;
+};
+
 }   // end gnx namespace
 
