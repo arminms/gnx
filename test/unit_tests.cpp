@@ -1300,7 +1300,7 @@ TEMPLATE_TEST_CASE
     SECTION( "save fasta" )
     {   s.load(SAMPLE_GENOME, 1);
         std::string filename = "test_output.fa";
-        s.save(filename, gnx::out::fasta());
+        s.save(filename);
         t.load(filename);
         CHECK(s == t);
         std::remove(filename.c_str());
@@ -1308,7 +1308,7 @@ TEMPLATE_TEST_CASE
     SECTION( "save fasta.gz" )
     {   s.load(SAMPLE_GENOME, 1);
         std::string filename = "test_output.fa.gz";
-        s.save(filename, gnx::out::fasta_gz());
+        s.save(filename);
         t.load(filename);
         CHECK(s == t);
         std::remove(filename.c_str());
@@ -1316,15 +1316,15 @@ TEMPLATE_TEST_CASE
     SECTION( "save fastq" )
     {   s.load(SAMPLE_READS);
         std::string filename = "test_reads.fq";
-        s.save(filename, gnx::out::fastq());
+        s.save(filename);
         t.load(filename);
         CHECK(s == t);
         std::remove(filename.c_str());
     }
     SECTION( "save fastq.gz" )
     {   s.load(SAMPLE_READS);
-        std::string filename = "test_reads.fqz";
-        s.save(filename, gnx::out::fastq_gz());
+        std::string filename = "test_reads.fq.gz";
+        s.save(filename);
         t.load(filename);
         CHECK(s == t);
         std::remove(filename.c_str());
