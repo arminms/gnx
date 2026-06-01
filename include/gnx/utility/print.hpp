@@ -34,8 +34,8 @@ inline std::string print
 {   return detail::print_to_string
     (   range
     ,   gnx::is_peptide(range)
-        ?   gnx::color_scheme::na_warn
-        :   gnx::color_scheme::na
+        ?   color_scheme::aa_clustal
+        :   color_scheme::na
     ,   line_width
     ,   start_index
     ,   separator
