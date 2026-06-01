@@ -898,18 +898,47 @@ struct file
     ,   int n_sub_blks = 256
     ,   size_t buffer_size = 65536
     )
-    {   if (filename == "-" || filename.ends_with(".fa") || filename.ends_with(".fasta"))
-            _handler.emplace<out::fasta>(faidx, line_width, buffer_size);
-        else if (filename.ends_with(".fa.gz") || filename.ends_with(".fasta.gz"))
-            _handler.emplace<out::fasta_gz>(faidx, line_width, n_threads, compress_level, n_sub_blks, buffer_size);
+    {   if 
+        (   filename == "-"
+        ||  filename.ends_with(".fasta")
+        ||  filename.ends_with(".fa")
+        ||  filename.ends_with(".fas")
+        ||  filename.ends_with(".fna")
+        ||  filename.ends_with(".faa")
+        ||  filename.ends_with(".ffn")
+        ||  filename.ends_with(".frn")
+        )   _handler.emplace<out::fasta>(faidx, line_width, buffer_size);
+        else if
+        (   filename.ends_with(".fasta.gz")
+        ||  filename.ends_with(".fa.gz")
+        ||  filename.ends_with(".fas.gz")
+        ||  filename.ends_with(".fna.gz")
+        ||  filename.ends_with(".faa.gz")
+        ||  filename.ends_with(".ffn.gz")
+        ||  filename.ends_with(".frn.gz")
+        )   _handler.emplace<out::fasta_gz>
+            (   faidx
+            ,   line_width
+            ,   n_threads
+            ,   compress_level
+            ,   n_sub_blks
+            ,   buffer_size
+            );
         else if (filename.ends_with(".fq") || filename.ends_with(".fastq"))
             _handler.emplace<out::fastq>(faidx, buffer_size);
         else if (filename.ends_with(".fq.gz") || filename.ends_with(".fastq.gz"))
-            _handler.emplace<out::fastq_gz>(faidx, n_threads, compress_level, n_sub_blks, buffer_size);
+            _handler.emplace<out::fastq_gz>
+            (   faidx
+            ,   n_threads
+            ,   compress_level
+            ,   n_sub_blks
+            ,   buffer_size
+            );
         else
             throw std::runtime_error
             (   fmt::format("gnx::file: unrecognized file extension for file -> {}", filename)
             );
+
         std::visit([&](auto& handler){ handler.open(filename); }, _handler);
     }
     ~file()
@@ -922,7 +951,6 @@ struct file
     void write(const Sequence& seq)
     {   std::visit([&](auto& handler){ handler.write(seq); }, _handler);
     }
-
 
 private:
     std::variant
