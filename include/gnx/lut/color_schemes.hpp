@@ -88,6 +88,7 @@ std::array<std::string, 256> create_na_cs() noexcept
         );
     }
 
+    detail::assign_color(table, "-", gnx::ansi::vga::fg::ESC[16]);
     detail::assign_color(table, "A", gnx::ansi::vga::fg::ESC[40]);
     detail::assign_color(table, "C", gnx::ansi::vga::fg::ESC[33]);
     detail::assign_color(table, "G", gnx::ansi::vga::fg::ESC[240]);
@@ -211,28 +212,30 @@ std::array<std::string, 256> create_aa_clustal_cs() noexcept
     {   table[i]
         =   fmt::format
         (   "{}{}{}{}"
-        ,   gnx::ansi::vga::fg::ESC[226]
-        ,   gnx::ansi::vga::bg::ESC[160]
+        ,   ansi::vga::fg::ESC[226]
+        ,   ansi::vga::bg::ESC[160]
         ,   static_cast<char>(i)
-        ,   gnx::ansi::ESC[style::reset]
+        ,   ansi::ESC[style::reset]
         );
     }
     // stop codon
     detail::assign_color_reset
     (   table
     ,   "*"
-    ,   gnx::ansi::vga::fg::ESC[16]
-    ,   gnx::ansi::vga::bg::ESC[226]
+    ,   ansi::vga::fg::ESC[16]
+    ,   ansi::vga::bg::ESC[226]
     );
     // others
-    detail::assign_color(table, "AILMV", gnx::ansi::vga::fg::ESC[33]); // hydrophobic (blue)
-    detail::assign_color(table, "KR", gnx::ansi::vga::fg::ESC[160]);   // basic (red)
-    detail::assign_color(table, "DE", gnx::ansi::vga::fg::ESC[201]);   // acidic (magenta)
-    detail::assign_color(table, "NQST", gnx::ansi::vga::fg::ESC[40]);  // polar (green)
-    detail::assign_color(table, "C", gnx::ansi::vga::fg::ESC[213]);    // cysteine (pink)
-    detail::assign_color(table, "G", gnx::ansi::vga::fg::ESC[208]);    // glycine (orange)
-    detail::assign_color(table, "P", gnx::ansi::vga::fg::ESC[220]);    // proline (yellow)
-    detail::assign_color(table, "FHWY", gnx::ansi::vga::fg::ESC[45]);  // aromatic (cyan)
+    detail::assign_color(table, "AILMV", ansi::vga::fg::ESC[33]); // hydrophobic (blue)
+    detail::assign_color(table, "KR", ansi::vga::fg::ESC[160]);   // basic (red)
+    detail::assign_color(table, "DE", ansi::vga::fg::ESC[201]);   // acidic (magenta)
+    detail::assign_color(table, "NQST", ansi::vga::fg::ESC[40]);  // polar (green)
+    detail::assign_color(table, "C", ansi::vga::fg::ESC[213]);    // cysteine (pink)
+    detail::assign_color(table, "G", ansi::vga::fg::ESC[208]);    // glycine (orange)
+    detail::assign_color(table, "P", ansi::vga::fg::ESC[220]);    // proline (yellow)
+    detail::assign_color(table, "FHWY", ansi::vga::fg::ESC[45]);  // aromatic (cyan)
+    // gap
+    detail::assign_color(table, "-", ansi::vga::fg::ESC[16]);
 
     return table;
 }
