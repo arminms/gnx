@@ -450,6 +450,30 @@ inline Sequence dna
     rand(seq.begin(), length, alphabet, weights, seed);
     return seq;
 }
+/// @brief Generate a random RNA sequence with specified GC content.
+/// @tparam Sequence Sequence container type
+/// @param length Length of the sequence to generate
+/// @param gc_content Desired GC content percentage (0-100)
+/// @param seed Optional seed for the random number generator (default: current time)
+/// @return Randomly generated RNA sequence with specified GC content
+template <sequence_container Sequence = gnx::sq>
+inline Sequence rna
+(   std::size_t length
+,   double gc_content
+,   std::uint64_t seed = 0
+)
+{   const std::string_view alphabet = "ACGU";
+    const std::initializer_list<double> weights =
+    {   100 - gc_content + 0.5
+    ,   gc_content + 0.5
+    ,   gc_content + 0.5
+    ,   100 - gc_content + 0.5
+    };
+
+    Sequence seq(length);
+    rand(seq.begin(), length, alphabet, weights, seed);
+    return seq;
+}
 
 } // namespace random
 
