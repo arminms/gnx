@@ -765,13 +765,15 @@ public:
     {   *this = read(filename, id);
     }
     ///
-    /// Saves the sequence to a file using the provided write function object
-    template<typename WriteFunc>
+    /// Saves the sequence to a file
     void save
     (   std::string_view filename
-    ,   WriteFunc write
+    ,   std::size_t line_width = 80
+    ,   int n_threads = 1
+    ,   int compress_level = -1
     )
-    {   write(filename, *this);
+    {   gnx::file out(filename, false, line_width, n_threads, compress_level);
+        out.write(*this);
     }
 
     // =========================================================================
