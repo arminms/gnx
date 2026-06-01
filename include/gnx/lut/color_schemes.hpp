@@ -217,7 +217,14 @@ std::array<std::string, 256> create_aa_clustal_cs() noexcept
         ,   gnx::ansi::ESC[style::reset]
         );
     }
-
+    // stop codon
+    detail::assign_color_reset
+    (   table
+    ,   "*"
+    ,   gnx::ansi::vga::fg::ESC[16]
+    ,   gnx::ansi::vga::bg::ESC[226]
+    );
+    // others
     detail::assign_color(table, "AILMV", gnx::ansi::vga::fg::ESC[33]); // hydrophobic (blue)
     detail::assign_color(table, "KR", gnx::ansi::vga::fg::ESC[160]);   // basic (red)
     detail::assign_color(table, "DE", gnx::ansi::vga::fg::ESC[201]);   // acidic (magenta)
