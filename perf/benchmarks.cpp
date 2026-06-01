@@ -31,7 +31,7 @@ void io_write_fasta(benchmark::State& st)
     auto s = gnx::random::dna<gnx::generic_sequence<T>>(n);
 
     for (auto _ : st)
-    {   s.save(fasta_filename, gnx::out::fasta());
+    {   s.save(fasta_filename);
     }
     std::remove(fasta_filename.c_str());
 
@@ -76,7 +76,7 @@ void io_read_fasta(benchmark::State& st)
 {   size_t n = size_t(st.range());
     gnx::generic_sequence<T> sr;
     auto sw = gnx::random::dna<gnx::generic_sequence<T>>(n);
-    sw.save(fasta_filename, gnx::out::fasta());
+    sw.save(fasta_filename);
 
     for (auto _ : st)
     {   sr.load(fasta_filename);
@@ -857,7 +857,7 @@ template <typename T>
 void unified_vnp_memory(benchmark::State& st)
 {   size_t n = size_t(st.range());
     auto sw = gnx::random::dna<gnx::generic_sequence<T>>(n);
-    sw.save(fasta_filename, gnx::out::fasta());
+    sw.save(fasta_filename);
 
     for (auto _ : st)
     {   gnx::generic_sequence<T> sr;
@@ -885,7 +885,7 @@ void unified_vnp_memory_cuda(benchmark::State& st)
     cudaEventCreate(&start); cudaEventCreate(&stop);
     cudaEventRecord(start);
     auto sw = gnx::random::dna<gnx::generic_sequence<T>>(n);
-    sw.save(fasta_filename, gnx::out::fasta());
+    sw.save(fasta_filename);
     cudaEventRecord(stop);
     cudaEventSynchronize(stop);
 
@@ -936,7 +936,7 @@ void unified_vnp_memory_rocm(benchmark::State& st)
     hipEventCreate(&start); hipEventCreate(&stop);
     hipEventRecord(start);
     auto sw = gnx::random::dna<gnx::generic_sequence<T>>(n);
-    sw.save(fasta_filename, gnx::out::fasta());
+    sw.save(fasta_filename);
     hipEventRecord(stop);
     hipEventSynchronize(stop);
 
