@@ -33,6 +33,8 @@
 #include <gnx/backend/forward_stream.hpp>
 #include <gnx/backend/virtual_vector.hpp>
 #include <gnx/memory.hpp>
+#include <gnx/algorithms/is_peptide.hpp>
+#include <gnx/algorithms/complement.hpp>
 
 namespace gnx {
 //
@@ -344,6 +346,13 @@ public:
     /// Appends residues in the range [s, s + count) to the end of the @a sq.
     void append(const value_type* s, size_type count)
     {   _sq.insert(_sq.end(), s, s + count);
+    }
+    ///
+    /// Turns the sequence into its complement if it is not a peptide.
+    generic_sequence& operator~ () noexcept
+    {   if (!is_peptide(_sq))
+            complement(_sq);
+        return *this;
     }
 
 // -- subscript operator -------------------------------------------------------
