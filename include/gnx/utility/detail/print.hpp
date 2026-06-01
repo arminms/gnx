@@ -106,14 +106,15 @@ inline std::string print
     ;   i += line_width
     ,   start_index += line_width
     )
-    {   fmt::format_to
-        (   std::back_inserter(buf)
-        ,   "{}{}{:11} │{} "
-        ,   gnx::ansi::ESC[style::bold]
-        ,   gnx::ansi::vga::fg::ESC[250]
-        ,   start_index
-        ,   gnx::ansi::ESC[style::reset]
-        );
+    {   if (separator != line_width)
+            fmt::format_to
+            (   std::back_inserter(buf)
+            ,   "{}{}{:11} │{} "
+            ,   gnx::ansi::ESC[style::bold]
+            ,   gnx::ansi::vga::fg::ESC[250]
+            ,   start_index
+            ,   gnx::ansi::ESC[style::reset]
+            );
         for 
         (   std::size_t j = 0
         ;   j < line_width && i + j < size
