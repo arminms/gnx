@@ -30,6 +30,7 @@
 // #include <gnx/algorithms/compare.hpp>
 // #include <gnx/algorithms/valid.hpp>
 #include <gnx/algorithms/random.hpp>
+#include <gnx/algorithms/complement.hpp>
 #include <gnx/algorithms/count.hpp>
 // #include <gnx/algorithms/local_align.hpp>
 #include <gnx/algorithms/translate.hpp>
