@@ -258,4 +258,36 @@ std::array<std::string, 256> create_aa_clustal_inverted_cs() noexcept
 
 thread_local static const auto aa_clustal_inverted = create_aa_clustal_inverted_cs();
 
+std::array<std::string, 256> create_orf_identify_cs() noexcept
+{   std::array<std::string, 256> table{};
+    for (size_t i = 0; i < 256; ++i)
+    {   table[i]
+        =   fmt::format
+        (   "{}{}{}{}"
+        ,   gnx::ansi::vga::fg::ESC[226]
+        ,   gnx::ansi::vga::bg::ESC[160]
+        ,   static_cast<char>(i)
+        ,   gnx::ansi::ESC[style::reset]
+        );
+    }
+
+    detail::assign_color(table, "ACDEFGHIKLNPQRSTVWY", "");
+    detail::assign_color_reset
+    (   table
+    ,   "*"
+    ,   gnx::ansi::vga::fg::ESC[226]
+    ,   gnx::ansi::vga::bg::ESC[124]
+    );
+    detail::assign_color_reset
+    (   table
+    ,   "M"
+    ,   gnx::ansi::vga::fg::ESC[16]
+    ,   gnx::ansi::vga::bg::ESC[226]
+    );
+
+    return table;
+}
+
+thread_local static const auto orf_identify = create_orf_identify_cs();
+
 } // namespace gnx::color_scheme
