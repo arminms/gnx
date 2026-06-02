@@ -11,7 +11,7 @@ namespace gnx::color_scheme {
 
 namespace detail {
 
-void assign_color
+inline void assign_color
 (   std::array<std::string, 256> &table
 ,   std::string_view chars
 ,   std::string_view color
@@ -24,7 +24,7 @@ void assign_color
     }
 }
 
-void assign_color
+inline void assign_color
 (   std::array<std::string, 256> &table
 ,   std::string_view chars
 ,   std::string_view fg_color
@@ -38,7 +38,7 @@ void assign_color
     }
 }
 
-void assign_color_reset
+inline void assign_color_reset
 (   std::array<std::string, 256> &table
 ,   std::string_view chars
 ,   std::string_view fg_color
@@ -66,16 +66,16 @@ void assign_color_reset
 
 } // namespace detail
 
-std::array<std::string, 256> create_mono_cs() noexcept
+inline std::array<std::string, 256> create_mono_cs() noexcept
 {   std::array<std::string, 256> table{};
     for (size_t i = 0; i < 256; ++i)
         table[i] = static_cast<char>(i);
     return table;
 }
 
-thread_local static const auto mono = create_mono_cs();
+inline const auto mono = create_mono_cs();
 
-std::array<std::string, 256> create_na_cs() noexcept
+inline std::array<std::string, 256> create_na_cs() noexcept
 {   std::array<std::string, 256> table{};
     for (size_t i = 0; i < 256; ++i)
     {   table[i]
@@ -110,9 +110,9 @@ std::array<std::string, 256> create_na_cs() noexcept
     return table;
 }
 
-thread_local static const auto na = create_na_cs();
+inline const auto na = create_na_cs();
 
-std::array<std::string, 256> create_na_inverted_cs() noexcept
+inline std::array<std::string, 256> create_na_inverted_cs() noexcept
 {   std::array<std::string, 256> table{};
     for (size_t i = 0; i < 256; ++i)
     {   table[i]
@@ -140,9 +140,9 @@ std::array<std::string, 256> create_na_inverted_cs() noexcept
     return table;
 }
 
-thread_local static const auto na_inverted = create_na_inverted_cs();
+inline const auto na_inverted = create_na_inverted_cs();
 
-std::array<std::string, 256> create_na_warn_cs() noexcept
+inline std::array<std::string, 256> create_na_warn_cs() noexcept
 {   std::array<std::string, 256> table{};
     for (size_t i = 0; i < 256; ++i)
     {   table[i]
@@ -172,9 +172,9 @@ std::array<std::string, 256> create_na_warn_cs() noexcept
     return table;
 }
 
-thread_local static const auto na_warn = create_na_warn_cs();
+inline const auto na_warn = create_na_warn_cs();
 
-std::array<std::string, 256> create_aa_warn_cs() noexcept
+inline std::array<std::string, 256> create_aa_warn_cs() noexcept
 {   std::array<std::string, 256> table{};
     for (size_t i = 0; i < 256; ++i)
     {   table[i]
@@ -204,9 +204,9 @@ std::array<std::string, 256> create_aa_warn_cs() noexcept
     return table;
 }
 
-thread_local static const auto aa_warn = create_aa_warn_cs();
+inline const auto aa_warn = create_aa_warn_cs();
 
-std::array<std::string, 256> create_aa_clustal_cs() noexcept
+inline std::array<std::string, 256> create_aa_clustal_cs() noexcept
 {   std::array<std::string, 256> table{};
     for (size_t i = 0; i < 256; ++i)
     {   table[i]
@@ -240,9 +240,9 @@ std::array<std::string, 256> create_aa_clustal_cs() noexcept
     return table;
 }
 
-thread_local static const auto aa_clustal = create_aa_clustal_cs();
+inline const auto aa_clustal = create_aa_clustal_cs();
 
-std::array<std::string, 256> create_aa_clustal_inverted_cs() noexcept
+inline std::array<std::string, 256> create_aa_clustal_inverted_cs() noexcept
 {   std::array<std::string, 256> table{};
     for (size_t i = 0; i < 256; ++i)
     {   table[i]
@@ -266,9 +266,9 @@ std::array<std::string, 256> create_aa_clustal_inverted_cs() noexcept
     return table;
 }
 
-thread_local static const auto aa_clustal_inverted = create_aa_clustal_inverted_cs();
+inline const auto aa_clustal_inverted = create_aa_clustal_inverted_cs();
 
-std::array<std::string, 256> create_orf_identify_cs() noexcept
+inline std::array<std::string, 256> create_orf_identify_cs() noexcept
 {   std::array<std::string, 256> table{};
     for (size_t i = 0; i < 256; ++i)
     {   table[i]
@@ -298,6 +298,6 @@ std::array<std::string, 256> create_orf_identify_cs() noexcept
     return table;
 }
 
-thread_local static const auto orf_identify = create_orf_identify_cs();
+inline const auto orf_identify = create_orf_identify_cs();
 
 } // namespace gnx::color_scheme
