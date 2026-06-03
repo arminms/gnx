@@ -70,6 +70,6 @@ target_link_libraries(gnx_cli PRIVATE
 )
 
 install(TARGETS gnx_cli
-  EXPORT ${PROJECT_NAME}-targets
+  # EXPORT ${PROJECT_NAME}-targets
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
