@@ -18,6 +18,7 @@
 #include <charconv>
 #include <string>
 #include <algorithm>
+#include <array>
 
 #include <fmt/base.h>
 #include <fmt/format.h>
