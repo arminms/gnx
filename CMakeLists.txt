@@ -137,7 +137,6 @@ target_link_libraries(${PROJECT_NAME} INTERFACE
   ZLIB::ZLIB
   fmt::fmt
   g3p::g3p
-  ranx::openmp
 )
 if(MSVC)
   target_compile_options(${PROJECT_NAME} INTERFACE
