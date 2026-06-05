@@ -1,0 +1,29 @@
+{
+  "version": 3,
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build"
+    },
+    {
+      "name": "default",
+      "inherits": "base",
+      "displayName": "Default (no vcpkg)"
+    },
+    {
+      "name": "vcpkg",
+      "inherits": "base",
+      "displayName": "vcpkg",
+      "condition": {
+        "type": "notEquals",
+        "lhs": "$env{VCPKG_INSTALLATION_ROOT}",
+        "rhs": ""
+      },
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_INSTALLATION_ROOT}/scripts/buildsystems/vcpkg.cmake"
+      }
+    }
+  ]
+}
