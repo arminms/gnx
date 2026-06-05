@@ -26,30 +26,22 @@ jobs:
           core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
 
     - name: Install dependencies via vcpkg
-      run: vcpkg install pthreads catch2 zlib fmt --binarysource="clear;x-gha,readwrite"
+      run: vcpkg install pthreads catch2 zlib fmt cli11 --binarysource="clear;x-gha,readwrite"
 
     - name: Install libomp on macOS
       run: brew install libomp
       if: matrix.os == 'macos-latest'
 
-    - name: Configure with CMake (Linux)
+    - name: Configure with CMake (Linux/Windows)
       run: |
-        cmake -S ${{github.workspace}} -B build \
-        -DGNX_ENABLE_BENCHMARKS=OFF \
-        -DCMAKE_TOOLCHAIN_FILE=$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake
-      if: matrix.os == 'ubuntu-latest'
-
-    - name: Configure with CMake (Windows)
-      run: |
-        cmake -S ${{github.workspace}} -B build -DGNX_ENABLE_BENCHMARKS=OFF -DCMAKE_TOOLCHAIN_FILE="$Env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
-      if: matrix.os == 'windows-latest'
+        cmake -S ${{github.workspace}} --preset vcpkg -B build -DGNX_ENABLE_BENCHMARKS=OFF
+      if: matrix.os == 'ubuntu-latest' || matrix.os == 'windows-latest'
 
     - name: Configure with CMake (macOS)
       run: |
         export OpenMP_ROOT=$(brew --prefix libomp)
-        cmake -S ${{github.workspace}} -B build \
+        cmake -S ${{github.workspace}} --preset vcpkg -B build \
         -DGNX_ENABLE_BENCHMARKS=OFF \
-        -DCMAKE_TOOLCHAIN_FILE=$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake \
         -DOpenMP_ROOT=$OpenMP_ROOT \
         -DOpenMP_CXX_FLAGS="-Xpreprocessor -fopenmp -I$OpenMP_ROOT/include" \
         -DOpenMP_CXX_LIB_NAMES="omp" \
