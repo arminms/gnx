@@ -33,7 +33,7 @@ jobs:
       if: matrix.os == 'macos-latest'
 
     - name: Set up MSVC
-      uses: ilammy/msvc-dev-cmd@v1
+      uses: arminms/msvc-dev-cmd@v1
       if: matrix.os == 'windows-latest'
 
     - name: Configure with CMake (Linux/Windows)
