@@ -56,11 +56,15 @@ endfunction()
 ## defining unit tests
 #
 add_unit_tests("core" unit_tests.cpp)
+add_unit_tests("compare_algorithm" test_algorithm_compare.cpp)
+add_unit_tests("random_algorithm" test_algorithm_random.cpp)
 add_unit_tests("translate_algorithm" test_algorithm_translate.cpp)
 add_unit_tests("valid_algorithm" test_algorithm_valid.cpp)
 
 ## finally adding unit tests
 #
 catch_discover_tests(unit_tests TEST_PREFIX "[Core] ")
+catch_discover_tests(test_algorithm_compare TEST_PREFIX "[Algorithm] ")
+catch_discover_tests(test_algorithm_random TEST_PREFIX "[Algorithm] ")
 catch_discover_tests(test_algorithm_translate TEST_PREFIX "[Algorithm] ")
 catch_discover_tests(test_algorithm_valid TEST_PREFIX "[Algorithm] ")
