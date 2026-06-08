@@ -1,0 +1,10 @@
+{
+  "dependencies": [
+    "catch2",
+    "cli11",
+    "fmt",
+    "pthreads",
+    "zlib",
+    "benchmark"
+  ]
+}
