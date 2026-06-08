@@ -27,11 +27,11 @@ constexpr std::array<uint8_t, 256> create_2bit_encode_table()
 // Always cast your input char to uint8_t when indexing into this table
 // to avoid negative indices due to sign extension.
 // Example: auto p = gnx::lut::encode_2bit[static_cast<uint8_t>(ch)];
-thread_local static constexpr auto encode_2bit = create_2bit_encode_table();
+static constexpr auto encode_2bit = create_2bit_encode_table();
 
 // Decode table for 2-bit values (0-3) to nucleotide characters.
 // Example: char base = gnx::lut::decode_2bit[bits & 0x03u];
-thread_local static constexpr auto decode_2bit
+static constexpr auto decode_2bit
 =   std::array<char, 4>{'A', 'C', 'G', 'T'};
 
 } // namespace gnx::lut
