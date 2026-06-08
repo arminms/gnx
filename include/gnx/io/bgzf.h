@@ -380,7 +380,7 @@ static BGZF *bgzf_open(const char *path, const char *mode)
     else if (strchr(mode, 'w') || strchr(mode, 'W'))
     {
         FILE *fpw;
-        if ((fpw = fopen(path, "w")) == 0)
+        if ((fpw = fopen(path, "wb")) == 0)
             return 0;
         fp = bgzf_write_init(mode2level(mode));
         fp->fp = fpw;
@@ -404,7 +404,7 @@ static BGZF *bgzf_dopen(int fd, const char *mode)
     else if (strchr(mode, 'w') || strchr(mode, 'W'))
     {
         FILE *fpw;
-        if ((fpw = fdopen(fd, "w")) == 0)
+        if ((fpw = fdopen(fd, "wb")) == 0)
             return 0;
         fp = bgzf_write_init(mode2level(mode));
         fp->fp = fpw;
