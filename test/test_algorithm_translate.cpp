@@ -3,9 +3,6 @@
 //
 #include <catch2/catch_all.hpp>
 
-#include <string>
-#include <vector>
-
 #include <gnx/sq.hpp>
 #include <gnx/psq.hpp>
 #include <gnx/algorithms/translate.hpp>
