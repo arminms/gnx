@@ -372,7 +372,7 @@ static BGZF *bgzf_open(const char *path, const char *mode)
     if (strchr(mode, 'r') || strchr(mode, 'R'))
     {
         _bgzf_file_t fpr;
-        if ((fpr = _bgzf_open(path, "r")) == 0)
+        if ((fpr = _bgzf_open(path, "rb")) == 0)
             return 0;
         fp = bgzf_read_init();
         fp->fp = fpr;
@@ -962,7 +962,7 @@ static int bgzf_is_bgzf(const char *fn)
     uint8_t buf[16];
     int n;
     _bgzf_file_t fp;
-    if ((fp = _bgzf_open(fn, "r")) == 0)
+    if ((fp = _bgzf_open(fn, "rb")) == 0)
         return 0;
     n = (int)_bgzf_read(fp, buf, 16);
     _bgzf_close(fp);
