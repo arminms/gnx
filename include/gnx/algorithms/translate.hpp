@@ -194,6 +194,8 @@ template<std::random_access_iterator InIterator, std::output_iterator<char> OutI
 {   typedef typename std::iterator_traits<InIterator>::difference_type difference_type;
     difference_type n = last - first;
     difference_type num_codons = n / 3;
+    if (num_codons <= 0)
+        return d_first;
 
     const auto vptr = &first[0];
     for (difference_type i = 0; i < num_codons; ++i, ++d_first)
