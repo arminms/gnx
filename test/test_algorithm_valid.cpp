@@ -3,11 +3,12 @@
 //
 #include <catch2/catch_all.hpp>
 
-#include <string>
-#include <vector>
-
 #include <gnx/sq.hpp>
 #include <gnx/algorithms/valid.hpp>
+
+// =============================================================================
+// valid() algorithm tests
+// =============================================================================
 
 #if defined(__CUDACC__)
 TEMPLATE_TEST_CASE
