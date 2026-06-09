@@ -55,11 +55,12 @@ endfunction()
 
 ## defining unit tests
 #
-add_unit_tests("forward_stream" test_backend_forward_stream.cpp)
-add_unit_tests("core" unit_tests.cpp)
 add_unit_tests("compare_algorithm" test_algorithm_compare.cpp)
 add_unit_tests("complement_algorithm" test_algorithm_complement.cpp)
+add_unit_tests("core_psq2" test_core_psq2.cpp)
+add_unit_tests("core_sq" test_core_sq.cpp)
 add_unit_tests("count_algorithm" test_algorithm_count.cpp)
+add_unit_tests("forward_stream" test_backend_forward_stream.cpp)
 add_unit_tests("gc_content_utility" test_utility_gc_content.cpp)
 add_unit_tests("io_fastaqz" test_io_fastaqz.cpp)
 add_unit_tests("local_align_algorithm" test_algorithm_local_align.cpp)
@@ -72,7 +73,6 @@ add_unit_tests("virtual_vector" test_backend_virtual_vector.cpp)
 
 ## finally adding unit tests
 #
-catch_discover_tests(unit_tests TEST_PREFIX "[Core] ")
 catch_discover_tests(test_algorithm_compare TEST_PREFIX "[Algorithm] ")
 catch_discover_tests(test_algorithm_complement TEST_PREFIX "[Algorithm] ")
 catch_discover_tests(test_algorithm_count TEST_PREFIX "[Algorithm] ")
@@ -82,6 +82,8 @@ catch_discover_tests(test_algorithm_translate TEST_PREFIX "[Algorithm] ")
 catch_discover_tests(test_algorithm_valid TEST_PREFIX "[Algorithm] ")
 catch_discover_tests(test_backend_forward_stream TEST_PREFIX "[Backend] ")
 catch_discover_tests(test_backend_virtual_vector TEST_PREFIX "[Backend] ")
+catch_discover_tests(test_core_psq2 TEST_PREFIX "[Core] ")
+catch_discover_tests(test_core_sq TEST_PREFIX "[Core] ")
 catch_discover_tests(test_io_fastaqz TEST_PREFIX "[I/O] ")
 catch_discover_tests(test_view_sq TEST_PREFIX "[View] ")
 catch_discover_tests(test_view_psq2 TEST_PREFIX "[View] ")
