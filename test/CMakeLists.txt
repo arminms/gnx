@@ -65,6 +65,7 @@ add_unit_tests("local_align_algorithm" test_algorithm_local_align.cpp)
 add_unit_tests("random_algorithm" test_algorithm_random.cpp)
 add_unit_tests("translate_algorithm" test_algorithm_translate.cpp)
 add_unit_tests("valid_algorithm" test_algorithm_valid.cpp)
+add_unit_tests("virtual_vector" test_backend_virtual_vector.cpp)
 
 ## finally adding unit tests
 #
@@ -78,3 +79,4 @@ catch_discover_tests(test_algorithm_random TEST_PREFIX "[Algorithm] ")
 catch_discover_tests(test_algorithm_translate TEST_PREFIX "[Algorithm] ")
 catch_discover_tests(test_algorithm_valid TEST_PREFIX "[Algorithm] ")
 catch_discover_tests(test_io_fastaqz TEST_PREFIX "[I/O] ")
+catch_discover_tests(test_backend_virtual_vector TEST_PREFIX "[Backend] ")
