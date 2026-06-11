@@ -70,6 +70,7 @@ add_unit_tests("sq_view" test_view_sq.cpp)
 add_unit_tests("translate_algorithm" test_algorithm_translate.cpp)
 add_unit_tests("valid_algorithm" test_algorithm_valid.cpp)
 add_unit_tests("virtual_vector" test_backend_virtual_vector.cpp)
+add_unit_tests("wget_utility" test_utility_wget.cpp)
 
 ## finally adding unit tests
 #
@@ -88,3 +89,5 @@ catch_discover_tests(test_io_fastaqz TEST_PREFIX "[I/O] ")
 catch_discover_tests(test_view_sq TEST_PREFIX "[View] ")
 catch_discover_tests(test_view_psq2 TEST_PREFIX "[View] ")
 catch_discover_tests(test_utility_gc_content TEST_PREFIX "[Utility] ")
+catch_discover_tests(test_utility_wget TEST_PREFIX "[Utility] ")
+
