@@ -31,18 +31,44 @@
 #ifndef KNETFILE_H
 #define KNETFILE_H
 
+#include <time.h>
+#include <stdio.h>
+#include <ctype.h>
+#include <stdlib.h>
+#include <string.h>
+#include <errno.h>
 #include <stdint.h>
 #include <fcntl.h>
+#include <sys/types.h>
 
-#ifndef _WIN32
-#define netread(fd, ptr, len) read(fd, ptr, len)
-#define netwrite(fd, ptr, len) write(fd, ptr, len)
-#define netclose(fd) close(fd)
-#else
+#ifdef _WIN32
+// winsock2.h must be included before windows.h. If windows.h was already
+// pulled in by another header (which sets _WINSOCKAPI_ via winsock.h v1),
+// skip winsock2.h to avoid struct/function redefinition errors.
+// All socket types needed here (fd_set, timeval, WSAData, etc.) are also
+// present in winsock.h v1, so skipping winsock2.h is safe in that case.
+#ifndef _WINSOCKAPI_
 #include <winsock2.h>
+#endif
+#include <io.h>
+// Tell MSVC linker to pull in the Winsock2 runtime library automatically.
+#pragma comment(lib, "ws2_32.lib")
+// Map POSIX file I/O names to MSVC CRT equivalents
+#define open  _open
+#define read  _read
+#define lseek _lseeki64
+#define close _close
 #define netread(fd, ptr, len) recv(fd, ptr, len, 0)
 #define netwrite(fd, ptr, len) send(fd, ptr, len, 0)
 #define netclose(fd) closesocket(fd)
+#else
+#include <unistd.h>
+#include <netdb.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#define netread(fd, ptr, len) read(fd, ptr, len)
+#define netwrite(fd, ptr, len) write(fd, ptr, len)
+#define netclose(fd) close(fd)
 #endif
 
 // FIXME: currently I/O is unbuffered
@@ -79,21 +105,6 @@ int knet_close(knetFile *fp);
 
 #define knet_tell(fp) ((fp)->offset)
 #define knet_fileno(fp) ((fp)->fd)
-
-#include <time.h>
-#include <stdio.h>
-#include <ctype.h>
-#include <stdlib.h>
-#include <string.h>
-#include <errno.h>
-#include <unistd.h>
-#include <sys/types.h>
-
-#ifndef _WIN32
-#include <netdb.h>
-#include <arpa/inet.h>
-#include <sys/socket.h>
-#endif
 
 /* In winsock.h, the type of a socket is SOCKET, which is: "typedef
  * u_int SOCKET". An invalid SOCKET is: "(SOCKET)(~0)", or signed

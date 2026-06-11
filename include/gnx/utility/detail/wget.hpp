@@ -3,14 +3,14 @@
 //
 #pragma once
 
+#include <gnx/utility/detail/knetfile.h>
+
 #include <fmt/base.h>
 #include <fmt/format.h>
 
 #include <string_view>
 #include <filesystem>
 #include <stdexcept>
-
-#include <gnx/utility/detail/knetfile.h>
 
 namespace gnx {
 

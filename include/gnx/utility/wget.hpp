@@ -19,7 +19,7 @@ inline wget_result wget(std::string_view url)
     auto fp = knet_open(url.data(), "r");
     if (fp == nullptr)
         throw std::runtime_error(fmt::format("Failed to open URL: {}", url));
-    FILE* out_fp = fopen(temp_file_path.c_str(), "wb");
+    FILE* out_fp = fopen(temp_file_path.string().c_str(), "wb");
     if (out_fp == nullptr)
     {   knet_close(fp);
         throw std::runtime_error
