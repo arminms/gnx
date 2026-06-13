@@ -38,7 +38,7 @@ jobs:
 
     - name: Configure with CMake (Linux/Windows)
       run: |
-        cmake -S ${{github.workspace}} --preset vcpkg -B build -DGNX_ENABLE_BENCHMARKS=OFF
+        cmake -S ${{github.workspace}} --preset vcpkg -B build -DGNX_ENABLE_BENCHMARKS=OFF -DGNX_ENABLE_CUDA=OFF -DGNX_ENABLE_HIP=OFF
       if: matrix.os == 'ubuntu-latest' || matrix.os == 'windows-latest'
 
     - name: Configure with CMake (macOS)
@@ -46,6 +46,8 @@ jobs:
         export OpenMP_ROOT=$(brew --prefix libomp)
         cmake -S ${{github.workspace}} --preset vcpkg -B build \
         -DGNX_ENABLE_BENCHMARKS=OFF \
+        -DGNX_ENABLE_CUDA=OFF \
+        -DGNX_ENABLE_HIP=OFF \
         -DOpenMP_ROOT=$OpenMP_ROOT \
         -DOpenMP_CXX_FLAGS="-Xpreprocessor -fopenmp -I$OpenMP_ROOT/include" \
         -DOpenMP_CXX_LIB_NAMES="omp" \
