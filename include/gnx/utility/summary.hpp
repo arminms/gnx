@@ -105,7 +105,16 @@ inline void summary
     else if constexpr (std::is_convertible_v<Range, std::filesystem::path>)
     {   // Filename: summarise sequence-length distribution
         std::string path(range);
-        if (std::filesystem::exists(path + ".fai"))
+        if (detail::is_valid_url(range))
+        {   auto downloaded = gnx::wget(range);
+            if (downloaded().empty())
+                throw std::runtime_error
+                (   fmt::format("Failed to download the sequence from {}", range)
+                );
+            else
+                detail::summary_fs(gp, downloaded());
+        } 
+        else if (std::filesystem::exists(path + ".fai"))
             detail::summary_vv(gp, path);
         else
             detail::summary_fs(gp, path);
