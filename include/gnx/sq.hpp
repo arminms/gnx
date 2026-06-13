@@ -30,11 +30,12 @@
 #include <gnx/concepts.hpp>
 #include <gnx/views.hpp>
 #include <gnx/visitor.hpp>
+#include <gnx/memory.hpp>
 #include <gnx/backend/forward_stream.hpp>
 #include <gnx/backend/virtual_vector.hpp>
-#include <gnx/memory.hpp>
 #include <gnx/algorithms/is_peptide.hpp>
 #include <gnx/algorithms/complement.hpp>
+#include <gnx/utility/wget.hpp>
 
 namespace gnx {
 //
@@ -45,12 +46,8 @@ template
 <   typename Container
 ,   typename Map = std::unordered_map<std::string, std::any>
 >
-class generic_sequence
-{   Container                _sq;  // sequence
-    std::unique_ptr<Map> _ptr_td;  // pointer to tagged data
-
-public:
-    using value_type = typename Container::value_type;
+struct generic_sequence
+{   using value_type = typename Container::value_type;
     using size_type = typename Container::size_type;
     using difference_type = typename Container::difference_type;
     using reference = typename Container::reference;
@@ -75,30 +72,35 @@ public:
     ///
     /// @brief Constructs a sequence from a string view. If the string view is a
     /// file path, the constructor attempts to read the sequence from the file.
-    /// If the string view is not a file path, it is treated as a direct sequence
-    /// input.
-    /// @param sv The string view representing the sequence or a file path.
+    /// If it is a URL, the constructor attempts to download the file and read
+    /// the sequence from the downloaded file. If neither of them, it is treated
+    /// as a direct sequence input.
+    /// @param sv The string view representing the sequence, URL or a file path.
     /// @param ndx The index of the sequence to read from the file if the string
     /// view is a file path. Default is 0 (the first sequence).
     explicit generic_sequence(std::string_view sv, size_type ndx = 0)
-    {   if  // if the sv is a view over a filename, attempt to read it as such
-        (std::filesystem::path(std::string(sv)).has_extension())
+    {   // if sv is a view over a URL or filename, attempt to read it as such
+        if (detail::is_valid_url(sv))
+        {   auto downloaded = gnx::wget(sv);
+            if (downloaded().empty())
+                throw std::runtime_error
+                (   fmt::format("Failed to download the sequence from {}", sv)
+                );
+            else
+                load_ndx(downloaded(), ndx);
+        } 
+        else if (std::filesystem::path(std::string(sv)).has_extension())
         {   if (std::filesystem::exists(std::string(sv) + ".fai"))
             {   gnx::virtual_vector<self_type> vv{sv};
                 if (ndx < vv.size())
                     *this = vv[ndx];
                 else
-                    log_error("invalid sequence index");
+                    throw std::runtime_error
+                    (   fmt::format("Invalid sequence index: {}", ndx)
+                    );
             }
             else
-            {   size_t count = 0;
-                gnx::forward_stream<self_type> stream(sv);
-                auto it = stream.begin();
-                for (; it != stream.end() && count < ndx; ++it, ++count);
-                if (it != stream.end())
-                    *this = stream();
-                else
-                    log_error("invalid sequence index");
+            {   load_ndx(sv, ndx);
             }
         }
         else // otherwise, treat it as a view over a sequence
@@ -108,14 +110,24 @@ public:
     ///
     /// @brief Constructs a sequence from a string view and an ID. If the string
     /// view is a file path, the constructor attempts to read the sequence with
-    /// the matching ID from the file. If the string view is not a file path, it
-    /// is treated as a direct sequence input.
-    /// @param sv The string view representing the sequence or a file path.
+    /// the matching ID from the file. If it is a URL, the constructor attempts
+    /// to download the file and read the sequence from the downloaded file. If
+    /// neither of them, it is treated as a direct sequence input.
+    /// @param sv The string view representing the sequence, URL or a file path.
     /// @param id The ID of the sequence to read from the file if the string is
     /// a file path.
     generic_sequence(std::string_view sv, std::string_view id)
-    {   if  // if the sv is a view over a filename, attempt to read it as such
-        (std::filesystem::path(std::string(sv)).has_extension())
+    {   // if sv is a view over a URL or filename, attempt to read it as such
+        if (detail::is_valid_url(sv))
+        {   auto downloaded = gnx::wget(sv);
+            if (downloaded().empty())
+                throw std::runtime_error
+                (   fmt::format("Failed to download the sequence from {}", sv)
+                );
+            else
+                load_id(downloaded(), id);
+        } 
+        else if (std::filesystem::path(std::string(sv)).has_extension())
         {   if (std::filesystem::exists(std::string(sv) + ".fai"))
             {   gnx::virtual_vector<self_type> vv{sv};
                 for (size_type i = 0; i < vv.size(); ++i)
@@ -124,16 +136,12 @@ public:
                         return;
                     }
                 }
-                log_error("no sequence with matching ID found");
+                throw std::runtime_error
+                (   fmt::format("No sequence matching '{}' found", id)
+                );
             }
             else
-            {   gnx::forward_stream<self_type> stream(sv);
-                auto it = stream.begin();
-                for (; it != stream.end() && stream.id() != id; ++it);
-                if (it != stream.end())
-                    *this = stream();
-                else
-                    log_error("no sequence with matching ID found");
+            {   load_id(sv, id);
             }
         }
         else // otherwise, treat it as a view over a sequence
@@ -167,10 +175,6 @@ public:
     ,   _ptr_td()
     {}
 #endif //__CUDACC__
-
-// test
-
-//<-------------------
     ///
     /// @brief Constructs a sequence from a sequence view.
     /// @param sv The sequence view to construct the sequence from.
@@ -186,8 +190,6 @@ public:
     ,   _ptr_td()
     {}
 #endif //__CUDACC__
-//<-------------------
-
     ///
     template<typename InputIt>
     requires std::input_iterator<InputIt>
@@ -611,6 +613,34 @@ public:
                 );
             (*_ptr_td)[tag] = a;
         }
+    }
+
+private:
+    Container                _sq; // sequence
+    std::unique_ptr<Map> _ptr_td; // pointer to tagged data
+
+    void load_ndx(std::string_view filename, size_type ndx)
+    {   size_t count = 0;
+        gnx::forward_stream<self_type> stream(filename);
+        auto it = stream.begin();
+        for (; it != stream.end() && count < ndx; ++it, ++count);
+        if (it != stream.end())
+            *this = stream();
+        else
+            throw std::runtime_error
+            (   fmt::format("Invalid sequence index: {}", ndx)
+            );
+    }
+    void load_id(std::string_view filename, std::string_view id)
+    {   gnx::forward_stream<self_type> stream(filename);
+        auto it = stream.begin();
+        for (; it != stream.end() && stream.id() != id; ++it);
+        if (it != stream.end())
+            *this = stream();
+        else
+            throw std::runtime_error
+            (   fmt::format("No sequence matching '{}' found", id)
+            );
     }
 };
 
