@@ -561,7 +561,7 @@ inline knetFile *knet_dopen(int fd, const char *mode)
 	return fp;
 }
 
-off_t knet_read(knetFile *fp, void *buf, off_t len)
+inline off_t knet_read(knetFile *fp, void *buf, off_t len)
 {
 	off_t l = 0;
 	if (fp->fd == -1) return 0;
