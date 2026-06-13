@@ -169,7 +169,7 @@ inline int socket_connect(const char *host, const char *port)
 }
 #else
 /* MinGW's printf has problem with "%lld" */
-char *int64tostr(char *buf, int64_t x)
+inline char *int64tostr(char *buf, int64_t x)
 {
 	int cnt;
 	int i = 0;
@@ -184,7 +184,7 @@ char *int64tostr(char *buf, int64_t x)
 	return buf;
 }
 
-int64_t strtoint64(const char *buf)
+inline int64_t strtoint64(const char *buf)
 {
 	int64_t x;
 	for (x = 0; *buf != '\0'; ++buf)
@@ -192,12 +192,12 @@ int64_t strtoint64(const char *buf)
 	return x;
 }
 /* In windows, the first thing is to establish the TCP connection. */
-int knet_win32_init()
+inline int knet_win32_init()
 {
 	WSADATA wsaData;
 	return WSAStartup(MAKEWORD(2, 2), &wsaData);
 }
-void knet_win32_destroy()
+inline void knet_win32_destroy()
 {
 	WSACleanup();
 }
