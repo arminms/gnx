@@ -49,7 +49,7 @@
 // present in winsock.h v1, so skipping winsock2.h is safe in that case.
 #ifndef _WINSOCKAPI_
 #include <winsock2.h>
-#endif
+#endif // _WINSOCKAPI_
 #include <io.h>
 // Tell MSVC linker to pull in the Winsock2 runtime library automatically.
 #pragma comment(lib, "ws2_32.lib")
@@ -69,7 +69,7 @@
 #define netread(fd, ptr, len) read(fd, ptr, len)
 #define netwrite(fd, ptr, len) write(fd, ptr, len)
 #define netclose(fd) close(fd)
-#endif
+#endif // _WIN32
 
 // FIXME: currently I/O is unbuffered
 
@@ -646,5 +646,12 @@ inline int knet_close(knetFile *fp)
 	free(fp);
 	return 0;
 }
+
+#if _WIN32
+#undef open
+#undef read
+#undef lseek
+#undef close
+#endif // _WIN32
 
 #endif // KNETFILE_H
