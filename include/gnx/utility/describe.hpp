@@ -45,8 +45,17 @@ inline void describe(const Range& range)
         detail::describe(std::begin(range), std::end(range));
     }
     else if constexpr (std::is_convertible_v<Range, std::filesystem::path>)
-    {   // if the range is a view over a file, attempt to describe it as such
-        if (std::filesystem::exists(std::string(range) + ".fai"))
+    {   // if the range is a view over a URL or file, attempt to describe it as such
+        if (detail::is_valid_url(range))
+        {   auto downloaded = gnx::wget(range);
+            if (downloaded().empty())
+                throw std::runtime_error
+                (   fmt::format("Failed to download the sequence from {}", range)
+                );
+            else
+                detail::describe_fs(downloaded());
+        } 
+        else if (std::filesystem::exists(std::string(range) + ".fai"))
             detail::describe_vv(range);
         else
             detail::describe_fs(range);
