@@ -7,18 +7,31 @@
 
 namespace gnx {
 
-inline wget_result wget(std::string_view url)
-{   auto temp_file_path
-    =   std::filesystem::temp_directory_path()
-    /   std::filesystem::path(url).filename()
-    ;
+inline detail::wget_result wget
+(   std::string_view url
+,   size_t buffer_size = 65536
+)
+{   if (!detail::is_valid_url(url))
+        throw std::invalid_argument
+        (   fmt::format
+            (   "Unsupported URL scheme in '{}'"
+            ,   url
+            )
+        );
+    std::string url_str(url);
+    if (url.starts_with("genome://"))
+        url_str = detail::construct_genome_url(url);
+    if (url.starts_with("sra://"))
+        url_str = detail::construct_sra_url(url);
 #ifdef _WIN32
     knet_win32_init();
 #endif
-
-    auto fp = knet_open(url.data(), "r");
+    auto fp = knet_open(url_str.data(), "r");
     if (fp == nullptr)
-        throw std::runtime_error(fmt::format("Failed to open URL: {}", url));
+        throw std::runtime_error(fmt::format("Failed to open URL: {}", url_str));
+    auto temp_file_path
+    =   std::filesystem::temp_directory_path()
+    /   std::filesystem::path(url_str).filename();
     FILE* out_fp = fopen(temp_file_path.string().c_str(), "wb");
     if (out_fp == nullptr)
     {   knet_close(fp);
@@ -29,13 +42,16 @@ inline wget_result wget(std::string_view url)
             )
         );
     }
-    char buffer[8192];
+    fmt::memory_buffer buffer;
+    buffer.reserve(buffer_size);
     size_t bytes_read;
-    while ((bytes_read = knet_read(fp, buffer, sizeof(buffer))) > 0)
-        fwrite(buffer, 1, bytes_read, out_fp);
+    while ((bytes_read = knet_read(fp, buffer.data(), buffer_size)) > 0)
+    {   fwrite(buffer.data(), 1, bytes_read, out_fp);
+        buffer.clear();
+    }
     fclose(out_fp);
     knet_close(fp);
-    return wget_result(temp_file_path);
+    return detail::wget_result(temp_file_path);
 }
 
 } // namespace gnx
