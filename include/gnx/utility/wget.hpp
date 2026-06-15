@@ -9,7 +9,7 @@ namespace gnx {
 
 inline detail::wget_result wget
 (   std::string_view url
-,   size_t buffer_size = 65536
+,   size_t buffer_size = 1 << 20 // 1 MiB
 )
 {   if (!detail::is_valid_url(url))
         throw std::invalid_argument
