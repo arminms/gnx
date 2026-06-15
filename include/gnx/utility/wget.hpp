@@ -5,11 +5,16 @@
 
 #include <gnx/utility/detail/wget.hpp>
 
+#if defined(__CLING__)
+#   include <xwidgets/xprogress.hpp>
+#endif //__CLING__
+
 namespace gnx {
 
 inline detail::wget_result wget
 (   std::string_view url
-,   size_t buffer_size = 1 << 20 // 1 MiB
+// ,   size_t buffer_size = 1 << 20 // 1 MiB
+,   size_t buffer_size = 65536
 )
 {   if (!detail::is_valid_url(url))
         throw std::invalid_argument
@@ -29,6 +34,18 @@ inline detail::wget_result wget
     auto fp = knet_open(url_str.data(), "r");
     if (fp == nullptr)
         throw std::runtime_error(fmt::format("Failed to open URL: {}", url_str));
+#if defined(__CLING__)
+    double file_size = 0, downloaded = 0;
+    xw::progress<double> progress;
+    if (fp->type == KNF_TYPE_FTP)
+    {   file_size = static_cast<double>(fp->file_size);
+        progress.style().bar_color = "green";
+        progress.description = "Downloading...";
+        progress.style().description_width = "90px";
+        xcpp::display(progress);
+    }
+#endif // __CLING__
+
     auto temp_file_path
     =   std::filesystem::temp_directory_path()
     /   std::filesystem::path(url_str).filename();
@@ -48,6 +65,10 @@ inline detail::wget_result wget
     while ((bytes_read = knet_read(fp, buffer.data(), buffer_size)) > 0)
     {   fwrite(buffer.data(), 1, bytes_read, out_fp);
         buffer.clear();
+#if defined(__CLING__)
+        downloaded += static_cast<double>(bytes_read);
+        progress.value = downloaded / file_size * 100;
+#endif // __CLING__
     }
     fclose(out_fp);
     knet_close(fp);
