@@ -163,6 +163,13 @@ inline int socket_connect(const char *host, const char *port)
 	 * necessary. */
 	if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) == -1) __err_connect("setsockopt");
 	if (setsockopt(fd, SOL_SOCKET, SO_LINGER, &lng, sizeof(lng)) == -1) __err_connect("setsockopt");
+	/* Set OS-level socket receive/send buffers to 32 MB as recommended by
+	 * NCBI FTP server (https://ftp.ncbi.nlm.nih.gov/README.ftp). The OS
+	 * will use the closest value it supports (capped by rmem_max/wmem_max). */
+	{ int bufsz = 33554432;
+	  setsockopt(fd, SOL_SOCKET, SO_RCVBUF, &bufsz, sizeof(bufsz));
+	  setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &bufsz, sizeof(bufsz));
+	}
 	if (connect(fd, res->ai_addr, res->ai_addrlen) != 0) __err_connect("connect");
 	freeaddrinfo(res);
 	return fd;
