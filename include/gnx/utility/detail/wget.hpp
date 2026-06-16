@@ -127,4 +127,15 @@ inline std::string construct_sra_url(std::string_view run_acn)
     return result;
 }
 
+std::string human_readable_size(double size)
+{   int suffix_index{0};
+    for (; size >= 1024.; size /= 1024., ++suffix_index);
+    return fmt::format
+    (   "{:.1f} {}B"
+    ,   std::ceil(size * 10.) / 10.
+    ,   "BKMGTPE"[suffix_index]
+    );
+};
+
+
 } // namespace gnx::detail
