@@ -5,10 +5,6 @@
 
 #include <gnx/utility/detail/wget.hpp>
 
-#if defined(__CLING__)
-#   include <xwidgets/xprogress.hpp>
-#endif //__CLING__
-
 namespace gnx {
 
 inline detail::wget_result wget
@@ -37,15 +33,22 @@ inline detail::wget_result wget
 
 #if defined(__CLING__)
     double file_size = 0, downloaded = 0;
+    xw::label downloaded_label, speed_label;
     xw::progress<double> progress;
+    xw::hbox box;
+    box.layout().width = "50%";
+    box.add(progress);
+    box.add(downloaded_label);
+    box.add(speed_label);
     if (fp->type == KNF_TYPE_FTP)
     {   file_size = static_cast<double>(fp->file_size);
-        progress.description = "Starting...";
+        downloaded_label.layout().margin = "0 0 0 auto";
+        downloaded_label.layout().width = "25%";
+        speed_label.layout().margin = "0 0 0 auto";
+        speed_label.layout().width = "5%";
         progress.style().bar_color = "#4CAF50";
-        progress.style().description_width = "180px";
-        progress.layout().width = "50%";
-        progress.layout().height = "12px";
-        xcpp::display(progress);
+        progress.layout().width = "70%";
+        xcpp::display(box);
     }
 #endif // __CLING__
 
@@ -65,18 +68,31 @@ inline detail::wget_result wget
     fmt::memory_buffer buffer;
     buffer.reserve(buffer_size);
     size_t bytes_read;
+    auto timer_start = std::chrono::steady_clock::now();
     while ((bytes_read = knet_read(fp, buffer.data(), buffer_size)) > 0)
     {   fwrite(buffer.data(), 1, bytes_read, out_fp);
         buffer.clear();
 #if defined(__CLING__)
-        auto hrs = detail::human_readable_size(file_size);
+        auto hrs_file_size = detail::human_readable_size(file_size);
         downloaded += static_cast<double>(bytes_read);
+        double elapsed_seconds = std::chrono::duration<double>
+        (   std::chrono::steady_clock::now()
+        -   timer_start
+        ).count();
+        double speed = downloaded / elapsed_seconds;
         progress.value = downloaded / file_size * 100;
         progress.description = fmt::format
-        (   "{:>8} of {:>8} ({}%)"
-        ,   detail::human_readable_size(downloaded)
-        ,   hrs
+        (   "{}%"
         ,   static_cast<int>(progress.value)
+        );
+        downloaded_label.value = fmt::format
+        (   "{:>8} / {:>8}"
+        ,   detail::human_readable_size(downloaded)
+        ,   hrs_file_size
+        );
+        speed_label.value = fmt::format
+        (   "{:>8}/s"
+        ,   detail::human_readable_size(speed)
         );
 #endif // __CLING__
     }

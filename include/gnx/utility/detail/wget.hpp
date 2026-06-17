@@ -11,7 +11,13 @@
 #include <string_view>
 #include <filesystem>
 #include <stdexcept>
+#include <chrono>
 
+#if defined(__CLING__)
+#   include <xwidgets/xbox.hpp>
+#   include <xwidgets/xlabel.hpp>
+#   include <xwidgets/xprogress.hpp>
+#endif //__CLING__
 namespace gnx::detail
 {
 
