@@ -133,14 +133,14 @@ TEMPLATE_TEST_CASE
     SECTION( "copy constructor" )
     {   gnx::packed_generic_sequence_2bit<T> c(s);
         CHECK(c == s);
-        CHECK(-33 == std::any_cast<int>(c["test-int"]));
+        CHECK(-33 == std::get<int>(c["test-int"]));
     }
 
     SECTION( "move constructor" )
     {   gnx::packed_generic_sequence_2bit<T> m(std::move(s));
         CHECK(s.empty());
         CHECK(m == gnx::packed_generic_sequence_2bit<T>("ACGT"));
-        CHECK(-33 == std::any_cast<int>(m["test-int"]));
+        CHECK(-33 == std::get<int>(m["test-int"]));
     }
 
     SECTION( "construct from generic_sequence (with tagged data)" )
@@ -149,7 +149,7 @@ TEMPLATE_TEST_CASE
         gnx::packed_generic_sequence_2bit<T> p(src);
         CHECK(p == "ACGTACGT");
         CHECK(p.has("_id"));
-        CHECK(std::any_cast<std::string>(p["_id"]) == "read-1");
+        CHECK(std::get<std::string>(p["_id"]) == "read-1");
     }
 
     SECTION( "construct from generic_sequence (no tagged data)" )
@@ -164,7 +164,7 @@ TEMPLATE_TEST_CASE
     SECTION( "copy assignment operator" )
     {   gnx::packed_generic_sequence_2bit<T> c = s;
         CHECK(c == s);
-        CHECK(-33 == std::any_cast<int>(c["test-int"]));
+        CHECK(-33 == std::get<int>(c["test-int"]));
     }
 
     SECTION( "move assignment operator" )
@@ -193,7 +193,7 @@ TEMPLATE_TEST_CASE
         auto back = p.to_sq();
         CHECK(back == "ACGTACGT");
         CHECK(back.has("_id"));
-        CHECK(std::any_cast<std::string>(back["_id"]) == "read-1");
+        CHECK(std::get<std::string>(back["_id"]) == "read-1");
     }
 
     SECTION( "to_sq() lossless for all bases" )
@@ -346,28 +346,28 @@ TEMPLATE_TEST_CASE
 
         s["int"] = 19;
         CHECK(s.has("int"));
-        CHECK(19 == std::any_cast<int>(s["int"]));
+        CHECK(19 == std::get<int>(s["int"]));
 
         s["float"] = 3.14f;
         CHECK(s.has("float"));
-        CHECK(3.14f == std::any_cast<float>(s["float"]));
+        CHECK(3.14f == std::get<float>(s["float"]));
 
         s["double"] = 3.14;
         CHECK(s.has("double"));
-        CHECK(3.14 == std::any_cast<double>(s["double"]));
+        CHECK(3.14 == std::get<double>(s["double"]));
 
         s["string"] = std::string("hello");
         CHECK(s.has("string"));
-        CHECK("hello" == std::any_cast<std::string>(s["string"]));
+        CHECK("hello" == std::get<std::string>(s["string"]));
 
         std::string lvalue_tag{"check_lvalue_tag"};
         s[lvalue_tag] = 42;
         CHECK(s.has(lvalue_tag));
-        CHECK(42 == std::any_cast<int>(s[lvalue_tag]));
+        CHECK(42 == std::get<int>(s[lvalue_tag]));
 
         // const access to existing tag
         const gnx::packed_generic_sequence_2bit<T>& cs = s;
-        CHECK(19 == std::any_cast<int>(cs["int"]));
+        CHECK(19 == std::get<int>(cs["int"]));
 
         // const access to missing tag throws
         CHECK_THROWS_AS(cs["no_such_tag"], std::out_of_range);
@@ -403,14 +403,14 @@ TEMPLATE_TEST_CASE
 
         CHECK(s == t);
         CHECK(t.has("test-void"));
-        CHECK(std::any_cast<bool>(s["test-bool"])     == std::any_cast<bool>(t["test-bool"]));
-        CHECK(std::any_cast<int>(s["test-int"])       == std::any_cast<int>(t["test-int"]));
-        CHECK(std::any_cast<unsigned>(s["test-unsigned"])
-              == std::any_cast<unsigned>(t["test-unsigned"]));
-        CHECK(std::any_cast<float>(s["test-float"])   == std::any_cast<float>(t["test-float"]));
-        CHECK(std::any_cast<double>(s["test-double"]) == std::any_cast<double>(t["test-double"]));
-        CHECK(std::any_cast<std::string>(s["test-string"])
-              == std::any_cast<std::string>(t["test-string"]));
+        CHECK(std::get<bool>(s["test-bool"])     == std::get<bool>(t["test-bool"]));
+        CHECK(std::get<int>(s["test-int"])       == std::get<int>(t["test-int"]));
+        CHECK(std::get<unsigned>(s["test-unsigned"])
+              == std::get<unsigned>(t["test-unsigned"]));
+        CHECK(std::get<float>(s["test-float"])   == std::get<float>(t["test-float"]));
+        CHECK(std::get<double>(s["test-double"]) == std::get<double>(t["test-double"]));
+        CHECK(std::get<std::string>(s["test-string"])
+              == std::get<std::string>(t["test-string"]));
     }
 
 // -- string literal operator --------------------------------------------------
