@@ -160,7 +160,7 @@ inline std::string print_to_string
             ,   gnx::ansi::vga::fg::ESC[250]
             ,   gnx::ansi::ESC[style::reset]
             ,   ansi::ESC[fg::bright_magenta]
-            ,   std::any_cast<std::string>(range["_id"])
+            ,   std::get<std::string>(range["_id"])
             ,   gnx::ansi::ESC[style::reset]
             );
         if (range.has("_desc"))
@@ -171,7 +171,7 @@ inline std::string print_to_string
             ,   gnx::ansi::vga::fg::ESC[250]
             ,   gnx::ansi::ESC[style::reset]
             ,   ansi::ESC[fg::bright_cyan]
-            ,   std::any_cast<std::string>(range["_desc"])
+            ,   std::get<std::string>(range["_desc"])
             ,   gnx::ansi::ESC[style::reset]
             );
     }
@@ -222,7 +222,7 @@ inline nlohmann::json print_to_bundle
             ,   gnx::ansi::vga::fg::ESC[250]
             ,   gnx::ansi::ESC[style::reset]
             ,   ansi::ESC[fg::bright_magenta]
-            ,   std::any_cast<std::string>(range["_id"])
+            ,   std::get<std::string>(range["_id"])
             ,   gnx::ansi::ESC[style::reset]
             );
         if (range.has("_desc"))
@@ -233,7 +233,7 @@ inline nlohmann::json print_to_bundle
             ,   gnx::ansi::vga::fg::ESC[250]
             ,   gnx::ansi::ESC[style::reset]
             ,   gnx::ansi::ESC[fg::bright_cyan]
-            ,   std::any_cast<std::string>(range["_desc"])
+            ,   std::get<std::string>(range["_desc"])
             ,   gnx::ansi::ESC[style::reset]
             );
     }
