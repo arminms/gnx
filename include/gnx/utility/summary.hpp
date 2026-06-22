@@ -99,7 +99,7 @@ inline void summary
     {   // generic_sequence: summarise residue composition
         std::string seq_id;
         if (range.has("_id"))
-            seq_id = std::any_cast<std::string>(const_cast<Range&>(range)["_id"]);
+            seq_id = std::get<std::string>(const_cast<Range&>(range)["_id"]);
         detail::summary_seq(gp, std::begin(range), std::end(range), seq_id);
     }
     else if constexpr (std::is_convertible_v<Range, std::filesystem::path>)
