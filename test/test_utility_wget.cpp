@@ -34,7 +34,7 @@ TEMPLATE_TEST_CASE
         T seq{result()};
         REQUIRE_FALSE(seq.empty());
         REQUIRE(seq.size() == 1171667);
-        CHECK("NC_017287.1" == std::any_cast<std::string>(seq["_id"]));
+        CHECK("NC_017287.1" == std::get<std::string>(seq["_id"]));
         CHECK(seq(0, 10) == "TATATAAATA");
     }
 
