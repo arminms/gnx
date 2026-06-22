@@ -818,18 +818,9 @@ public:
             buf.append(_bytes.data(), _bytes.data() + _bytes.size());
         if (_ptr_td)
             for (const auto& [tag, data] : *_ptr_td)
-            {   fmt::format_to(std::back_inserter(buf), "#{0}#", tag);
-                const auto key = std::visit
-                (   [](const auto& v){ return std::type_index(typeid(v)); }
-                ,   data
-                );
-                if (const auto it = td_print_visitor.find(key)
-                ;   it != td_print_visitor.cend())
-                    it->second(buf, data);
-                else
-                {   quote_with_delimiter(buf, "UNREGISTERED TYPE");
-                    fmt::format_to(std::back_inserter(buf), "{{}}");
-                }
+            {   // Print tag in quoted format: #tag#
+                fmt::format_to(std::back_inserter(buf), "#{0}#", tag);
+                td_value_print(buf, data);
             }
         return fmt::to_string(buf);
     }

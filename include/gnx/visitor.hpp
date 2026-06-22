@@ -5,15 +5,18 @@
 
 #include <fmt/core.h>
 #include <fmt/format.h>
+
 #include <vector>
 #include <string>
 #include <string_view>
 #include <unordered_map>
 #include <utility>
-#include <typeindex>
 #include <functional>
 #include <variant>
 #include <sstream>
+#include <typeindex>
+#include <typeinfo>
+#include <cstdint>
 
 namespace gnx {
 
@@ -25,17 +28,14 @@ namespace gnx {
 using td_value_t = std::variant
 <   std::monostate
 ,   bool
-,   char
-,   signed char
-,   unsigned char
-,   short
-,   unsigned short
-,   int
-,   unsigned int
-,   long
-,   unsigned long
-,   long long
-,   unsigned long long
+,   int8_t
+,   int16_t
+,   int32_t
+,   int64_t
+,   uint8_t
+,   uint16_t
+,   uint32_t
+,   uint64_t
 ,   float
 ,   double
 ,   long double
@@ -43,117 +43,98 @@ using td_value_t = std::variant
 ,   std::vector<int>
 >;
 
-// -- quote_with_delimiter -----------------------------------------------------
+// -- td_type_name_map ---------------------------------------------------------
 
-inline void quote_with_delimiter(fmt::memory_buffer& buf, std::string_view str, char delimiter = '|')
-{
-    fmt::format_to(std::back_inserter(buf), "{}{}{}", delimiter, str, delimiter);
-}
-
-// -- make_td_print_visitor() --------------------------------------------------
-
-template<class T, class F>
-inline
-std::pair<const std::type_index, std::function<void(fmt::memory_buffer&, const td_value_t&)>>
-    make_td_print_visitor(const F& f)
-{   return
-    {   std::type_index(typeid(T)),
-        [g = f](fmt::memory_buffer& buf, const td_value_t& a)
-        {   if constexpr (std::is_same_v<T, std::monostate>) g(buf);
-            else g(buf, std::get<T>(a));
-        }
-    };
-}
-
-// -- td_print_visitor ---------------------------------------------------------
-
-static std::unordered_map<std::type_index, std::function<void(fmt::memory_buffer&, const td_value_t&)>>
-    td_print_visitor
-{   make_td_print_visitor<std::monostate>
-    (   [] (fmt::memory_buffer& buf)
-        { quote_with_delimiter(buf, "void"); fmt::format_to(std::back_inserter(buf), "{{}}"); }
-    )
-,   make_td_print_visitor<bool>
-    (   [](fmt::memory_buffer& buf, bool x)
-        { quote_with_delimiter(buf, "bool"); fmt::format_to(std::back_inserter(buf), "{}", x); }
-    )
-,   make_td_print_visitor<char>
-    (   [](fmt::memory_buffer& buf, char x)
-        { quote_with_delimiter(buf, "char"); fmt::format_to(std::back_inserter(buf), "{}", static_cast<int>(x)); }
-    )
-,   make_td_print_visitor<signed char>
-    (   [](fmt::memory_buffer& buf, signed char x)
-        { quote_with_delimiter(buf, "signed char"); fmt::format_to(std::back_inserter(buf), "{}", static_cast<int>(x)); }
-    )
-,   make_td_print_visitor<unsigned char>
-    (   [](fmt::memory_buffer& buf, unsigned char x)
-        { quote_with_delimiter(buf, "unsigned char"); fmt::format_to(std::back_inserter(buf), "{}", static_cast<unsigned>(x)); }
-    )
-,   make_td_print_visitor<short>
-    (   [](fmt::memory_buffer& buf, short x)
-        { quote_with_delimiter(buf, "short"); fmt::format_to(std::back_inserter(buf), "{}", x); }
-    )
-,   make_td_print_visitor<unsigned short>
-    (   [](fmt::memory_buffer& buf, unsigned short x)
-        { quote_with_delimiter(buf, "unsigned short"); fmt::format_to(std::back_inserter(buf), "{}", x); }
-    )
-,   make_td_print_visitor<int>
-    (   [](fmt::memory_buffer& buf, int x)
-        { quote_with_delimiter(buf, "int"); fmt::format_to(std::back_inserter(buf), "{}", x); }
-    )
-,   make_td_print_visitor<unsigned int>
-    (   [](fmt::memory_buffer& buf, unsigned int x)
-        { quote_with_delimiter(buf, "unsigned"); fmt::format_to(std::back_inserter(buf), "{}", x); }
-    )
-,   make_td_print_visitor<long>
-    (   [](fmt::memory_buffer& buf, long x)
-        { quote_with_delimiter(buf, "long"); fmt::format_to(std::back_inserter(buf), "{}", x); }
-    )
-,   make_td_print_visitor<unsigned long>
-    (   [](fmt::memory_buffer& buf, unsigned long x)
-        { quote_with_delimiter(buf, "unsigned long"); fmt::format_to(std::back_inserter(buf), "{}", x); }
-    )
-,   make_td_print_visitor<long long>
-    (   [](fmt::memory_buffer& buf, long long x)
-        { quote_with_delimiter(buf, "long long"); fmt::format_to(std::back_inserter(buf), "{}", x); }
-    )
-,   make_td_print_visitor<unsigned long long>
-    (   [](fmt::memory_buffer& buf, unsigned long long x)
-        { quote_with_delimiter(buf, "unsigned long long"); fmt::format_to(std::back_inserter(buf), "{}", x); }
-    )
-,   make_td_print_visitor<float>
-    (   [](fmt::memory_buffer& buf, float x)
-        { quote_with_delimiter(buf, "float"); fmt::format_to(std::back_inserter(buf), "{}", x); }
-    )
-,   make_td_print_visitor<double>
-    (   [](fmt::memory_buffer& buf, double x)
-        { quote_with_delimiter(buf, "double"); fmt::format_to(std::back_inserter(buf), "{}", x); }
-    )
-,   make_td_print_visitor<long double>
-    (   [](fmt::memory_buffer& buf, long double x)
-        { quote_with_delimiter(buf, "long double"); fmt::format_to(std::back_inserter(buf), "{}", static_cast<double>(x)); }
-    )
-,   make_td_print_visitor<std::string>
-    (   [] (fmt::memory_buffer& buf, const std::string& s)
-        { quote_with_delimiter(buf, "string"); fmt::format_to(std::back_inserter(buf), "\"{}\"", s); }
-    )
-,   make_td_print_visitor<std::vector<int>>
-    (   [] (fmt::memory_buffer& buf, const std::vector<int>& v)
-        {   quote_with_delimiter(buf, "std::vector<int>"); 
-            fmt::format_to(std::back_inserter(buf), "{{");
-            for (auto i : v)
-                fmt::format_to(std::back_inserter(buf), "{},", i);
-            fmt::format_to(std::back_inserter(buf), "}}");
-        }
-    )
-    // ... add more handlers here ...
+static std::unordered_map<std::type_index, std::string> td_type_name_map
+{   {   std::type_index(typeid(std::monostate)), "void"
+    }
+,
+    {   std::type_index(typeid(bool)), "bool"
+    }
+,
+    {   std::type_index(typeid(int8_t)), "int8_t"
+    }
+,
+    {   std::type_index(typeid(int16_t)), "int16_t"
+    }
+,
+    {   std::type_index(typeid(int32_t)), "int32_t"
+    }
+,
+    {   std::type_index(typeid(int64_t)), "int64_t"
+    }
+,
+    {   std::type_index(typeid(uint8_t)), "uint8_t"
+    }
+,
+    {   std::type_index(typeid(uint16_t)), "uint16_t"
+    }
+,
+    {   std::type_index(typeid(uint32_t)), "uint32_t"
+    }
+,
+    {   std::type_index(typeid(uint64_t)), "uint64_t"
+    }
+,
+    {   std::type_index(typeid(float)),"float"
+    }
+,
+    {   std::type_index(typeid(double)),"double"
+    }
+,
+    {   std::type_index(typeid(long double)),"long double"
+    }
+,
+    {   std::type_index(typeid(std::string)),"string"
+    }
+,
+    {   std::type_index(typeid(std::vector<int>)),"std::vector<int>"
+    }
 };
 
-// -- register_td_print_visitor ------------------------------------------------
+// -- quote_with_delimiter -----------------------------------------------------
 
-template<class T, class F>
-inline void register_td_print_visitor(const F& f)
-{   td_print_visitor.insert(make_td_print_visitor<T>(f));   }
+// inline void quote_with_delimiter(fmt::memory_buffer& buf, std::string_view str, char delimiter = '|')
+// {
+//     fmt::format_to(std::back_inserter(buf), "{}{}{}", delimiter, str, delimiter);
+// }
+
+// -- td_value_print ----------------------------------------------------------
+/// Appends the type-tagged serialization of a td_value_t to @a buf.
+
+inline void td_value_print(fmt::memory_buffer& buf, const td_value_t& v)
+{   std::visit
+    (   [&buf](const auto& x)
+        {   using T = std::decay_t<decltype(x)>;
+            if constexpr (std::is_same_v<T, std::monostate>)
+            {   fmt::format_to(std::back_inserter(buf), "|void|{{}}");
+            }
+            else if constexpr (std::is_same_v<T, std::string>)
+            {   fmt::format_to(std::back_inserter(buf), "|string|\"{}\"", x);
+            }
+            else if constexpr (std::ranges::common_range<T>)
+            {   fmt::format_to
+                (   std::back_inserter(buf)
+                ,   "|{}|"
+                ,   td_type_name_map[std::type_index(typeid(x))]
+                );
+                fmt::format_to(std::back_inserter(buf), "{{");
+                for (auto i : x)
+                    fmt::format_to(std::back_inserter(buf), "{},", i);
+                fmt::format_to(std::back_inserter(buf), "}}");
+            }
+            else
+            {   fmt::format_to
+                (   std::back_inserter(buf)
+                ,   "|{}|{}"
+                ,   td_type_name_map[std::type_index(typeid(x))]
+                ,   static_cast<T>(x)
+                );
+            }
+        }
+    ,   v
+    );
+}
 
 // -- td_scan_visitor ----------------------------------------------------------
 
@@ -169,59 +150,44 @@ static std::unordered_map<std::string, std::function<void(std::istream&, td_valu
         { bool x; is >> std::boolalpha >> x; a = x; }
     }
     ,
-    {   "char"
+    {   "int8_t"
     ,   [] (std::istream& is, td_value_t& a)
-        { int x; is >> x; a = static_cast<char>(x); }
+        { int8_t x; is >> x; a = x; }
     }
     ,
-    {   "signed char"
+    {   "int16_t"
     ,   [] (std::istream& is, td_value_t& a)
-        { int x; is >> x; a = static_cast<signed char>(x); }
+        { int16_t x; is >> x; a = x; }
     }
     ,
-    {   "unsigned char"
+    {   "int32_t"
     ,   [] (std::istream& is, td_value_t& a)
-        { unsigned x; is >> x; a = static_cast<unsigned char>(x); }
+        { int32_t x; is >> x; a = x; }
     }
     ,
-    {   "short"
+    {   "int64_t"
     ,   [] (std::istream& is, td_value_t& a)
-        { short x; is >> x; a = x; }
+        { int64_t x; is >> x; a = x; }
     }
     ,
-    {   "unsigned short"
+    {   "uint8_t"
     ,   [] (std::istream& is, td_value_t& a)
-        { unsigned short x; is >> x; a = x; }
+        { uint8_t x; is >> x; a = x; }
     }
     ,
-    {   "int"
+    {   "uint16_t"
     ,   [] (std::istream& is, td_value_t& a)
-        { int x; is >> x; a = x; }
+        { uint16_t x; is >> x; a = x; }
     }
     ,
-    {   "unsigned"
+    {   "uint32_t"
     ,   [] (std::istream& is, td_value_t& a)
-        { unsigned int x; is >> x; a = x; }
+        { uint32_t x; is >> x; a = x; }
     }
     ,
-    {   "long"
+    {   "uint64_t"
     ,   [] (std::istream& is, td_value_t& a)
-        { long x; is >> x; a = x; }
-    }
-    ,
-    {   "unsigned long"
-    ,   [] (std::istream& is, td_value_t& a)
-        { unsigned long x; is >> x; a = x; }
-    }
-    ,
-    {   "long long"
-    ,   [] (std::istream& is, td_value_t& a)
-        { long long x; is >> x; a = x; }
-    }
-    ,
-    {   "unsigned long long"
-    ,   [] (std::istream& is, td_value_t& a)
-        { unsigned long long x; is >> x; a = x; }
+        { uint64_t x; is >> x; a = x; }
     }
     ,
     {   "float"
