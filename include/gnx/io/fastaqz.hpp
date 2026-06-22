@@ -175,10 +175,10 @@ struct fasta
         (   std::back_inserter(_buffer)
         ,   ">{}{}\n"
         ,   seq.has("_id") 
-            ?   std::any_cast<std::string>(seq["_id"])
+            ?   std::get<std::string>(seq["_id"])
             :   fmt::format("{}.{}", _filename, _serial)
         ,   seq.has("_desc")
-            ?   " " + std::any_cast<std::string>(seq["_desc"])
+            ?   " " + std::get<std::string>(seq["_desc"])
             :   ""
         );
         if (_faidx)
@@ -191,7 +191,7 @@ struct fasta
             (   _faidx_fp
             ,   "{}\t{}\t{}\t{}\t{}\n"
             ,   seq.has("_id") 
-                ?   std::any_cast<std::string>(seq["_id"])
+                ?   std::get<std::string>(seq["_id"])
                 :   fmt::format("{}.{}", _filename, _serial)
             ,   std::size(seq)
             ,   offset
@@ -382,10 +382,10 @@ struct fasta_gz
         (   std::back_inserter(_buffer)
         ,   ">{}{}\n"
         ,   seq.has("_id") 
-            ?   std::any_cast<std::string>(seq["_id"])
+            ?   std::get<std::string>(seq["_id"])
             :   fmt::format("{}.{}", _id, _serial)
         ,   seq.has("_desc")
-            ?   " " + std::any_cast<std::string>(seq["_desc"])
+            ?   " " + std::get<std::string>(seq["_desc"])
             :   ""
         );
 
@@ -398,7 +398,7 @@ struct fasta_gz
             (   _faidx_fp
             ,   "{}\t{}\t{}\t{}\t{}\n"
             ,   seq.has("_id") 
-                ?   std::any_cast<std::string>(seq["_id"])
+                ?   std::get<std::string>(seq["_id"])
                 :   fmt::format("{}.{}", _id, _serial)
             ,   std::size(seq)
             ,   offset
@@ -561,10 +561,10 @@ struct fastq
         (   std::back_inserter(_buffer)
         ,   "@{}{}\n"
         ,   seq.has("_id") 
-            ?   std::any_cast<std::string>(seq["_id"])
+            ?   std::get<std::string>(seq["_id"])
             :   fmt::format("{}.{}", _filename, _serial)
         ,   seq.has("_desc")
-            ?   " " + std::any_cast<std::string>(seq["_desc"])
+            ?   " " + std::get<std::string>(seq["_desc"])
             :   ""
         );
 
@@ -583,7 +583,7 @@ struct fastq
             (   _faidx_fp
             ,   "{}\t{}\t{}\t{}\t{}\t{}\n"
             ,   seq.has("_id") 
-                ?   std::any_cast<std::string>(seq["_id"])
+                ?   std::get<std::string>(seq["_id"])
                 :   fmt::format("{}.{}", _filename, _serial)
             ,   std::size(seq)
             ,   offset
@@ -601,7 +601,7 @@ struct fastq
             (   std::back_inserter(_buffer)
             ,   "\n+\n{}\n"
             ,   seq.has("_qs")
-                ?   std::any_cast<std::string>(seq["_qs"])
+                ?   std::get<std::string>(seq["_qs"])
                 :   std::string(std::size(seq), 'I') // dummy quality string
             );
         };
@@ -762,10 +762,10 @@ struct fastq_gz
         (   std::back_inserter(_buffer)
         ,   "@{}{}\n"
         ,   seq.has("_id") 
-            ?   std::any_cast<std::string>(seq["_id"])
+            ?   std::get<std::string>(seq["_id"])
             :   fmt::format("{}.{}", _id, _serial)
         ,   seq.has("_desc")
-            ?   " " + std::any_cast<std::string>(seq["_desc"])
+            ?   " " + std::get<std::string>(seq["_desc"])
             :   ""
         );
         if (_faidx)
@@ -801,7 +801,7 @@ struct fastq_gz
             (   _faidx_fp
             ,   "{}\t{}\t{}\t{}\t{}\t{}\n"
             ,   seq.has("_id") 
-                ?   std::any_cast<std::string>(seq["_id"])
+                ?   std::get<std::string>(seq["_id"])
                 :   fmt::format("{}.{}", _id, _serial)
             ,   std::size(seq)
             ,   offset
@@ -817,7 +817,7 @@ struct fastq_gz
         (   std::back_inserter(_buffer)
         ,   "{}\n"
         ,   seq.has("_qs")
-            ?   std::any_cast<std::string>(seq["_qs"])
+            ?   std::get<std::string>(seq["_qs"])
             :   std::string(std::size(seq), 'I') // dummy quality string
         );
 
