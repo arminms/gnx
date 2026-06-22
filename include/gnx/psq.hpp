@@ -36,7 +36,7 @@ namespace gnx {
 /// @tparam Map            Map type used for tagged metadata storage.
 template
 <   typename ByteContainer = std::vector<uint8_t>
-,   typename Map = std::unordered_map<std::string, std::any>
+,   typename Map = std::unordered_map<std::string, td_value_t>
 >
 class packed_generic_sequence_2bit
 {
@@ -596,7 +596,7 @@ public:
         {   mem += sizeof(Map);
             for (const auto& [tag, data] : *_ptr_td)
             {   mem += tag.capacity() * sizeof(char);
-                mem += data.has_value() ? sizeof(data.type()) : 0;
+                mem += gnx::td_value_size(data);
             }
         }
         return mem;
@@ -690,17 +690,17 @@ public:
     }
     /// Returns a reference to the tagged data for @a tag.
     /// Creates a new entry if it does not exist.
-    std::any& operator[](const std::string& tag)
+    typename Map::mapped_type& operator[](const std::string& tag)
     {   if (!_ptr_td) _ptr_td = std::make_unique<Map>();
         return (*_ptr_td)[tag];
     }
-    std::any& operator[](std::string&& tag)
+    typename Map::mapped_type& operator[](std::string&& tag)
     {   if (!_ptr_td) _ptr_td = std::make_unique<Map>();
         return (*_ptr_td)[std::move(tag)];
     }
     /// Returns a const reference to the tagged data for @a tag.
     /// Throws std::out_of_range if the tag does not exist.
-    const std::any& operator[](const std::string& tag) const
+    const typename Map::mapped_type& operator[](const std::string& tag) const
     {   if (!_ptr_td || _ptr_td->find(tag) == _ptr_td->end())
             throw std::out_of_range("gnx::psq2: tag not found -> " + tag);
         return _ptr_td->at(tag);
@@ -819,7 +819,11 @@ public:
         if (_ptr_td)
             for (const auto& [tag, data] : *_ptr_td)
             {   fmt::format_to(std::back_inserter(buf), "#{0}#", tag);
-                if (const auto it = td_print_visitor.find(std::type_index(data.type()))
+                const auto key = std::visit
+                (   [](const auto& v){ return std::type_index(typeid(v)); }
+                ,   data
+                );
+                if (const auto it = td_print_visitor.find(key)
                 ;   it != td_print_visitor.cend())
                     it->second(buf, data);
                 else
@@ -877,7 +881,7 @@ public:
             _ptr_td = std::make_unique<Map>();
         while (is.peek() == '#')
         {   std::string tag, type;
-            std::any a;
+            typename Map::mapped_type a;
             is >> std::quoted(tag, '#') >> std::quoted(type, '|');
             if
             (   const auto it = td_scan_visitor.find(type)

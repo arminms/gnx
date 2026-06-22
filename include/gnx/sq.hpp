@@ -14,7 +14,7 @@
 #include <string_view>
 #include <vector>
 #include <unordered_map>
-#include <any>
+#include <variant>
 #include <memory>
 #include <typeindex>
 #include <cstdint>
@@ -44,7 +44,7 @@ namespace gnx {
 /// @tparam Map The type of the map used for tagged data storage.
 template
 <   typename Container
-,   typename Map = std::unordered_map<std::string, std::any>
+,   typename Map = std::unordered_map<std::string, td_value_t>
 >
 struct generic_sequence
 {   using value_type = typename Container::value_type;
@@ -319,7 +319,7 @@ struct generic_sequence
     ///
     /// Returns the size in memory (in bytes) used by the @a sq including its
     /// tagged data.
-    size_type size_in_memory() const noexcept
+    [[nodiscard]] size_type size_in_memory() const noexcept
     {   size_type mem
         =   sizeof(Container)
         +   (_sq.capacity() * sizeof(value_type))
@@ -329,9 +329,7 @@ struct generic_sequence
         {   mem += sizeof(Map);
             for (const auto& [tag, data] : *_ptr_td)
             {   mem += tag.capacity() * sizeof(char);
-            // Note: estimating size of std::any content is not straightforward.
-            // Here we just add sizeof of the contained type as a rough estimate.
-                mem += data.has_value() ? sizeof(data.type()) : 0;
+                mem += gnx::td_value_size(data);
             }
         }
         return mem;
@@ -413,21 +411,21 @@ struct generic_sequence
     ///
     /// Returns a reference to the tagged data associated with the specified
     /// @a tag. If the tagged data does not exist, a new entry is created.
-    std::any& operator[] (const std::string& tag)
+    typename Map::mapped_type& operator[] (const std::string& tag)
     {   if (!_ptr_td) _ptr_td = std::make_unique<Map>();
         return (*_ptr_td)[tag];
     }
     ///
     /// Returns a reference to the tagged data associated with the specified
     /// @a tag. If the tagged data does not exist, a new entry is created.
-    std::any& operator[] (std::string&& tag)
+    typename Map::mapped_type& operator[] (std::string&& tag)
     {   if (!_ptr_td) _ptr_td = std::make_unique<Map>();
         return (*_ptr_td)[std::move(tag)];
     }
     ///
     /// Returns a const reference to the tagged data associated with the specified
     /// @a tag. Throws std::out_of_range if the tag does not exist.
-    const std::any& operator[] (const std::string& tag) const
+    const typename Map::mapped_type& operator[] (const std::string& tag) const
     {   if (!_ptr_td || _ptr_td->find(tag) == _ptr_td->end())
             throw std::out_of_range("gnx::sq: tag not found -> " + tag);
         return _ptr_td->at(tag);
@@ -549,8 +547,12 @@ struct generic_sequence
             for (const auto& [tag, data] : *_ptr_td)
             {   // Print tag in quoted format: #tag#
                 fmt::format_to(std::back_inserter(buf), "#{0}#", tag);
+                const auto key = std::visit
+                (   [](const auto& v){ return std::type_index(typeid(v)); }
+                ,   data
+                );
                 if
-                (   const auto it = td_print_visitor.find(std::type_index(data.type()))
+                (   const auto it = td_print_visitor.find(key)
                 ;    it != td_print_visitor.cend()
                 )
                     it->second(buf, data);
@@ -599,7 +601,7 @@ struct generic_sequence
             _ptr_td = std::make_unique<Map>();
         while (is.peek() == '#')
         {   std::string tag, type;
-            std::any a;
+            typename Map::mapped_type a;
             is >> std::quoted(tag, '#')
                >> std::quoted(type, '|');
             if
