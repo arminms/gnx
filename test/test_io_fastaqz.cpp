@@ -62,16 +62,16 @@ TEMPLATE_TEST_CASE
         CHECK(7553 == std::size(s));
         CHECK(s(0, 10) == "TATAATTAAA");
         CHECK(s( 7543) == "TCCAATTCTA");
-        CHECK("NC_017288.1" == std::any_cast<std::string>(s["_id"]));
-        CHECK(desc == std::any_cast<std::string>(s["_desc"]));
+        CHECK("NC_017288.1" == std::get<std::string>(s["_id"]));
+        CHECK(desc == std::get<std::string>(s["_desc"]));
     }
     SECTION( "load with id" )
     {   s.load(SAMPLE_GENOME, "NC_017288.1");
         CHECK(7553 == std::size(s));
         CHECK(s(0, 10) == "TATAATTAAA");
         CHECK(s( 7543) == "TCCAATTCTA");
-        CHECK("NC_017288.1" == std::any_cast<std::string>(s["_id"]));
-        CHECK(desc == std::any_cast<std::string>(s["_desc"]));
+        CHECK("NC_017288.1" == std::get<std::string>(s["_id"]));
+        CHECK(desc == std::get<std::string>(s["_desc"]));
     }
     SECTION( "save fasta" )
     {   s.load(SAMPLE_GENOME, 1);
