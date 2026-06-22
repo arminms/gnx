@@ -110,11 +110,11 @@ TEMPLATE_TEST_CASE_METHOD
     {   gnx::virtual_vector<SequenceType> vv(this->tmp_fa);
         auto s0 = vv[0];
         CHECK(std::size(s0) == 1171667);
-        CHECK("NC_017287.1" == std::any_cast<std::string>(s0["_id"]));
+        CHECK("NC_017287.1" == std::get<std::string>(s0["_id"]));
         CHECK(s0(0, 10) == "TATATAAATA");
         auto s1 = vv[1];
         CHECK(std::size(s1) == 7553);
-        CHECK("NC_017288.1" == std::any_cast<std::string>(s1["_id"]));
+        CHECK("NC_017288.1" == std::get<std::string>(s1["_id"]));
         CHECK(s1(0, 10) == "TATAATTAAA");
     }
 
@@ -220,11 +220,11 @@ TEMPLATE_TEST_CASE_METHOD
     {   gnx::virtual_vector<SequenceType> vv(this->tmp_fa_gz);
         auto s0 = vv[0];
         CHECK(std::size(s0) == 1171667);
-        CHECK("NC_017287.1" == std::any_cast<std::string>(s0["_id"]));
+        CHECK("NC_017287.1" == std::get<std::string>(s0["_id"]));
         CHECK(s0(0, 10) == "TATATAAATA");
         auto s1 = vv[1];
         CHECK(std::size(s1) == 7553);
-        CHECK("NC_017288.1" == std::any_cast<std::string>(s1["_id"]));
+        CHECK("NC_017288.1" == std::get<std::string>(s1["_id"]));
         CHECK(s1(0, 10) == "TATAATTAAA");
     }
 
