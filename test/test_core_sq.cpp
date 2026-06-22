@@ -114,13 +114,13 @@ TEMPLATE_TEST_CASE( "gnx::sq", "[class]", std::vector<char>)
     SECTION( "copy constructor" )
     {   gnx::generic_sequence<T> c(s);
         CHECK(c == s);
-        CHECK(-33 == std::any_cast<int>(c["test-int"]));
+        CHECK(-33 == std::get<int>(c["test-int"]));
     }
     SECTION( "move constructor" )
     {   gnx::generic_sequence<T> m(std::move(s));
         CHECK(s.empty());
         CHECK(m == gnx::generic_sequence<T>("ACGT"));
-        CHECK(-33 == std::any_cast<int>(m["test-int"]));
+        CHECK(-33 == std::get<int>(m["test-int"]));
     }
     SECTION( "initializer list" )
     {   gnx::generic_sequence<T> c{'A', 'C', 'G', 'T'};
@@ -132,7 +132,7 @@ TEMPLATE_TEST_CASE( "gnx::sq", "[class]", std::vector<char>)
     SECTION( "copy assignment operator" )
     {   gnx::generic_sequence<T> c = s;
         CHECK(c == s);
-        CHECK(-33 == std::any_cast<int>(c["test-int"]));
+        CHECK(-33 == std::get<int>(c["test-int"]));
     }
     SECTION( "move constructor" )
     {   gnx::generic_sequence<T> m = gnx::generic_sequence<T>("ACGT");
@@ -256,29 +256,29 @@ TEMPLATE_TEST_CASE( "gnx::sq", "[class]", std::vector<char>)
 
         s["int"] = 19;
         CHECK(s.has("int"));
-        CHECK(19 == std::any_cast<int>(s["int"]));
+        CHECK(19 == std::get<int>(s["int"]));
 
         s["float"] = 3.14f;
         CHECK(s.has("float"));
-        CHECK(3.14f == std::any_cast<float>(s["float"]));
+        CHECK(3.14f == std::get<float>(s["float"]));
 
         s["double"] = 3.14;
         CHECK(s.has("double"));
-        CHECK(3.14 == std::any_cast<double>(s["double"]));
+        CHECK(3.14 == std::get<double>(s["double"]));
 
         s["string"] = std::string("hello");
         CHECK(s.has("string"));
-        CHECK("hello" == std::any_cast<std::string>(s["string"]));
+        CHECK("hello" == std::get<std::string>(s["string"]));
 
         std::vector<int> v{ 1, 2, 3, 4 };
         s["vector_int"] = v;
         CHECK(s.has("vector_int"));
-        CHECK(v == std::any_cast<std::vector<int>>(s["vector_int"]));
+        CHECK(v == std::get<std::vector<int>>(s["vector_int"]));
 
         std::string lvalue_tag{"check_lvalue_tag"};
         s[lvalue_tag] = 42;
         CHECK(s.has(lvalue_tag));
-        CHECK(42 == std::any_cast<int>(s[lvalue_tag]));
+        CHECK(42 == std::get<int>(s[lvalue_tag]));
     }
 
 // -- i/o operators ------------------------------------------------------------
@@ -300,13 +300,13 @@ TEMPLATE_TEST_CASE( "gnx::sq", "[class]", std::vector<char>)
         CHECK(s == t);
         CHECK(s.has("test-void"));
         CHECK(t.has("test-void"));
-        CHECK(std::any_cast<bool>(s["test-bool"]) == std::any_cast<bool>(t["test-bool"]));
-        CHECK(std::any_cast<int>(s["test-int"]) == std::any_cast<int>(t["test-int"]));
-        CHECK(std::any_cast<unsigned>(s["test-unsigned"]) == std::any_cast<unsigned>(t["test-unsigned"]));
-        CHECK(std::any_cast<float>(s["test-float"]) == std::any_cast<float>(t["test-float"]));
-        CHECK(std::any_cast<double>(s["test-double"]) == std::any_cast<double>(t["test-double"]));
-        CHECK(std::any_cast<std::string>(s["test-string"]) == std::any_cast<std::string>(t["test-string"]));
-        CHECK(4 == std::any_cast<std::vector<int>>(s["test-vector-int"]).size());
+        CHECK(std::get<bool>(s["test-bool"]) == std::get<bool>(t["test-bool"]));
+        CHECK(std::get<int>(s["test-int"]) == std::get<int>(t["test-int"]));
+        CHECK(std::get<unsigned>(s["test-unsigned"]) == std::get<unsigned>(t["test-unsigned"]));
+        CHECK(std::get<float>(s["test-float"]) == std::get<float>(t["test-float"]));
+        CHECK(std::get<double>(s["test-double"]) == std::get<double>(t["test-double"]));
+        CHECK(std::get<std::string>(s["test-string"]) == std::get<std::string>(t["test-string"]));
+        CHECK(4 == std::get<std::vector<int>>(s["test-vector-int"]).size());
     }
 
 // -- string literal operator --------------------------------------------------
