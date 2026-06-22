@@ -20,7 +20,7 @@ inline void describe(const Range& range)
             ,   "{}▼ {}{}{}\n"
             ,   ansi::vga::fg::ESC[250]
             ,   ansi::ESC[fg::bright_magenta]
-            ,   std::any_cast<std::string>(range["_id"])
+            ,   std::get<std::string>(range["_id"])
             ,   ansi::ESC[fg::reset]
             );
         else
@@ -38,7 +38,7 @@ inline void describe(const Range& range)
         ,   "{}├── {}{}{}\n"
         ,   ansi::vga::fg::ESC[250]
         ,   ansi::ESC[fg::bright_cyan]
-        ,   std::any_cast<std::string>(range["_desc"])
+        ,   std::get<std::string>(range["_desc"])
         ,   ansi::ESC[fg::reset]
         );
         std::cout.write(buf.data(), buf.size());
