@@ -174,6 +174,7 @@ inline std::string print_to_string
             ,   std::get<std::string>(range["_desc"])
             ,   gnx::ansi::ESC[style::reset]
             );
+        range.print_tagged_data(buf);
     }
 #ifdef __CLING__
     auto bundle = nlohmann::json::object();
@@ -236,6 +237,7 @@ inline nlohmann::json print_to_bundle
             ,   std::get<std::string>(range["_desc"])
             ,   gnx::ansi::ESC[style::reset]
             );
+        range.print_tagged_data(buf); 
     }
     auto bundle = nlohmann::json::object();
     bundle["text/plain"] = fmt::to_string(buf) + detail::print

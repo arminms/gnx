@@ -887,6 +887,37 @@ public:
             (*_ptr_td)[tag] = a;
         }
     }
+    ///
+    /// @brief Prints the tagged data to the provided memory buffer in a
+    /// formatted manner.
+    /// @param buf The memory buffer to which the tagged data will be printed.
+    void print_tagged_data(fmt::memory_buffer& buf) const
+    {   if (_ptr_td)
+            for (const auto& [tag, data] : *_ptr_td)
+            {   if (tag.starts_with("_"))
+                    continue;
+                auto tag_copy = tag; // prevents cling openmp error
+                std::visit
+                (   [&buf, &tag_copy](const auto& x)
+                    {   using T = std::decay_t<decltype(x)>;
+                        if constexpr (!std::is_same_v<T, std::monostate>)
+                        {   fmt::format_to
+                            (   std::back_inserter(buf)
+                            ,   "{}{:12.11}{}│{} {}{}{}\n"
+                            ,   gnx::ansi::ESC[style::bold]
+                            ,   tag_copy
+                            ,   gnx::ansi::vga::fg::ESC[250]
+                            ,   gnx::ansi::ESC[style::reset]
+                            ,   gnx::ansi::ESC[fg::bright_green]
+                            ,   static_cast<T>(x)
+                            ,   gnx::ansi::ESC[style::reset]
+                            );
+                        }
+                    }
+                ,   data
+                );
+            }
+    }
 
     // =========================================================================
     // internal helpers (exposed for generic_sequence interop)
