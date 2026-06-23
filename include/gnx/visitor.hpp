@@ -92,13 +92,6 @@ static std::unordered_map<std::type_index, std::string> td_type_name_map
     }
 };
 
-// -- quote_with_delimiter -----------------------------------------------------
-
-// inline void quote_with_delimiter(fmt::memory_buffer& buf, std::string_view str, char delimiter = '|')
-// {
-//     fmt::format_to(std::back_inserter(buf), "{}{}{}", delimiter, str, delimiter);
-// }
-
 // -- td_value_print ----------------------------------------------------------
 /// Appends the type-tagged serialization of a td_value_t to @a buf.
 
