@@ -12,11 +12,13 @@
 #include <filesystem>
 #include <stdexcept>
 #include <chrono>
+#include <thread>
 
 #if defined(__CLING__)
 #   include <xwidgets/xbox.hpp>
 #   include <xwidgets/xlabel.hpp>
 #   include <xwidgets/xprogress.hpp>
+#   include <xwidgets/xbutton.hpp>
 #endif //__CLING__
 namespace gnx::detail
 {
@@ -143,5 +145,82 @@ inline std::string human_readable_size(double size)
     ,   "BKMGTPE"[suffix_index]
     );
 };
+
+#if defined(__CLING__)
+    inline void async_download
+    (   knetFile *fp
+    ,   FILE* out_fp
+    ,   std::filesystem::path temp_file_path
+    ,   size_t buffer_size = 65536
+    )
+    {   double file_size = 0, downloaded = 0;
+        bool cancel_download = false;
+        xw::button cancel_button;
+        xw::label downloaded_label, speed_label;
+        xw::progress<double> progress;
+        xw::hbox box;
+        box.layout().width = "50%";
+        box.add(cancel_button);
+        box.add(progress);
+        box.add(downloaded_label);
+        box.add(speed_label);
+        cancel_button.on_click
+        (   [&cancel_button, &cancel_download]()
+            {   cancel_download = true;
+                cancel_button.button_style = "success";
+            }
+        );
+        if (fp->type == KNF_TYPE_FTP)
+        {   file_size = static_cast<double>(fp->file_size);
+            // cancel_button.layout().height = "25px";
+            cancel_button.layout().margin = "0 0 0 auto";
+            cancel_button.layout().width = "40px"; 
+            cancel_button.button_style = "danger";
+            cancel_button.icon = "power-off";
+            cancel_button.tooltip = "Cancel the download";
+            downloaded_label.layout().margin = "0 0 0 auto";
+            downloaded_label.layout().width = "25%";
+            speed_label.layout().margin = "0 0 0 auto";
+            speed_label.layout().width = "5%";
+            progress.style().bar_color = "#4CAF50";
+            progress.layout().width = "67%";
+            xcpp::display(box);
+        }
+        fmt::memory_buffer buffer;
+        buffer.reserve(buffer_size);
+        size_t bytes_read;
+        auto timer_start = std::chrono::steady_clock::now();
+        while ((bytes_read = knet_read(fp, buffer.data(), buffer_size)) > 0)
+        {   if (cancel_download)
+                break;
+            fwrite(buffer.data(), 1, bytes_read, out_fp);
+            auto hrs_file_size = detail::human_readable_size(file_size);
+            downloaded += static_cast<double>(bytes_read);
+            double elapsed_seconds = std::chrono::duration<double>
+            (   std::chrono::steady_clock::now()
+            -   timer_start
+            ).count();
+            double speed = downloaded / elapsed_seconds;
+            progress.value = downloaded / file_size * 100;
+            progress.description = fmt::format
+            (   "{}%"
+            ,   static_cast<int>(progress.value)
+            );
+            downloaded_label.value = fmt::format
+            (   "{:>8} / {:>8}"
+            ,   detail::human_readable_size(downloaded)
+            ,   hrs_file_size
+            );
+            speed_label.value = fmt::format
+            (   "{:>8}/s"
+            ,   detail::human_readable_size(speed)
+            );
+        }
+        fclose(out_fp);
+        knet_close(fp);
+        if (cancel_download)
+            std::filesystem::remove(temp_file_path);
+    }
+#endif // __CLING__
 
 } // namespace gnx::detail
