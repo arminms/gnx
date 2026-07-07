@@ -125,7 +125,7 @@ s["ref_number"] = 321;
 And getting them by providing their tag and type:
 
 ```{code-cell} cpp
-std::any_cast<int>(s["ref_number"])
+std::get<int>(s["ref_number"])
 ```
 
 As you add more tagged data, the size of the sequence increases accordingly:
@@ -303,28 +303,35 @@ last_ten
 With `gnx`, it's easy to work with compressed/uncompressed [FASTA](wiki:FASTA_format) files. First, let's download a sample compressed <wiki:genome> from the [NCBI](wiki:National_Center_for_Biotechnology_Information) ftp site:
 
 ```{code-cell} cpp
-!wget https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/204/255/GCF_000204255.1_ASM20425v1/GCF_000204255.1_ASM20425v1_genomic.fna.gz
+auto bacterial_genome = wget("genome://GCF_000204255.1_ASM20425v1");
 ```
-
-:::{tip} Using `curl` instead of `wget`
-:class: dropdown
-If `wget` is not installed in your computer you can switch to `curl` using the following command for the same effect:
-```{code-block} cpp
-!curl -LO https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/204/255/GCF_000204255.1_ASM20425v1/GCF_000204255.1_ASM20425v1_genomic.fna.gz
-```
-:::
 
 Now, let's get a gist of what's inside using `gnx::describe()` function:
 
 ```{code-cell} cpp
-describe("GCF_000204255.1_ASM20425v1_genomic.fna.gz");
+describe(bacterial_genome());
 ```
 
 Turned out it's a bacterial whole genome of a *<wiki:Chlamydia>* species, including a **7.6** kb *<wiki:plasmid>*. To work with the smaller *<wiki:plasmid>*, we can use the exact same method we used to instantiate a `gnx::sq` object but this time we provide the filename instead of a sequence, and a *zero-offset* index of 1, as the second argument to load the second sequence in the file:
 
 ```{code-cell} cpp
-sq plasmid("GCF_000204255.1_ASM20425v1_genomic.fna.gz", 1);
+sq plasmid(bacterial_genome(), 1);
 ```
+
+:::{tip} Loading the plasmid directly
+:class: dropdown
+If all you need is just the plasmid sequence and don't have anything to do with the whole genome, rather than downloading the file first and then loading the plasmid, you can load the plasmid directly:
+
+**with index:**
+```{code-block} cpp
+sq plasmid("genome://GCF_000204255.1_ASM20425v1", 1);
+```
+**with id:**
+```{code-block} cpp
+sq plasmid("genome://GCF_000204255.1_ASM20425v1", "NC_017288.1");
+```
+:::
+
 Once loaded, we can call either `gnx::describe()` or `gnx::summary()` to get more information about it:
 
 ```{code-cell} cpp
@@ -339,7 +346,7 @@ summary(plasmid);
 :class: dropdown
 You can also use the plasmid id (`NC_017288.1`) instead of the index for the same effect:
 ```{code-block} cpp
-sq plasmid("GCF_000204255.1_ASM20425v1_genomic.fna.gz", "NC_017288.1");
+sq plasmid(bacterial_genome(), "NC_017288.1");
 ```
 :::
 
@@ -347,7 +354,7 @@ sq plasmid("GCF_000204255.1_ASM20425v1_genomic.fna.gz", "NC_017288.1");
 :class: dropdown
 It is also possible to use the `string literal` method to load from a sequence file, but it always loads the first sequence in the file, which is the *<wiki:Chlamydia>*'s chromosome (`NC_017287.1` with index `0`) in this case:
 ```{code-block} cpp
-auto chromosome = "GCF_000204255.1_ASM20425v1_genomic.fna.gz"_sq;
+auto chromosome = "genome://GCF_000204255.1_ASM20425v1"_sq;
 ```
 :::
 
@@ -402,26 +409,27 @@ auto rf3 = translate(plasmid_rc);
 
 You can also work with uncompressed/[block compressed](wiki:BGZF) mammalian genomic [FASTA](wiki:FASTA_format) files with accompanying index (`.fai`, `.gzi`) files using `gnx::virtual_vector` class:
 
-:::{tip} Whole genome files available on our clusters
-:class: dropdown
-If you're working on our clusters you will find a nice collection of them in the `/cvmfs/ref.mugqic/genomes/species` folder.
-:::
 
 ```{code-cell} cpp
-// describe("Homo_sapiens.hg19.fa.gz");
+auto downloaded_human_genome = wget("genome://GCF_000001405.40_GRCh38.p14");
+```
+
+```{code-cell} cpp
+describe(downloaded_human_genome());
 ```
 +++
 ```{code-cell} cpp
-// gnx::virtual_vector<sq> human_genome{"Homo_sapiens.hg19.fa.gz"};
+gnx::virtual_vector<sq> human_genome{downloaded_human_genome()};
 ```
 +++
 ```{code-cell} cpp
-// auto chrUn_gl000249 = human_genome[92];
+auto NC_012920_1 = human_genome[704];
 ```
 +++
 ```{code-cell} cpp
-// summary(chrUn_gl000249);
+summary(NC_012920_1);
 ```
+
 #### 2-Bit Packed sequences
 
 `gnx::psq2` stores DNA sequences using only 2 bits per nucleotide (A=`00`, C=`01`, G=`10`, T=`11`), packing four bases into each byte. Compared with one byte per character in `gnx::sq`, this gives a **4× memory reduction** — critical for whole-genome analysis and GPU-resident data. Within each byte, bases are stored **MSB-first**:
@@ -434,13 +442,13 @@ byte[i] = [base 4i | base 4i+1 | base 4i+2 | base 4i+3]
 So the four-base sequence `ACGT` encodes to the single byte `0b00_01_10_11 = 0x1B`
 
 ```{code-cell} cpp
-// gnx::virtual_vector<psq2> packed_human_genome{"Homo_sapiens.hg19.fa.gz"};
-// auto packed_chrUn = packed_human_genome[92];
-// packed_chrUn.size_in_memory()
+gnx::virtual_vector<psq2> packed_human_genome{downloaded_human_genome()};
+auto packed_NC_012920_1 = packed_human_genome[704];
+packed_NC_012920_1.size_in_memory()
 ```
 +++
 ```{code-cell} cpp
-// chrUn_gl000249.size_in_memory()
+NC_012920_1.size_in_memory()
 ```
 
 ### WGS (<wiki:Whole_genome_sequencing>) reads 
@@ -448,21 +456,21 @@ So the four-base sequence `ACGT` encodes to the single byte `0b00_01_10_11 = 0x1
 `gnx` also supports compressed/uncompressed [FASTQ](wiki:FASTQ_format) files coming from [high throughput sequencing](wiki:DNA_sequencing#High-throughput_sequencing_(HTS)_methods) pipelines. Like the [FASTA](wiki:FASTA_format) example, first let's download a small [FASTQ](wiki:FASTQ_format) file containing reads:
 
 ```{code-cell} cpp
-!wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR101/073/SRR10190173/SRR10190173_1.fastq.gz
+auto downloaded_reads = wget("sra://SRR10190173_1");
 ```
 Now let investigate what's in it:
 
 ```{code-cell} cpp
-describe("SRR10190173_1.fastq.gz")
+describe(downloaded_reads())
 ```
 +++
 ```{code-cell} cpp
-summary("SRR10190173_1.fastq.gz")
+summary(downloaded_reads())
 ```
 +++
 
 ```{code-cell} cpp
-sq read("SRR10190173_1.fastq.gz", 12724);
+sq read(downloaded_reads(), 12724);
 read
 ```
 
@@ -475,11 +483,11 @@ summary(read);
 ### Parallel execution policies
 
 ```{code-cell} cpp
-describe("GCF_000204255.1_ASM20425v1_genomic.fna.gz");
+describe(download());
 ```
 +++
 ```{code-cell} cpp
-auto chromosome = "GCF_000204255.1_ASM20425v1_genomic.fna.gz"_sq;
+auto chromosome{downloaded()};
 ```
 +++
 ```{code-cell} cpp
@@ -524,28 +532,27 @@ auto device_test = translate(thrust::hip::par, chromosome);
 ## Local alignment (<wiki:Smith-Waterman_algorithm>)
 
 ```{code-cell} cpp
-!wget https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/864/765/GCF_000864765.1_ViralProj15476/GCF_000864765.1_ViralProj15476_genomic.fna.gz
+auto HIV_1 = "genome://GCF_000864765.1_ViralProj15476"_sq;
 ```
 +++
 ```{code-cell} cpp
-describe("GCF_000864765.1_ViralProj15476_genomic.fna.gz");
+describe(HIV_1);
 ```
 +++
 ```{code-cell} cpp
-auto HIV_1 ="GCF_000864765.1_ViralProj15476_genomic.fna.gz"_sq;
 summary(HIV_1);
 ```
 +++
 ```{code-cell} cpp
-!wget https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/856/385/GCF_000856385.1_ViralProj14991/GCF_000856385.1_ViralProj14991_genomic.fna.gz
+auto HIV_2 = "genome://GCF_000856385.1_ViralProj14991"_sq;
 ```
 +++
 ```{code-cell} cpp
-describe("GCF_000856385.1_ViralProj14991_genomic.fna.gz");
+describe(HIV_2);
 ```
 +++
 ```{code-cell} cpp
-auto HIV_2 = "GCF_000856385.1_ViralProj14991_genomic.fna.gz"_sq;
+
 summary(HIV_2);
 ```
 +++
