@@ -4,6 +4,7 @@
 #pragma once
 
 #include <gnx/utility/detail/wget.hpp>
+#include <gnx/concepts.hpp>
 
 namespace gnx {
 
@@ -11,40 +12,7 @@ inline detail::wget_result wget
 (   std::string_view url
 ,   size_t buffer_size = 65536
 )
-{   if (!detail::is_valid_url(url))
-        throw std::invalid_argument
-        (   fmt::format
-            (   "Unsupported URL scheme in '{}'"
-            ,   url
-            )
-        );
-    std::string url_str(url);
-    if (url.starts_with("genome://"))
-        url_str = detail::construct_genome_url(url);
-    if (url.starts_with("sra://"))
-        url_str = detail::construct_sra_url(url);
-
-#ifdef _WIN32
-    knet_win32_init();
-#endif
-    auto fp = knet_open(url_str.data(), "r");
-    if (fp == nullptr)
-        throw std::runtime_error(fmt::format("Failed to open URL: {}", url_str));
-
-    auto temp_file_path
-    =   std::filesystem::temp_directory_path()
-    /   std::filesystem::path(url_str).filename();
-    auto out_fp = fopen(temp_file_path.string().c_str(), "wb");
-    if (out_fp == nullptr)
-    {   knet_close(fp);
-        throw std::runtime_error
-        (   fmt::format
-            (   "Failed to create temporary file: {}"
-            ,   temp_file_path.string()
-            )
-        );
-    }
-
+{   auto [fp, out_fp, temp_file_path] = detail::wget_init(url);
 #if defined(__CLING__)
     std::thread t
     (   detail::async_download
@@ -55,16 +23,49 @@ inline detail::wget_result wget
     );
     t.detach();
 #else
-    fmt::memory_buffer buffer;
-    buffer.reserve(buffer_size);
-    size_t bytes_read;
-    while ((bytes_read = knet_read(fp, buffer.data(), buffer_size)) > 0)
-        fwrite(buffer.data(), 1, bytes_read, out_fp);
-    fclose(out_fp);
-    knet_close(fp);
+    detail::download(fp, out_fp, temp_file_path, buffer_size);
 #endif // __CLING__
-
     return detail::wget_result(temp_file_path);
 }
+
+#if defined(__CLING__)
+template <sequence_container SequenceType>
+void wget
+(   std::string_view url
+,   SequenceType& seq
+,   typename SequenceType::size_type ndx
+)
+{   auto [fp, out_fp, temp_file_path] = detail::wget_init(url);
+    std::thread t
+    (   detail::async_load_ndx<SequenceType>
+    ,   std::ref(seq)
+    ,   ndx
+    ,   fp
+    ,   out_fp
+    ,   temp_file_path
+    ,   65535
+    );
+    t.detach();
+}
+
+template <sequence_container SequenceType>
+void wget
+(   std::string_view url
+,   SequenceType& seq
+,   std::string_view id
+)
+{   auto [fp, out_fp, temp_file_path] = detail::wget_init(url);
+    std::thread t
+    (   detail::async_load_id<SequenceType>
+    ,   std::ref(seq)
+    ,   id
+    ,   fp
+    ,   out_fp
+    ,   temp_file_path
+    ,   65535
+    );
+    t.detach();
+}
+#endif // __CLING__
 
 } // namespace gnx

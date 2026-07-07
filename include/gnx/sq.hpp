@@ -81,13 +81,19 @@ struct generic_sequence
     explicit generic_sequence(std::string_view sv, size_type ndx = 0)
     {   // if sv is a view over a URL or filename, attempt to read it as such
         if (detail::is_valid_url(sv))
-        {   auto downloaded = gnx::wget(sv);
+        {
+#if defined(__CLING__)
+            gnx::wget(sv, *this, ndx);
+#else
+            auto downloaded = gnx::wget(sv);
             if (downloaded().empty())
                 throw std::runtime_error
                 (   fmt::format("Failed to download the sequence from {}", sv)
                 );
             else
-                load_ndx(downloaded(), ndx);
+            {   load_ndx(downloaded(), ndx);
+            }
+#endif  // __CLING__
         } 
         else if (std::filesystem::path(std::string(sv)).has_extension())
         {   if (std::filesystem::exists(std::string(sv) + ".fai"))
@@ -119,13 +125,18 @@ struct generic_sequence
     generic_sequence(std::string_view sv, std::string_view id)
     {   // if sv is a view over a URL or filename, attempt to read it as such
         if (detail::is_valid_url(sv))
-        {   auto downloaded = gnx::wget(sv);
+        {
+#if defined(__CLING__)
+            gnx::wget(sv, *this, id);
+#else
+            auto downloaded = gnx::wget(sv);
             if (downloaded().empty())
                 throw std::runtime_error
                 (   fmt::format("Failed to download the sequence from {}", sv)
                 );
             else
                 load_id(downloaded(), id);
+#endif  // __CLING__
         } 
         else if (std::filesystem::path(std::string(sv)).has_extension())
         {   if (std::filesystem::exists(std::string(sv) + ".fai"))
