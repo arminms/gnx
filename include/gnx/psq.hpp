@@ -17,6 +17,7 @@
 #include <gnx/sq.hpp>
 #include <gnx/io/fastaqz.hpp>
 #include <gnx/memory.hpp>
+#include <gnx/utility/wget.hpp>
 
 #ifdef __CLING__
 #   include <gnx/utility/print.hpp>
@@ -352,6 +353,15 @@ public:
     ,   _ptr_td()
     {}
     /// Constructs a packed sequence from a string view (only ACGT recognized).
+    ///
+    /// @brief Constructs a sequence from a string view (only ACGT recognized).
+    /// If the string view is a file path, the constructor attempts to read the
+    /// sequence from the file. If it is a URL, the constructor attempts to
+    /// download the file and read the sequence from the downloaded file. If
+    /// neither of them, it is treated as a direct sequence input.
+    /// @param sv The string view representing the sequence, URL or a file path.
+    /// @param ndx The index of the sequence to read from the file if the string
+    /// view is a file path. Default is 0 (the first sequence).
     explicit packed_generic_sequence_2bit
     (   std::string_view sv
     ,   size_type ndx = 0
@@ -359,27 +369,36 @@ public:
     :   _bytes(num_bytes(sv.size()), uint8_t{0})
     ,   _size(sv.size())
     ,   _ptr_td()
-    {   if  // if the sv is a view over a filename, attempt to read it as such
-        (std::filesystem::path(std::string(sv)).has_extension())
+    {   if (detail::is_valid_url(sv))
+        {
+#if defined(__CLING__)
+            gnx::wget(sv, *this, ndx);
+#else
+            auto downloaded = gnx::wget(sv);
+            if (downloaded().empty())
+                throw std::runtime_error
+                (   fmt::format("Failed to download the sequence from {}", sv)
+                );
+            else
+            {   load_ndx(downloaded(), ndx);
+            }
+#endif  // __CLING__
+        }
+        else if (std::filesystem::path(std::string(sv)).has_extension())
         {   if (std::filesystem::exists(std::string(sv) + ".fai"))
             {   gnx::virtual_vector<self_type> vv{sv};
                 if (ndx < vv.size())
                     *this = vv[ndx];
                 else
-                    log_error("invalid sequence index");
+                    throw std::runtime_error
+                    (   fmt::format("Invalid sequence index: {}", ndx)
+                    );
             }
             else
-            {   size_t count = 0;
-                gnx::forward_stream<self_type> stream(sv);
-                auto it = stream.begin();
-                for (; it != stream.end() && count < ndx; ++it, ++count);
-                if (it != stream.end())
-                    *this = stream();
-                else
-                    log_error("invalid sequence index");
+            {   load_ndx(sv, ndx);
             }
         }
-        else // otherwise, treat it as a view over a sequence
+        else
         {   for (size_type i = 0; i < _size; ++i)
                 _set_base(i, sv[i]);
         }
@@ -398,8 +417,21 @@ public:
     :   _bytes(num_bytes(sv.size()), uint8_t{0})
     ,   _size(sv.size())
     ,   _ptr_td()
-    {   if  // if the sv is a view over a filename, attempt to read it as such
-        (std::filesystem::path(std::string(sv)).has_extension())
+    {   if (detail::is_valid_url(sv))
+        {
+#if defined(__CLING__)
+            gnx::wget(sv, *this, id);
+#else
+            auto downloaded = gnx::wget(sv);
+            if (downloaded().empty())
+                throw std::runtime_error
+                (   fmt::format("Failed to download the sequence from {}", sv)
+                );
+            else
+                load_id(downloaded(), id);
+#endif  // __CLING__
+        } 
+        else if (std::filesystem::path(std::string(sv)).has_extension())
         {   if (std::filesystem::exists(std::string(sv) + ".fai"))
             {   gnx::virtual_vector<self_type> vv{sv};
                 for (size_type i = 0; i < vv.size(); ++i)
@@ -408,19 +440,15 @@ public:
                         return;
                     }
                 }
-                log_error("no sequence with matching ID found");
+                throw std::runtime_error
+                (   fmt::format("No sequence matching '{}' found", id)
+                );
             }
             else
-            {   gnx::forward_stream<self_type> stream(sv);
-                auto it = stream.begin();
-                for (; it != stream.end() && stream.id() != id; ++it);
-                if (it != stream.end())
-                    *this = stream();
-                else
-                    log_error("no sequence with matching ID found");
+            {   load_id(sv, id);
             }
         }
-        else // otherwise, treat it as a view over a sequence
+        else
         {   for (size_type i = 0; i < _size; ++i)
                 _set_base(i, sv[i]);
         }
@@ -950,6 +978,32 @@ private:
         const uint8_t mask = static_cast<uint8_t>(0xFFu << ((4u - remainder) << 1u));
         _bytes.back() &= mask;
     }
+    /// Load a sequence from a file by its index.
+    void load_ndx(std::string_view filename, size_type ndx)
+    {   size_t count = 0;
+        gnx::forward_stream<self_type> stream(filename);
+        auto it = stream.begin();
+        for (; it != stream.end() && count < ndx; ++it, ++count);
+        if (it != stream.end())
+            *this = stream();
+        else
+            throw std::runtime_error
+            (   fmt::format("Invalid sequence index: {}", ndx)
+            );
+    }
+    /// Load a sequence from a file by its identifier.
+    void load_id(std::string_view filename, std::string_view id)
+    {   gnx::forward_stream<self_type> stream(filename);
+        auto it = stream.begin();
+        for (; it != stream.end() && stream.id() != id; ++it);
+        if (it != stream.end())
+            *this = stream();
+        else
+            throw std::runtime_error
+            (   fmt::format("No sequence matching '{}' found", id)
+            );
+    }
+
 };
 
 // -- free comparison operators ------------------------------------------------
