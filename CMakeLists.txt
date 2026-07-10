@@ -22,7 +22,7 @@ option(GNX_ENABLE_HIP "Enable ROCm HIP support ?" ON)
 #
 project(
   gnx
-  VERSION 0.5.0
+  VERSION 0.6.0
   LANGUAGES CXX
   DESCRIPTION "C++20 header-only biosequence analysis library"
   HOMEPAGE_URL "https://github.com/arminms/gnx"
