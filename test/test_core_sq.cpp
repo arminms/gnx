@@ -270,10 +270,10 @@ TEMPLATE_TEST_CASE( "gnx::sq", "[class]", std::vector<char>)
         CHECK(s.has("string"));
         CHECK("hello" == std::get<std::string>(s["string"]));
 
-        std::vector<int> v{ 1, 2, 3, 4 };
-        s["vector_int"] = v;
-        CHECK(s.has("vector_int"));
-        CHECK(v == std::get<std::vector<int>>(s["vector_int"]));
+        sul::dynamic_bitset<> bits(12, 0b0100010110111);
+        s["dynamic_bitset"] = bits;
+        CHECK(s.has("dynamic_bitset"));
+        CHECK(bits == std::get<sul::dynamic_bitset<>>(s["dynamic_bitset"]));
 
         std::string lvalue_tag{"check_lvalue_tag"};
         s[lvalue_tag] = 42;
@@ -290,7 +290,7 @@ TEMPLATE_TEST_CASE( "gnx::sq", "[class]", std::vector<char>)
         s["test-float"] = 3.14f;
         s["test-double"] = 3.14;
         s["test-string"] = std::string("hello");
-        s["test-vector-int"] = std::vector<int>{ 1, 2, 3, 4 };
+        s["dynamic_bitset"] = sul::dynamic_bitset<>(12, 0b0100010110111);
 
         std::stringstream ss;
         ss << s;
@@ -306,7 +306,7 @@ TEMPLATE_TEST_CASE( "gnx::sq", "[class]", std::vector<char>)
         CHECK(std::get<float>(s["test-float"]) == std::get<float>(t["test-float"]));
         CHECK(std::get<double>(s["test-double"]) == std::get<double>(t["test-double"]));
         CHECK(std::get<std::string>(s["test-string"]) == std::get<std::string>(t["test-string"]));
-        CHECK(4 == std::get<std::vector<int>>(s["test-vector-int"]).size());
+        CHECK(sul::dynamic_bitset<>(12, 0b0100010110111) == std::get<sul::dynamic_bitset<>>(t["dynamic_bitset"]));
     }
 
 // -- string literal operator --------------------------------------------------
