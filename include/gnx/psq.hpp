@@ -928,7 +928,20 @@ public:
                 std::visit
                 (   [&buf, &tag_copy](const auto& x)
                     {   using T = std::decay_t<decltype(x)>;
-                        if constexpr (!std::is_same_v<T, std::monostate>)
+                        if constexpr (std::is_same_v<T, sul::dynamic_bitset<>>)
+                        {   fmt::format_to
+                            (   std::back_inserter(buf)
+                            ,   "{}{:12.11}{}│{} {}{}{}\n"
+                            ,   gnx::ansi::ESC[style::bold]
+                            ,   tag_copy
+                            ,   gnx::ansi::vga::fg::ESC[250]
+                            ,   gnx::ansi::ESC[style::reset]
+                            ,   gnx::ansi::ESC[fg::bright_green]
+                            ,   x.to_string()
+                            ,   gnx::ansi::ESC[style::reset]
+                            );
+                        }
+                        else if constexpr (!std::is_same_v<T, std::monostate>)
                         {   fmt::format_to
                             (   std::back_inserter(buf)
                             ,   "{}{:12.11}{}│{} {}{}{}\n"
