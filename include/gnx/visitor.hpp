@@ -18,6 +18,9 @@
 #include <typeinfo>
 #include <cstdint>
 
+#include <gnx/detail/libpopcnt.h>
+#include <gnx/detail/dynamic_bitset.hpp>
+
 namespace gnx {
 
 // -- td_value_t ---------------------------------------------------------------
@@ -41,6 +44,7 @@ using td_value_t = std::variant
 ,   long double
 ,   std::string
 ,   std::vector<int>
+,   sul::dynamic_bitset<>
 >;
 
 // -- td_type_name_map ---------------------------------------------------------
@@ -88,6 +92,9 @@ static std::unordered_map<std::type_index, std::string> td_type_name_map
     {   std::type_index(typeid(std::string)),"string"
     }
 ,
+    {   std::type_index(typeid(sul::dynamic_bitset<>)),"dynamic_bitset"
+    }
+,
     {   std::type_index(typeid(std::vector<int>)),"std::vector<int>"
     }
 };
@@ -104,6 +111,9 @@ inline void td_value_print(fmt::memory_buffer& buf, const td_value_t& v)
             }
             else if constexpr (std::is_same_v<T, std::string>)
             {   fmt::format_to(std::back_inserter(buf), "|string|\"{}\"", x);
+            }
+            else if constexpr (std::is_same_v<T, sul::dynamic_bitset<>>)
+            {   fmt::format_to(std::back_inserter(buf), "|dynamic_bitset|{}", x.to_string());
             }
             else if constexpr (std::ranges::common_range<T>)
             {   fmt::format_to
@@ -198,6 +208,11 @@ static std::unordered_map<std::string, std::function<void(std::istream&, td_valu
         { double x; is >> x; a = static_cast<long double>(x); }
     }
     ,
+    {   "dynamic_bitset"
+    ,   [] (std::istream& is, td_value_t& a)
+        {   sul::dynamic_bitset<> db; is >> db; a = db; }
+    }
+    ,
     {   "string"
     ,   [] (std::istream& is, td_value_t& a)
         { std::string s; 
@@ -248,6 +263,8 @@ inline std::size_t td_value_size(const td_value_t& v)
                 return 0;
             else if constexpr (std::is_same_v<T, std::string>)
                 return sizeof(std::string) + x.capacity() * sizeof(char);
+            else if constexpr (std::is_same_v<T, sul::dynamic_bitset<>>)
+                return sizeof(sul::dynamic_bitset<>) + (x.capacity() / 8);
             else if constexpr (std::is_same_v<T, std::vector<int>>)
                 return sizeof(std::vector<int>) + x.capacity() * sizeof(int);
             else
