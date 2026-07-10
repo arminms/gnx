@@ -24,7 +24,8 @@ project(
   gnx
   VERSION 0.5.0
   LANGUAGES CXX
-  DESCRIPTION "Biological sequences for Modern C++"
+  DESCRIPTION "C++20 header-only biosequence analysis library"
+  HOMEPAGE_URL "https://github.com/arminms/gnx"
 )
 
 ## prevent in-source builds
