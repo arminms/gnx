@@ -6,7 +6,6 @@
 #include <fmt/core.h>
 #include <fmt/format.h>
 
-#include <vector>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -25,7 +24,7 @@ namespace gnx {
 
 // -- td_value_t ---------------------------------------------------------------
 // The default tagged-data value type: a closed variant covering all C++
-// fundamental types plus std::string and std::vector<int>.
+// fundamental types plus std::string and sul::dynamic_bitset.
 // std::monostate represents an unset (null) value and maps to the "void" tag.
 
 using td_value_t = std::variant
@@ -43,7 +42,6 @@ using td_value_t = std::variant
 ,   double
 ,   long double
 ,   std::string
-,   std::vector<int>
 ,   sul::dynamic_bitset<>
 >;
 
@@ -93,9 +91,6 @@ static std::unordered_map<std::type_index, std::string> td_type_name_map
     }
 ,
     {   std::type_index(typeid(sul::dynamic_bitset<>)),"dynamic_bitset"
-    }
-,
-    {   std::type_index(typeid(std::vector<int>)),"std::vector<int>"
     }
 };
 
@@ -223,21 +218,6 @@ static std::unordered_map<std::string, std::function<void(std::istream&, td_valu
         }
     }
     ,
-    {   "std::vector<int>"
-    ,   [] (std::istream& is, td_value_t& a)
-        {   std::vector<int> v;
-            int i;
-            is.ignore();
-            while (is.peek() != '}')
-            {   is >> i;
-                is.ignore();
-                v.push_back(i);
-            }
-            is.ignore();
-            a = v;
-        }
-    }
-    ,
     {   "UNREGISTERED TYPE"
     ,   [] (std::istream& is, td_value_t& a)
         { is.ignore(2); a = std::monostate{}; }
@@ -253,7 +233,7 @@ inline void register_td_scan_visitor(std::string type, const F& f)
 
 // -- td_value_size ------------------------------------------------------------
 /// Returns the actual heap size (in bytes) occupied by a td_value_t value,
-/// accounting for dynamic allocations inside std::string and std::vector<int>.
+/// accounting for dynamic allocations inside std::string and sul::dynamic_bitset.
 
 inline std::size_t td_value_size(const td_value_t& v)
 {   return std::visit
@@ -265,8 +245,6 @@ inline std::size_t td_value_size(const td_value_t& v)
                 return sizeof(std::string) + x.capacity() * sizeof(char);
             else if constexpr (std::is_same_v<T, sul::dynamic_bitset<>>)
                 return sizeof(sul::dynamic_bitset<>) + (x.capacity() / 8);
-            else if constexpr (std::is_same_v<T, std::vector<int>>)
-                return sizeof(std::vector<int>) + x.capacity() * sizeof(int);
             else
                 return sizeof(T);
         }
