@@ -26,5 +26,4 @@ jobs:
       with:
         context: .
         push: true
-        tags: ghcr.io/${{ github.repository }}/gnx:latest,
-              ghcr.io/${{ github.repository }}/gnx:${{ github.event.release.tag_name }}
+        tags: ghcr.io/${{ github.repository }}:latest
