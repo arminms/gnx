@@ -8,6 +8,7 @@
         "ms-toolsai.jupyter",
         "ms-toolsai.vscode-jupyter-cell-tags",
         "ms-toolsai.jupyter-renderers",
+        "ms-vscode.hexeditor",
         "executablebookproject.myst-highlight",
         "ms-python.python",
         "congyiwu.vscode-jupytext",
