@@ -128,6 +128,7 @@ RUN set -ex \
         curl \
         wget \
         pkg-config \
+        ninja-build \
         libgd3 \
         libcairo2 \
         libwebp-dev \
