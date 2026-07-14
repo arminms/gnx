@@ -145,16 +145,9 @@ RUN set -ex \
     && wget -qO- https://cmake.org/files/v3.31/cmake-3.31.0-linux-x86_64.tar.gz \
         | tar --strip-components=1 -xz -C /usr/local
 
-# install vcpkg
-RUN set -ex \
-    && cd /opt \
-    && git clone https://github.com/Microsoft/vcpkg.git \
-    && cd vcpkg \
-    && ./bootstrap-vcpkg.sh
-
 # set the PATH
-ENV VCPKG_INSTALLATION_ROOT="/opt/vcpkg"
-ENV PATH="/opt/vcpkg:$PATH"
+ENV VCPKG_INSTALLATION_ROOT="${HOME}/vcpkg"
+ENV PATH="${HOME}/vcpkg:$PATH"
 
 # copy gnuplot
 COPY --from=gnuplot-604 /opt/xeus-cling /opt/xeus-cling
@@ -164,6 +157,12 @@ COPY --from=gnx /opt/xeus-cling /opt/xeus-cling
 
 # switch back to jovyan
 USER ${NB_USER}
+
+# install vcpkg
+RUN set -ex \
+    && git clone https://github.com/Microsoft/vcpkg.git ${HOME}/vcpkg \
+    && cd ${HOME}/vcpkg \
+    && ./bootstrap-vcpkg.sh
 
 # copy tutorial markdowns to the home directory and convert them to notebooks
 COPY --chown=${NB_UID}:${NB_GID} doc/notebooks/*.md ${HOME}/
