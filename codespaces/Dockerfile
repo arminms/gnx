@@ -125,6 +125,7 @@ RUN set -ex \
         git \
         zip \
         unzip \
+        curl \
         wget \
         pkg-config \
         libgd3 \
