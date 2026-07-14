@@ -13,6 +13,7 @@
         "congyiwu.vscode-jupytext",
         "ms-toolsai.jupyter-keymap",
         "vscode-icons-team.vscode-icons",
+        "github.vscode-pull-request-github",
         "mutantdino.resourcemonitor"
       ]
     },
