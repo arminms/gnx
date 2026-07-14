@@ -12,7 +12,8 @@
         "ms-python.python",
         "congyiwu.vscode-jupytext",
         "ms-toolsai.jupyter-keymap",
-        "vscode-icons-team.vscode-icons"
+        "vscode-icons-team.vscode-icons",
+        "mutantdino.resourcemonitor"
       ]
     },
     "codespaces": {
