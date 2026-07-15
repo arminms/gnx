@@ -1,6 +1,14 @@
 {
   "name": "GNX Dev Environment",
   "image": "ghcr.io/arminms/gnx:latest",
+  "forwardPorts": [8888],
+  "postStartCommand": "jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --ServerApp.token='' --ServerApp.password='' --ServerApp.default_url='/lab/tree/sandbox.ipynb'",
+  "portsAttributes": {
+    "8888": {
+      "label": "JupyterLab",
+      "onAutoForward": "openBrowser"
+    }
+  },
   "customizations": {
     "vscode": {
       "extensions": [
@@ -17,11 +25,6 @@
         "github.vscode-pull-request-github",
         "eamodio.gitlens",
         "mutantdino.resourcemonitor"
-      ]
-    },
-    "codespaces": {
-      "openFiles": [
-        "/home/jovyan/sandbox.ipynb"
       ]
     }
   }
