@@ -5,12 +5,11 @@
   "portsAttributes": {
     "8888": {
       "label": "JupyterLab",
-      "onAutoForward": "openBrowser",
-      "visibility": "public"
+      "onAutoForward": "openBrowser"
     }
   },
-  "postStartCommand": "jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --ServerApp.password='' --ServerApp.token='sandbox-token' --ServerApp.default_url='/lab/tree/doc/notebooks/sandbox.ipynb?token=sandbox-token'",
-  "postCreateCommand": "cd doc/notebooks && jupytext --to notebook *.md && rm -rf *.md",
+  "postCreateCommand": "cd doc/notebooks && jupytext --to notebook *.md && rm -rf *.md && jupyter lab workspaces import .devcontainer/workspace.json",
+  "postStartCommand": "jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --ServerApp.token='' --ServerApp.password=''",
   "customizations": {
     "vscode": {
       "extensions": [
