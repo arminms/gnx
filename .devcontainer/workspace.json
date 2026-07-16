@@ -1,0 +1,18 @@
+{
+  "data": {
+    "layout-restorer:data": {
+      "main": {
+        "dock": {
+          "type": "tab-area",
+          "widgets": [
+            "notebook:doc/notebooks/sandbox.ipynb"
+          ]
+        },
+        "current": "notebook:doc/notebooks/sandbox.ipynb"
+      }
+    }
+  },
+  "metadata": {
+    "id": "default"
+  }
+}
