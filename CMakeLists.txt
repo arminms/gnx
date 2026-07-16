@@ -84,19 +84,26 @@ endif()
 #
 find_package(ZLIB REQUIRED)
 
-## fetch {fmt} library
+## check for {fmt} library
 #
-message(STATUS "Fetching fmt library...")
-FetchContent_Declare(
-  fmt
-  GIT_REPOSITORY https://github.com/fmtlib/fmt.git
-  GIT_TAG        11.0.2
+find_package(
+  fmt CONFIG
+  HINTS $ENV{HOME} $ENV{HOME}/.local /usr/local /opt/local /opt
 )
-FetchContent_MakeAvailable(fmt)
+if(NOT fmt_FOUND)
+  message(STATUS "Fetching {fmt} library...")
+  FetchContent_Declare(
+    fmt
+    GIT_REPOSITORY https://github.com/fmtlib/fmt.git
+    GIT_TAG        11.0.2
+  )
+  FetchContent_MakeAvailable(fmt)
+endif()
 
 ## check for ranx
 #
-find_package(ranx CONFIG COMPONENTS openmp
+find_package(
+  ranx CONFIG COMPONENTS openmp
   HINTS $ENV{HOME} $ENV{HOME}/.local /usr/local /opt/local /opt
 )
 if(NOT ranx_FOUND)
