@@ -8,8 +8,8 @@
       "onAutoForward": "openBrowser"
     }
   },
-  "postCreateCommand": "cd doc/notebooks && jupytext --to notebook *.md && rm -rf *.md && jupyter lab workspaces import .devcontainer/workspace.json",
-  "postStartCommand": "jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --ServerApp.token='' --ServerApp.password=''",
+  "postCreateCommand": "jupytext-config set-default-viewer markdown python",
+  "postStartCommand": "jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --ServerApp.root_dir='doc/notebooks'",
   "customizations": {
     "vscode": {
       "extensions": [
