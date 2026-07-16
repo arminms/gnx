@@ -2,14 +2,15 @@
   "name": "GNX Dev Environment",
   "image": "ghcr.io/arminms/gnx:latest",
   "forwardPorts": [8888],
-  "postCreateCommand": "cd doc/notebooks && jupytext --to notebook *.md && rm -rf *.md",
-  "postStartCommand": "jupyter lab doc/notebooks/sandbox.ipynb --ip=0.0.0.0 --port=8888 --no-browser --ServerApp.token='' --ServerApp.password=''",
   "portsAttributes": {
     "8888": {
       "label": "JupyterLab",
-      "onAutoForward": "openBrowser"
+      "onAutoForward": "openBrowser",
+      "visibility": "public"
     }
   },
+  "postStartCommand": "jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --ServerApp.password='' --ServerApp.token='sandbox-token' --ServerApp.default_url='/lab/tree/doc/notebooks/sandbox.ipynb?token=sandbox-token'",
+  "postCreateCommand": "cd doc/notebooks && jupytext --to notebook *.md && rm -rf *.md",
   "customizations": {
     "vscode": {
       "extensions": [
