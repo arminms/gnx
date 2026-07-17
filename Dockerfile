@@ -140,7 +140,7 @@ COPY --from=gnx /opt/xeus-cling /opt/xeus-cling
 USER ${NB_USER}
 
 # copy tutorial markdowns to the home directory and convert them to notebooks
-COPY --chown=${NB_UID}:${NB_GID} doc/notebooks/*.md ${HOME}/
+COPY --chown=${NB_UID}:${NB_GID} doc/sandbox.md doc/tutorial.md ${HOME}/
 RUN set -ex \
     && cd ${HOME} \
     && jupytext --to notebook *.md \
