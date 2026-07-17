@@ -8,7 +8,7 @@
       "onAutoForward": "openBrowser"
     }
   },
-  "postCreateCommand": "cd doc && jupytext --to notebook -o notebooks/sandbox.ipynb sandbox.md && jupytext --to notebook -o notebooks/tutorial.ipynb tutorial.md",
+  "postCreateCommand": "cd doc && mkdir -p notebooks && jupytext --to notebook -o notebooks/sandbox.ipynb sandbox.md && jupytext --to notebook -o notebooks/tutorial.ipynb tutorial.md",
   "postStartCommand": "jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --ServerApp.token='' --ServerApp.password='' --ServerApp.root_dir='doc/notebooks'",
   "customizations": {
     "vscode": {
