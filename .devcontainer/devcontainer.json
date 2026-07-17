@@ -9,7 +9,7 @@
     }
   },
   "postCreateCommand": "cd doc/notebooks && jupytext --to notebook *.md",
-  "postStartCommand": "jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --NotebookApp.token='' --NotebookApp.password='' --ServerApp.root_dir='doc/notebooks'",
+  "postStartCommand": "jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --ServerApp.token='' --ServerApp.password='' --ServerApp.root_dir='doc/notebooks'",
   "customizations": {
     "vscode": {
       "extensions": [
