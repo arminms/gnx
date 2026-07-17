@@ -1,17 +1,12 @@
 ---
-jupytext:
-  text_representation:
-    extension: .md
-    format_name: myst
-    format_version: 0.13
-    jupytext_version: 1.18.1
+title: GNX Tutorial
+description: Using GNX in a nutshell.
 kernelspec:
   name: xcpp20-openmp
   display_name: C++20-OpenMP
-  language: C++20
 ---
 
-# `gnx` sandbox
+# GNX Tutorial
 
 ---
 
