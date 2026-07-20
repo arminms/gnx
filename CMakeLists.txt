@@ -13,10 +13,11 @@ endif()
 
 ## life is about choices...
 #
+option(GNX_ENABLE_CLI "Enable the command-line tools ?" OFF)
 option(GNX_ENABLE_TESTS "Enable the unit tests ?" ON)
-option(GNX_ENABLE_BENCHMARKS "Enable benchmarks ?" ON)
-option(GNX_ENABLE_CUDA "Enable CUDA support ?" ON)
-option(GNX_ENABLE_HIP "Enable ROCm HIP support ?" ON)
+option(GNX_ENABLE_BENCHMARKS "Enable benchmarks ?" OFF)
+option(GNX_ENABLE_CUDA "Enable CUDA support ?" OFF)
+option(GNX_ENABLE_HIP "Enable ROCm HIP support ?" OFF)
 
 ## finally our project...
 #
@@ -260,6 +261,8 @@ if (NOT_SUBPROJECT)
 
   ## add gnx executable
   #
-  add_subdirectory(src)
-
+  if(${GNX_ENABLE_CLI})
+    add_subdirectory(cli)
+  endif()
+  
 endif(NOT_SUBPROJECT)
