@@ -13,11 +13,25 @@ endif()
 
 ## life is about choices...
 #
-option(GNX_ENABLE_CLI "Enable the command-line tools ?" OFF)
+option(GNX_ENABLE_TOOLKIT "Enable the command-line toolkit ?" OFF)
 option(GNX_ENABLE_TESTS "Enable the unit tests ?" ON)
 option(GNX_ENABLE_BENCHMARKS "Enable benchmarks ?" OFF)
 option(GNX_ENABLE_CUDA "Enable CUDA support ?" OFF)
 option(GNX_ENABLE_HIP "Enable ROCm HIP support ?" OFF)
+
+## vcpkg manifest features
+#
+if(${GNX_ENABLE_TOOLKIT})
+  list(APPEND VCPKG_MANIFEST_FEATURES "toolkit")
+endif()
+
+if(${GNX_ENABLE_TESTS})
+  list(APPEND VCPKG_MANIFEST_FEATURES "tests")
+endif()
+
+if(${GNX_ENABLE_BENCHMARKS})
+  list(APPEND VCPKG_MANIFEST_FEATURES "benchmarks")
+endif()
 
 ## finally our project...
 #
@@ -259,10 +273,10 @@ if (NOT_SUBPROJECT)
     add_subdirectory(perf)
   endif()
 
-  ## add gnx executable
+  ## add gnx command-line toolkit
   #
-  if(${GNX_ENABLE_CLI})
-    add_subdirectory(cli)
+  if(${GNX_ENABLE_TOOLKIT})
+    add_subdirectory(src)
   endif()
   
 endif(NOT_SUBPROJECT)

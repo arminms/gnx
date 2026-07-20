@@ -1,10 +1,21 @@
 {
   "dependencies": [
-    "catch2",
-    "cli11",
     "fmt",
     "pthreads",
-    "zlib",
-    "benchmark"
-  ]
+    "zlib"
+  ],
+  "features": {
+    "tests": {
+      "description": "Dependencies needed for the unit tests",
+      "dependencies": [ "catch2" ]
+    },
+    "benchmarks": {
+      "description": "Dependencies needed for the benchmarks",
+      "dependencies": [ "benchmark" ]
+    },
+    "toolkit": {
+      "description": "Dependencies needed for the command-line toolkit",
+      "dependencies": [ "cli11" ]
+    }
+  }
 }
