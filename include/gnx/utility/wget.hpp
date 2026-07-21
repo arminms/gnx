@@ -8,6 +8,16 @@
 
 namespace gnx {
 
+#if defined(GNX_USE_ASIO) && !defined(__CLING__)
+inline detail::wget_result wget
+(   std::string_view url
+,   size_t buffer_size = 65536
+)
+{   auto [fp, out_fp, temp_file_path] = detail::wget_init(url);
+    detail::download(fp, out_fp, temp_file_path, buffer_size);
+    return detail::wget_result(temp_file_path);
+}
+#else
 inline detail::wget_result wget
 (   std::string_view url
 ,   size_t buffer_size = 65536
@@ -27,6 +37,7 @@ inline detail::wget_result wget
 #endif // __CLING__
     return detail::wget_result(temp_file_path);
 }
+#endif
 
 #if defined(__CLING__)
 template <sequence_container SequenceType>
