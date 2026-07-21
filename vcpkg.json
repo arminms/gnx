@@ -13,6 +13,10 @@
       "description": "Dependencies needed for the benchmarks",
       "dependencies": [ "benchmark" ]
     },
+    "asio-networking": {
+      "description": "Dependencies needed for networking with Asio",
+      "dependencies": [ "asio", "openssl" ]
+    },
     "toolkit": {
       "description": "Dependencies needed for the command-line toolkit",
       "dependencies": [ "cli11" ]

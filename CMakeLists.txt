@@ -18,6 +18,7 @@ option(GNX_ENABLE_TESTS "Enable the unit tests ?" ON)
 option(GNX_ENABLE_BENCHMARKS "Enable benchmarks ?" OFF)
 option(GNX_ENABLE_CUDA "Enable CUDA support ?" OFF)
 option(GNX_ENABLE_HIP "Enable ROCm HIP support ?" OFF)
+option(GNX_ENABLE_ASIO_NETWORKING "Enable using Asio for networking ?" OFF)
 
 ## vcpkg manifest features
 #
@@ -31,6 +32,10 @@ endif()
 
 if(${GNX_ENABLE_BENCHMARKS})
   list(APPEND VCPKG_MANIFEST_FEATURES "benchmarks")
+endif()
+
+if(${GNX_ENABLE_ASIO_NETWORKING})
+  list(APPEND VCPKG_MANIFEST_FEATURES "asio-networking")
 endif()
 
 ## finally our project...
@@ -99,6 +104,29 @@ endif()
 #
 find_package(ZLIB REQUIRED)
 
+## check for OpenSSL (required for asio::ssl HTTPS support) and Asio
+#
+if(${GNX_ENABLE_ASIO_NETWORKING})
+  find_package(OpenSSL)
+  if(NOT OpenSSL_FOUND)
+    message(WARNING "Couldn't find OpenSSL, disabling Asio networking support...")
+  else()
+    set(USE_ASIO ON)
+    find_package(asio CONFIG
+      HINTS $ENV{HOME} $ENV{HOME}/.local /usr/local /opt/local /opt
+    )
+    if(NOT asio_FOUND)
+      message(STATUS "Fetching asio library...")
+      FetchContent_Declare(
+        asio
+        GIT_REPOSITORY https://github.com/chriskohlhoff/asio.git
+        GIT_TAG        1.38.1
+      )
+      FetchContent_MakeAvailable(asio)
+    endif()
+  endif()
+endif()
+
 ## check for {fmt} library
 #
 find_package(
@@ -158,6 +186,9 @@ target_link_libraries(${PROJECT_NAME} INTERFACE
   $<IF:$<BOOL:${MSVC}>,PThreads4W::PThreads4W,Threads::Threads>
   OpenMP::OpenMP_CXX
   ZLIB::ZLIB
+  $<IF:$<BOOL:${USE_ASIO}>,OpenSSL::SSL,>
+  $<IF:$<BOOL:${USE_ASIO}>,OpenSSL::Crypto,>
+  $<IF:$<BOOL:${USE_ASIO}>,asio::asio,>
   fmt::fmt
   g3p::g3p
 )
@@ -173,6 +204,9 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
   VERSION ${gnx_VERSION}
   SOVERSION ${gnx_VERSION_MAJOR}
 )
+if(USE_ASIO)
+  target_compile_definitions(${PROJECT_NAME} INTERFACE GNX_USE_ASIO)
+endif()
 
 ## only perform the installation when gnx is not being used as a subproject
 #
