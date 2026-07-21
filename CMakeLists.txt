@@ -18,7 +18,7 @@ option(GNX_ENABLE_TESTS "Enable the unit tests ?" ON)
 option(GNX_ENABLE_BENCHMARKS "Enable benchmarks ?" OFF)
 option(GNX_ENABLE_CUDA "Enable CUDA support ?" OFF)
 option(GNX_ENABLE_HIP "Enable ROCm HIP support ?" OFF)
-option(GNX_ENABLE_ASIO_NETWORKING "Enable using Asio for networking ?" OFF)
+option(GNX_ENABLE_ASIO_NETWORKING "Enable using Asio for networking ?" ON)
 
 ## vcpkg manifest features
 #
