@@ -72,6 +72,36 @@ TEMPLATE_TEST_CASE
         REQUIRE(std::filesystem::exists(result.file_path()));
     }
 
+#if defined(GNX_USE_ASIO)
+    SECTION( "HTTP download (redirects to HTTPS)" )
+    {   const auto http_url{"http://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/204/255/GCF_000204255.1_ASM20425v1/GCF_000204255.1_ASM20425v1_genomic.fna.gz"};
+        auto result = gnx::wget(http_url);
+        REQUIRE_FALSE(result.file_path().empty());
+        REQUIRE_FALSE(result().empty());
+        REQUIRE(result.file_path().filename() == "GCF_000204255.1_ASM20425v1_genomic.fna.gz");
+        REQUIRE(std::filesystem::exists(result.file_path()));
+        auto file_size = std::filesystem::file_size(result.file_path());
+        REQUIRE(file_size == 351022);
+        T seq{result()};
+        REQUIRE(seq.size() == 1171667);
+        CHECK("NC_017287.1" == std::get<std::string>(seq["_id"]));
+    }
+
+    SECTION( "HTTPS download" )
+    {   const auto https_url{"https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/204/255/GCF_000204255.1_ASM20425v1/GCF_000204255.1_ASM20425v1_genomic.fna.gz"};
+        auto result = gnx::wget(https_url);
+        REQUIRE_FALSE(result.file_path().empty());
+        REQUIRE_FALSE(result().empty());
+        REQUIRE(result.file_path().filename() == "GCF_000204255.1_ASM20425v1_genomic.fna.gz");
+        REQUIRE(std::filesystem::exists(result.file_path()));
+        auto file_size = std::filesystem::file_size(result.file_path());
+        REQUIRE(file_size == 351022);
+        T seq{result()};
+        REQUIRE(seq.size() == 1171667);
+        CHECK("NC_017287.1" == std::get<std::string>(seq["_id"]));
+    }
+#endif
+
     SECTION( "SRA URL construction 9" )
     {   auto constructed_url = gnx::detail::construct_sra_url("sra://SRR123456");
         REQUIRE(constructed_url == "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR123/SRR123456/SRR123456.fastq.gz");
