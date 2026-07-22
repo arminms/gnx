@@ -19,6 +19,20 @@
 #include <string>
 #include <string_view>
 
+#ifdef _WIN32
+    #ifndef NOMINMAX
+        #define NOMINMAX
+    #endif
+    #ifndef WIN32_LEAN_AND_MEAN
+        #define WIN32_LEAN_AND_MEAN
+    #endif
+    #include <windows.h>
+    #include <wincrypt.h>
+    #if defined(_MSC_VER)
+        #pragma comment(lib, "crypt32.lib")
+    #endif
+#endif
+
 namespace gnx::detail
 {
 
@@ -195,6 +209,34 @@ private:
     http_response_info _info;
 };
 
+#ifdef _WIN32
+/// Loads the OS-trusted root certificates from the Windows "ROOT"
+/// certificate store (via CryptoAPI) into an Asio/OpenSSL SSL context.
+///
+/// OpenSSL has no knowledge of the Windows certificate store, so
+/// `asio::ssl::context::set_default_verify_paths()` looks for Unix-style CA
+/// bundle files/env vars that don't exist on Windows, causing every HTTPS
+/// handshake to fail with "certificate verify failed". This function feeds
+/// the OS-trusted roots directly into OpenSSL's certificate store instead.
+inline void load_windows_root_certificates(asio::ssl::context& ctx)
+{   HCERTSTORE cert_store = CertOpenSystemStoreW(0, L"ROOT");
+    if (!cert_store)
+        throw std::runtime_error("Failed to open Windows ROOT certificate store");
+
+    X509_STORE* x509_store = SSL_CTX_get_cert_store(ctx.native_handle());
+    PCCERT_CONTEXT cert_ctx = nullptr;
+    while ((cert_ctx = CertEnumCertificatesInStore(cert_store, cert_ctx)) != nullptr)
+    {   const unsigned char* encoded = cert_ctx->pbCertEncoded;
+        X509* x509 = d2i_X509(nullptr, &encoded, cert_ctx->cbCertEncoded);
+        if (x509)
+        {   X509_STORE_add_cert(x509_store, x509);
+            X509_free(x509);
+        }
+    }
+    CertCloseStore(cert_store, 0);
+}
+#endif // _WIN32
+
 /// Blocking HTTPS GET session over `asio::ssl::stream`, with SNI and peer
 /// hostname verification enabled.
 class https_session final : public net_session
@@ -202,7 +244,12 @@ class https_session final : public net_session
 public:
     explicit https_session(http_url const& url)
     :   _stream(_io_context, _ssl_context)
-    {   _ssl_context.set_default_verify_paths();
+    {
+#ifdef _WIN32
+        load_windows_root_certificates(_ssl_context);
+#else
+        _ssl_context.set_default_verify_paths();
+#endif
         asio::ip::tcp::resolver resolver(_io_context);
         auto endpoints = resolver.resolve(url.host, url.port);
         asio::connect(_stream.lowest_layer(), endpoints);
