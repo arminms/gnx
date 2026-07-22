@@ -59,7 +59,11 @@ TEMPLATE_TEST_CASE
     SECTION( "genome URL construction" )
     {   auto genome_url = "genome://GCF_000204255.1_ASM20425v1";
         auto constructed_url = gnx::detail::construct_genome_url(genome_url);
+#if defined(GNX_USE_ASIO)
+        REQUIRE(constructed_url == "https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/204/255/GCF_000204255.1_ASM20425v1/GCF_000204255.1_ASM20425v1_genomic.fna.gz");
+#else
         REQUIRE(constructed_url == "ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/204/255/GCF_000204255.1_ASM20425v1/GCF_000204255.1_ASM20425v1_genomic.fna.gz");
+#endif
     }
 
     SECTION( "genome URL download" )
@@ -103,30 +107,54 @@ TEMPLATE_TEST_CASE
 
     SECTION( "SRA URL construction 9" )
     {   auto constructed_url = gnx::detail::construct_sra_url("sra://SRR123456");
+#if defined(GNX_USE_ASIO)
+        REQUIRE(constructed_url == "https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR123/SRR123456/SRR123456.fastq.gz");
+        constructed_url = gnx::detail::construct_sra_url("sra://SRR123456_1");
+        REQUIRE(constructed_url == "https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR123/SRR123456/SRR123456_1.fastq.gz");
+#else
         REQUIRE(constructed_url == "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR123/SRR123456/SRR123456.fastq.gz");
         constructed_url = gnx::detail::construct_sra_url("sra://SRR123456_1");
         REQUIRE(constructed_url == "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR123/SRR123456/SRR123456_1.fastq.gz");
+#endif
     }
 
     SECTION( "SRA URL construction 10" )
     {   auto constructed_url = gnx::detail::construct_sra_url("sra://SRR1234567");
+#if defined(GNX_USE_ASIO)
+        REQUIRE(constructed_url == "https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR123/007/SRR1234567/SRR1234567.fastq.gz");
+        constructed_url = gnx::detail::construct_sra_url("sra://SRR1234567_1");
+        REQUIRE(constructed_url == "https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR123/007/SRR1234567/SRR1234567_1.fastq.gz");
+#else
         REQUIRE(constructed_url == "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR123/007/SRR1234567/SRR1234567.fastq.gz");
         constructed_url = gnx::detail::construct_sra_url("sra://SRR1234567_1");
         REQUIRE(constructed_url == "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR123/007/SRR1234567/SRR1234567_1.fastq.gz");
+#endif
     }
 
     SECTION( "SRA URL construction 11" )
     {   auto constructed_url = gnx::detail::construct_sra_url("sra://SRR12345678");
+#if defined(GNX_USE_ASIO)
+        REQUIRE(constructed_url == "https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR123/078/SRR12345678/SRR12345678.fastq.gz");
+        constructed_url = gnx::detail::construct_sra_url("sra://SRR12345678_1");
+        REQUIRE(constructed_url == "https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR123/078/SRR12345678/SRR12345678_1.fastq.gz");
+#else
         REQUIRE(constructed_url == "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR123/078/SRR12345678/SRR12345678.fastq.gz");
         constructed_url = gnx::detail::construct_sra_url("sra://SRR12345678_1");
         REQUIRE(constructed_url == "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR123/078/SRR12345678/SRR12345678_1.fastq.gz");
+#endif
     }
 
     SECTION( "SRA URL construction 12" )
     {   auto constructed_url = gnx::detail::construct_sra_url("sra://SRR123456789");
+#if defined(GNX_USE_ASIO)
+        REQUIRE(constructed_url == "https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR123/789/SRR123456789/SRR123456789.fastq.gz");
+        constructed_url = gnx::detail::construct_sra_url("sra://SRR123456789_1");
+        REQUIRE(constructed_url == "https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR123/789/SRR123456789/SRR123456789_1.fastq.gz");
+#else
         REQUIRE(constructed_url == "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR123/789/SRR123456789/SRR123456789.fastq.gz");
         constructed_url = gnx::detail::construct_sra_url("sra://SRR123456789_1");
         REQUIRE(constructed_url == "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR123/789/SRR123456789/SRR123456789_1.fastq.gz");
+#endif
     }
 
     SECTION( "SRA URL download" )
