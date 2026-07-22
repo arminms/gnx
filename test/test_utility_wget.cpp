@@ -4,7 +4,6 @@
 #include <catch2/catch_all.hpp>
 
 #include <gnx/sq.hpp>
-#include <gnx/utility/wget.hpp>
 
 const uint64_t seed_pi{3141592654};
 

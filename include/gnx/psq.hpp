@@ -13,11 +13,11 @@
 #include <vector>
 #include <cstdint>
 
+#include <gnx/utility/wget.hpp>
 #include <gnx/lut/pack2bit.hpp>
 #include <gnx/sq.hpp>
 #include <gnx/io/fastaqz.hpp>
 #include <gnx/memory.hpp>
-#include <gnx/utility/wget.hpp>
 
 #ifdef __CLING__
 #   include <gnx/utility/print.hpp>

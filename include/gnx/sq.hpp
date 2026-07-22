@@ -26,6 +26,7 @@
     #include <thrust/memory.h>
 #endif // __CUDACC__
 
+#include <gnx/utility/wget.hpp>
 #include <gnx/commons.hpp>
 #include <gnx/concepts.hpp>
 #include <gnx/views.hpp>
@@ -35,7 +36,6 @@
 #include <gnx/backend/virtual_vector.hpp>
 #include <gnx/algorithms/is_peptide.hpp>
 #include <gnx/algorithms/complement.hpp>
-#include <gnx/utility/wget.hpp>
 
 namespace gnx {
 //
