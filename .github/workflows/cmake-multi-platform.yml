@@ -46,6 +46,7 @@ jobs:
         -DGNX_ENABLE_BENCHMARKS=OFF \
         -DGNX_ENABLE_CUDA=OFF \
         -DGNX_ENABLE_HIP=OFF \
+        -DGNX_ENABLE_ASIO_NETWORKING=OFF \
         -DOpenMP_ROOT=$OpenMP_ROOT \
         -DOpenMP_CXX_FLAGS="-Xpreprocessor -fopenmp -I$OpenMP_ROOT/include" \
         -DOpenMP_CXX_LIB_NAMES="omp" \
