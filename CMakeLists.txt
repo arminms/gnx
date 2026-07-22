@@ -189,6 +189,7 @@ target_link_libraries(${PROJECT_NAME} INTERFACE
   $<IF:$<BOOL:${USE_ASIO}>,OpenSSL::SSL,>
   $<IF:$<BOOL:${USE_ASIO}>,OpenSSL::Crypto,>
   $<IF:$<BOOL:${USE_ASIO}>,asio::asio,>
+  $<$<AND:$<BOOL:${USE_ASIO}>,$<PLATFORM_ID:Windows>>:crypt32>
   fmt::fmt
   g3p::g3p
 )
