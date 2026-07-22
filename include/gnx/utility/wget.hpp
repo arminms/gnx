@@ -4,7 +4,6 @@
 #pragma once
 
 #include <gnx/utility/detail/wget.hpp>
-#include <gnx/concepts.hpp>
 
 namespace gnx {
 

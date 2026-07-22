@@ -14,6 +14,8 @@
 #   include <gnx/utility/detail/knetfile.h>
 #endif
 
+#include <gnx/concepts.hpp>
+
 #include <fmt/base.h>
 #include <fmt/format.h>
 
