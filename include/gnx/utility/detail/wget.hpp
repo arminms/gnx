@@ -84,7 +84,12 @@ inline bool is_valid_url(std::string_view url)
 inline std::string construct_genome_url(std::string_view genome_acn_n_assembly)
 {   genome_acn_n_assembly.remove_prefix(9); // remove "genome://"
     return fmt::format
-    (   "ftp://ftp.ncbi.nlm.nih.gov/genomes/all/{}/{}/{}/{}/{}/{}_genomic.fna.gz"
+    (
+#if defined(GNX_USE_ASIO)
+        "https://ftp.ncbi.nlm.nih.gov/genomes/all/{}/{}/{}/{}/{}/{}_genomic.fna.gz"
+#else
+        "ftp://ftp.ncbi.nlm.nih.gov/genomes/all/{}/{}/{}/{}/{}/{}_genomic.fna.gz"
+#endif
     ,   genome_acn_n_assembly.substr(0, 3)
     ,   genome_acn_n_assembly.substr(4, 3)
     ,   genome_acn_n_assembly.substr(7, 3)
@@ -96,7 +101,12 @@ inline std::string construct_genome_url(std::string_view genome_acn_n_assembly)
 
 [[nodiscard]]
 inline std::string construct_sra_url(std::string_view run_acn)
-{   std::string result, base{"ftp://ftp.sra.ebi.ac.uk/vol1/fastq"};
+{
+#if defined(GNX_USE_ASIO)
+    std::string result, base{"https://ftp.sra.ebi.ac.uk/vol1/fastq"};
+#else
+    std::string result, base{"ftp://ftp.sra.ebi.ac.uk/vol1/fastq"};
+#endif
     run_acn.remove_prefix(6); // remove "sra://"
     auto pos = run_acn.rfind('_');
     auto accession
