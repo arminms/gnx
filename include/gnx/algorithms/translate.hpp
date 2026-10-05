@@ -197,12 +197,11 @@ template<std::random_access_iterator InIterator, std::output_iterator<char> OutI
     if (num_codons <= 0)
         return d_first;
 
-    const auto vptr = &first[0];
     for (difference_type i = 0; i < num_codons; ++i, ++d_first)
         *d_first = detail::translate_codon
-        (   static_cast<char>(vptr[i * 3    ])
-        ,   static_cast<char>(vptr[i * 3 + 1])
-        ,   static_cast<char>(vptr[i * 3 + 2])
+        (   static_cast<char>(first[i * 3    ])
+        ,   static_cast<char>(first[i * 3 + 1])
+        ,   static_cast<char>(first[i * 3 + 2])
         );
     return d_first;
 }
@@ -265,9 +264,6 @@ requires gnx::is_execution_policy_v<std::decay_t<ExecPolicy>>
     if (num_codons <= 0)
         return d_first;
 
-    const auto vptr = &first[0];
-    auto optr = &(*d_first);
-
     if constexpr
     (   std::is_same_v<std::decay_t<ExecPolicy>
     ,   gnx::execution::sequenced_policy>
@@ -281,10 +277,10 @@ requires gnx::is_execution_policy_v<std::decay_t<ExecPolicy>>
     {   // Vectorized: each codon is independent, so SIMD over codon indices is safe
 #pragma omp simd
         for (difference_type i = 0; i < num_codons; ++i)
-            optr[i] = detail::translate_codon
-            (   static_cast<char>(vptr[i * 3    ])
-            ,   static_cast<char>(vptr[i * 3 + 1])
-            ,   static_cast<char>(vptr[i * 3 + 2])
+            *(d_first + i) = detail::translate_codon
+            (   static_cast<char>(first[i * 3    ])
+            ,   static_cast<char>(first[i * 3 + 1])
+            ,   static_cast<char>(first[i * 3 + 2])
             );
         return d_first + num_codons;
     }
@@ -295,10 +291,10 @@ requires gnx::is_execution_policy_v<std::decay_t<ExecPolicy>>
     {   // parallel execution with OpenMP
 #pragma omp parallel for
         for (difference_type i = 0; i < num_codons; ++i)
-            optr[i] = detail::translate_codon
-            (   static_cast<char>(vptr[i * 3    ])
-            ,   static_cast<char>(vptr[i * 3 + 1])
-            ,   static_cast<char>(vptr[i * 3 + 2])
+            *(d_first + i) = detail::translate_codon
+            (   static_cast<char>(first[i * 3    ])
+            ,   static_cast<char>(first[i * 3 + 1])
+            ,   static_cast<char>(first[i * 3 + 2])
             );
         return d_first + num_codons;
     }
@@ -313,10 +309,10 @@ requires gnx::is_execution_policy_v<std::decay_t<ExecPolicy>>
 #pragma omp parallel for simd
 #endif // _WIN32
         for (difference_type i = 0; i < num_codons; ++i)
-            optr[i] = detail::translate_codon
-            (   static_cast<char>(vptr[i * 3    ])
-            ,   static_cast<char>(vptr[i * 3 + 1])
-            ,   static_cast<char>(vptr[i * 3 + 2])
+            *(d_first + i) = detail::translate_codon
+            (   static_cast<char>(first[i * 3    ])
+            ,   static_cast<char>(first[i * 3 + 1])
+            ,   static_cast<char>(first[i * 3 + 2])
             );
         return d_first + num_codons;
     }
