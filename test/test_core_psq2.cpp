@@ -5,6 +5,7 @@
 
 #include <gnx/psq.hpp>
 #include <gnx/algorithms/random.hpp>
+#include <gnx/algorithms/valid.hpp>
 
 const uint64_t seed_pi{3141592654};
 
