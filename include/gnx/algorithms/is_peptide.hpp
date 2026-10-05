@@ -11,6 +11,7 @@
     #include <thrust/host_vector.h>
     #include <thrust/device_vector.h>
     #include <thrust/universal_vector.h>
+    #include <thrust/logical.h>
     #include <thrust/memory.h>
 #endif // __CUDACC__
 
@@ -27,11 +28,12 @@ constexpr bool is_peptide
 )
 {   using value_type = typename std::iterator_traits<Iterator>::value_type;
     auto& is_peptide_device = lut::get_static_device<bool, 0>(gnx::lut::is_peptide);
+    auto* is_peptide_data = thrust::raw_pointer_cast(is_peptide_device.data());
     return thrust::any_of
     (   first
     ,   std::distance(first, last) < 100'000 ? last : first + 100'000
-    ,   [] __device__ (value_type c)
-        {   return is_peptide_device[static_cast<uint8_t>(c)];
+    ,   [is_peptide_data] __device__ (value_type c)
+        {   return is_peptide_data[static_cast<uint8_t>(c)];
         }
     );
 }
